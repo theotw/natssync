@@ -1,0 +1,181 @@
+openapi: 3.0.0
+info:
+  title: On Prem cloud side REST APIBridge REST API
+  description: Cloud side service to move messages between on prem and cloud
+  version: 1.0.0
+  license:
+    name: Apache
+
+servers:
+  - url: /event-bridge/1
+
+paths:
+  /about:
+    get:
+      summary: Get information about this API
+      operationId: getAbout
+      x-operationAlias: getAbout
+
+      tags:
+        - about
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AboutResponse'
+  /register:
+    post:
+      summary: Registers an On Prem region
+      description: Registers an On Prem region
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterOnPremReq'
+      responses:
+        '201':
+          description: registration accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterOnPremResponse'
+        '400':
+          description: Client input error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /message-queue/{premid}:
+    post:
+      summary: Pushes pending messages to the bridge.
+      parameters:
+        - in: path
+          name: premid
+          required: true
+          description: the premise ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BridgeMessages'
+      responses:
+        '202':
+          description: Messages accepted
+        '400':
+          description: Bad juju happened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Bad juju happened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      summary: Grabs messages from the cloud side for the given prem ID.
+      description: This call will block for some timeout period (tbd, multiple seconds) waiting for messages.  If none are avilable, it will return an empty array
+      parameters:
+        - in: path
+          name: premid
+          required: true
+          description: the premise ID
+      responses:
+        '200':
+          description: Messages for the prem ID.  If not messages were available in the timeout period then an empty array is returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BridgeMessages'
+        '400':
+          description: Bad juju happened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Bad juju happened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+
+  schemas:
+    BridgeMessages:
+      type: array
+      items:
+        $ref: '#/components/schemas/BridgeMessage'
+
+
+    RegisterOnPremReq:
+      type: object
+      properties:
+        authToken:
+          type: string
+          description: Token with permissions to register a On Prem location/region
+        premID:
+          type: string
+          description: prem ID to use.  Should be UUID
+        publicKey:
+          type: string
+          description: Public key for the On Prem region
+    RegisterOnPremResponse:
+      type: object
+      properties:
+        cloudPublicKey:
+          type: string
+        permId:
+          type: string
+          description: An ID to use for all other calls of post and get messages
+
+    BridgeMessage:
+      type: object
+      properties:
+        formatVersion:
+          description: Format version of this message.  This indicates how the message is encrypted
+          example: v1
+          type: string
+        clientID:
+          type: string
+        messageData:
+          description: Encrypted message data.
+          type: string
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          description: An I18N string
+          type: string
+        parameters:
+          type: object
+          additionalProperties:
+            type: string
+
+    AboutResponse:
+      type: object
+      properties:
+        appVersion:
+          type: string
+        apiVersions:
+          type: array
+          items:
+            type: string
+
