@@ -41,10 +41,6 @@ buildmac:
 	go build -v -o out/bridgeclient_x64_darwin apps/bridge_client.go
 	go build -v -o out/echo_main_x64_darwin apps/echo_main.go
 	go build -v -o out/echo_client_x64_darwin apps/echo_client.go
-	go build -v -o out/k8s_proxylet_x64_darwin apps/k8s_proxylet.go
-	go build -v -o out/k8s_pub_x64_darwin apps/k8s-pub.go
-	go build -v -o out/k8sApiProxyServer_x64_darwin apps/k8sapi_server.go
-	go build -v -o out/k8sApiProxylet_x64_darwin apps/k8sapi_proxylet.go
 
 
 buildlinux:	export GOOS=linux
@@ -58,10 +54,6 @@ buildlinux:
 	go build -v -o out/bridgeclient_x64_linux apps/bridge_client.go
 	go build -v -o out/echo_main_x64_linux apps/echo_main.go
 	go build -v -o out/echo_client_x64_linux apps/echo_client.go
-	go build -v -o out/k8s_proxylet_x64_linux apps/k8s_proxylet.go
-	go build -v -o out/k8s_pub_x64_linux apps/k8s-pub.go
-	go build -v -o out/k8sApiProxyServer_x64_linux apps/k8sapi_server.go
-	go build -v -o out/k8sApiProxylet_x64_linux apps/k8sapi_proxylet.go
 
 clean:
 	rm -r -f tmp
