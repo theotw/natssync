@@ -1,3 +1,7 @@
+/*
+ * Copyright (c)  The One True Way 2020. Use as described in the license. The authors accept no libility for the use of this software.  It is offered "As IS"  Have fun with it
+ */
+
 package cloudserver
 
 import (
@@ -6,12 +10,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
+	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/bridgemodel"
+	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
+	"github.com/theotw/natssync/pkg/msgs"
 	"math"
 	"net/http"
-	"onprembridge/pkg"
-	"onprembridge/pkg/bridgemodel"
-	v1 "onprembridge/pkg/bridgemodel/generated/cloudserver/v1"
-	"onprembridge/pkg/msgs"
+
 	"os"
 	"time"
 )

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c)  The One True Way 2020. Use as described in the license. The authors accept no libility for the use of this software.  It is offered "As IS"  Have fun with it
+ */
+
 package main
 
 import (
@@ -6,13 +10,13 @@ import (
 	"fmt"
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
+	"github.com/theotw/natssync/pkg"
+	cloudclient "github.com/theotw/natssync/pkg/bridgeclient"
+	"github.com/theotw/natssync/pkg/bridgemodel"
+	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
+	"github.com/theotw/natssync/pkg/msgs"
 	"io/ioutil"
 	"net/http"
-	"onprembridge/pkg"
-	cloudclient "onprembridge/pkg/bridgeclient"
-	"onprembridge/pkg/bridgemodel"
-	v1 "onprembridge/pkg/bridgemodel/generated/cloudserver/v1"
-	msgs "onprembridge/pkg/msgs"
 	"os"
 	"time"
 )

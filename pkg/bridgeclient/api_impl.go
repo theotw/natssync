@@ -1,3 +1,7 @@
+/*
+ * Copyright (c)  The One True Way 2020. Use as described in the license. The authors accept no libility for the use of this software.  It is offered "As IS"  Have fun with it
+ */
+
 package cloudclient
 
 import (
@@ -8,12 +12,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/bridgemodel"
+	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
+	"github.com/theotw/natssync/pkg/msgs"
+
 	"net/http"
-	"onprembridge/pkg"
-	"onprembridge/pkg/bridgemodel"
-	serverv1 "onprembridge/pkg/bridgemodel/generated/cloudserver/v1"
-	v1 "onprembridge/pkg/bridgemodel/generated/onpremserver/v1"
-	"onprembridge/pkg/msgs"
 )
 
 const WAIT_MAX = 30
@@ -28,14 +32,14 @@ func handleGetRegister(c *gin.Context) {
 	}
 }
 func handlePostRegister(c *gin.Context) {
-	var in v1.RegisterReq
+	var in v1.RegisterOnPremReq
 	e := c.ShouldBindJSON(&in)
 	if e != nil {
 		code, ret := bridgemodel.HandleErrors(c, e)
 		c.JSON(code, &ret)
 		return
 	}
-	var req serverv1.RegisterOnPremReq
+	var req v1.RegisterOnPremReq
 	premID := uuid.New().String()
 	req.PremID = premID
 	log.Debugf("Generating new key for prem ID %s", premID)

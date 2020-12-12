@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020. NetApp
+ * Copyright (c)  The One True Way 2020. Use as described in the license. The authors accept no libility for the use of this software.  It is offered "As IS"  Have fun with it
  */
 
 package bridgemodel
@@ -8,8 +8,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"onprembridge/pkg/bridgemodel/errors"
-	v1 "onprembridge/pkg/bridgemodel/generated/cloudserver/v1"
+	"github.com/theotw/natssync/pkg/bridgemodel/errors"
+	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
 
 	"net/http"
 	"strings"
