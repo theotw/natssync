@@ -1,15 +1,19 @@
 CLOUD_OPENAPIDEF_FILE=openapi/cloud_openapi_v1.yaml
 openapicli_jar=third_party/openapi-generator-cli.jar
 
-generate:
+generate: maketmp justgenerate rmtmp
+maketmp:
 	rm -r -f tmpcloud
 	mkdir tmpcloud
+
+rmtmp:
+	rm -r -f tmpcloud
+
+justgenerate:
 	docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate -g go-server --package-name v1 -i /local/${CLOUD_OPENAPIDEF_FILE} -o /local/tmpcloud
 	rm -r -f pkg/bridgemodel/generated/v1
 	mkdir pkg/bridgemodel/generated/v1
 	cp tmpcloud/go/model* pkg/bridgemodel/generated/v1
-	chmod -R 777 tmpcloud
-	rm -r -f tmpcloud
 
 incontainergenerate:
 	rm -r -f tmpcloud
