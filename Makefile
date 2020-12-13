@@ -73,3 +73,12 @@ echoproxylet:
 
 
 allimages: cloudimage clientimage echoproxylet
+
+l1: export CERT_DIR=${PWD}/testfiles
+l1:
+	echo ${PATH}
+	go get github.com/jstemmer/go-junit-report
+	mkdir -p out
+	#go test -v -coverpkg=github.com/theotw/natssync/pkg/... -coverprofile=out/unit_coverage.out github.com/theotw/natssync/pkg/...
+	go test -v -coverpkg=github.com/theotw/natssync/pkg/... -coverprofile=out/unit_coverage.out github.com/theotw/natssync/pkg/...  2>&1 >out/l1_out.txt
+	cat out/l1_out.txt | go-junit-report > out/report_l1.xml

@@ -22,7 +22,7 @@ import (
 )
 
 func loadPrivateKey(clientID string) (*rsa.PrivateKey, error) {
-	basePath := pkg.GetEnvWithDefaults("CERT_DIR", "certs")
+	basePath := pkg.GetEnvWithDefaults("CERT_DIR", "/certs")
 	var keyFile string
 	if clientID == CLOUD_ID {
 		keyFile = "actmaster.pem"

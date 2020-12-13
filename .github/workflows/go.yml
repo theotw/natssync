@@ -33,4 +33,7 @@ jobs:
     - name: Build
       run: make buildlinux
 
+    - name: Unit / L1 Test
+      run: |
+        make l1
 
