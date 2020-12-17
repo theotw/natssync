@@ -11,4 +11,5 @@ require (
 	github.com/nats-io/nats.go v1.10.0
 	github.com/sirupsen/logrus v1.5.0
 	github.com/stretchr/testify v1.6.1
+	go.mongodb.org/mongo-driver v1.4.4
 )

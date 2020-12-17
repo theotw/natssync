@@ -6,6 +6,7 @@ package cloudserver
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
@@ -43,6 +44,10 @@ func RunMsgHandler(subjectString string) {
 				for listenForMsgs {
 					m, err := subscription.NextMsg(10 * time.Second)
 					if err == nil {
+						if strings.HasSuffix(m.Subject,msgs.ECHO_SUBJECT_BASE){
+							echosub:=fmt.Sprintf("%s.bridge-msg-handler",m.Reply)
+							nc.Publish(echosub,[]byte("message handler "+time.Now().String()))
+						}
 						clientID := FindClientID(m.Subject)
 						if len(clientID) != 0 {
 							cm := new(CachedMsg)

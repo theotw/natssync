@@ -6,7 +6,10 @@ package msgs
 
 const ENVELOPE_VERSION_1 = 1
 const CLOUD_ID = "cloud"
-
+const NB_MSG_PREFIX="natssync-nb"
+const SB_MSG_PREFIX="natssync-sb"
+const ECHOLET_SUFFIX="echolet"
+const ECHO_SUBJECT_BASE="echo"
 type MessageEnvelope struct {
 	EnvelopeVersion int
 	RecipientID     string

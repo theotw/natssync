@@ -7,9 +7,11 @@ package cloudserver
 import (
 	"github.com/theotw/natssync/pkg"
 	"sync"
+	"time"
 )
 
 type CachedMsg struct {
+	Timestamp time.Time
 	ClientID string
 	Data     string
 }

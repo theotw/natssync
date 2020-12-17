@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/cloudserver"
+	"github.com/theotw/natssync/pkg/msgs"
 )
 
 func main() {
@@ -26,7 +27,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to initialize the cache manager %s", err.Error())
 	}
-	go cloudserver.RunMsgHandler("astra.>")
+	subjectString:=fmt.Sprintf("%s.>",msgs.SB_MSG_PREFIX)
+	go cloudserver.RunMsgHandler(subjectString)
 	fmt.Println("Starting Server")
 	cloudserver.RunBridgeServer(false)
 	fmt.Println("Server stopped")

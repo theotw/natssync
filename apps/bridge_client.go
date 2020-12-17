@@ -18,6 +18,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -57,7 +58,7 @@ func main() {
 				time.Sleep(10 * time.Second)
 				continue
 			} else {
-				subj := fmt.Sprintf("astra.%s.>", msgs.CLOUD_ID)
+				subj := fmt.Sprintf("%s.%s.>",msgs.NB_MSG_PREFIX ,msgs.CLOUD_ID)
 				nc.Subscribe(subj, func(msg *nats.Msg) {
 					log.Debugf("Sending msg to cloud %s", msg.Subject)
 					sendMessageToCloud(msg, serverURL, clientID)
@@ -102,6 +103,13 @@ func main() {
 					continue
 				}
 				if len(natmsg.Reply) > 0 {
+					if strings.HasSuffix(natmsg.Subject,msgs.ECHO_SUBJECT_BASE){
+						var echomsg nats.Msg
+						echomsg.Subject=fmt.Sprintf("%s.bridge-client",natmsg.Reply)
+						echomsg.Data=[]byte("birdge client")
+						go sendMessageToCloud(&echomsg,serverURL, clientID)
+					}
+
 					nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data)
 				} else {
 					nc.Publish(natmsg.Subject, natmsg.Data)

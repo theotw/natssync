@@ -22,7 +22,7 @@ var quit chan os.Signal
 
 // Run - configures and starts the web server
 func RunBridgeServer(test bool) error {
-	logLevel := pkg.GetEnvWithDefaults("LOG_LEVEL", "debug")
+	logLevel := pkg.GetEnvWithDefaults("LOG_LEVEL", "info")
 
 	level, levelerr := log.ParseLevel(logLevel)
 	if levelerr != nil {

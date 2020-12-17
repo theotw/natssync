@@ -5,6 +5,7 @@ import (
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/msgs"
 	"os"
 	"runtime"
 )
@@ -20,12 +21,13 @@ func main() {
 		os.Exit(2)
 	}
 	clientID := pkg.GetEnvWithDefaults("PREM_ID", "client1")
-	subj := fmt.Sprintf("astra.%s.echo", clientID)
+	subj := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX,clientID,msgs.ECHO_SUBJECT_BASE)
 
 	nc.Subscribe(subj, func(msg *nats.Msg) {
 		log.Infof("Got message %s : ", subj, msg.Reply)
 		echoMsg := fmt.Sprintf("From %s message=%s \n", clientID, string(msg.Data))
-		nc.Publish(msg.Reply, []byte(echoMsg))
+		replysub:=fmt.Sprintf("%s.%s",msg.Reply,msgs.ECHOLET_SUFFIX)
+		nc.Publish(replysub, []byte(echoMsg))
 		nc.Flush()
 	})
 	runtime.Goexit()
