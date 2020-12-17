@@ -80,12 +80,12 @@ jobs:
         id: ip
         uses: haythem/public-ip@v1.2
       - name: Save the IP of the server
-        run: echo ${{ steps.ip.outputs.ipv4 }} > out/server_ip.txt
+        run: echo ${{ steps.ip.outputs.ipv4 }} > server_ip.txt
       - name: Upload the IP of the server
         uses: actions/upload-artifact@v2
         with:
           name: server_ip
-          path: out/server_ip.txt
+          path: server_ip.txt
       - name: Install nats
         run: |
           docker pull nats
