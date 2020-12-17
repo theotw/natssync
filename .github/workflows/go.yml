@@ -89,7 +89,7 @@ jobs:
         with:
           name: server_ip
       - name: Install nats
-          run: docker pull nats
+        run: docker pull nats
       - name: Run the client
         run: |
           value=`cat server_ip.txt`
