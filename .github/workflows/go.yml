@@ -124,4 +124,4 @@ jobs:
         with:
           assertion: should.equal
           expected: "Test message"
-          actual: `cat test_response.txt`
+          actual: $(cat test_response.txt)
