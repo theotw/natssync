@@ -38,11 +38,6 @@ jobs:
       with:
         name: bridgeclient_x64_linux
         path: out/bridgeclient_x64_linux
-    - name: Upload bridgeserver from the build job
-      uses: actions/upload-artifact@v2
-      with:
-        name: bridgeserver_test_x64_linux
-        path: out/bridgeserver_test_x64_linux
     - name: Upload echo_main from the build job
       uses: actions/upload-artifact@v2
       with:
@@ -149,7 +144,9 @@ jobs:
       - name: Sleep to wait for the server message
         run: sleep 30
       - name: Kill the server
-        run: curl http://server_ip:8080/k8sdeployer/kill
+        run: |
+          value=`cat server_ip.txt`
+          curl http://${value}:8080/k8sdeployer/kill
 
   echotest:
     name: Check echo response
