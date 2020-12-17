@@ -102,7 +102,7 @@ jobs:
       - name: Run the server
         run: |
           chmod +x echo_main_x64_linux
-          go test -v apps/bridge_server_test.go &
+          go test -v apps/bridge_server_test.go 2>&1 &
           PID=$!
           echo "Server PID $PID"
           ./echo_main_x64_linux "Test message" &> test_response.txt
