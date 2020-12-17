@@ -73,15 +73,8 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         files: out/report_*.xml
-    - name: Run the server
-      run: |
-        chmod +x bridgeserver_x64_linux
-        chmod +x echo_main_x64_linux
-        ./bridgeserver_x64_linux &
-        ./echo_main_x64_linux "Test message" > test_response.txt
-        cat test_response.txt
 
-  clientintegration:
+  client:
     name: Client
     needs: build
     runs-on: ubuntu-latest
@@ -107,3 +100,23 @@ jobs:
           chmod +x bridgeclient_x64_linux
           ./bridgeclient_x64_linux &
           ./echo_client_x64_linux &
+
+  echotest:
+    name: Run echo test
+    needs: Client
+    steps:
+      - name: Download bridgeserver from the build job
+        uses: actions/download-artifact@v2
+        with:
+          name: bridgeserver_x64_linux
+      - name: Download echo_main from the build job
+        uses: actions/download-artifact@v2
+        with:
+          name: echo_main_x64_linux
+      - name: Run the server
+          run: |
+            chmod +x bridgeserver_x64_linux
+            chmod +x echo_main_x64_linux
+            ./bridgeserver_x64_linux &
+            ./echo_main_x64_linux "Test message" > test_response.txt
+            cat test_response.txt
