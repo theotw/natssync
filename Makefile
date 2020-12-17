@@ -38,6 +38,7 @@ buildmac:
 	mkdir -p out
 	rm -f  out/bridgeserver_x64_darwin
 	go build -v -o out/bridgeserver_x64_darwin apps/bridge_server.go
+	go build -v -o out/bridgeserver_test_x64_darwin apps/bridge_server_test.go
 	go build -v -o out/bridgeclient_x64_darwin apps/bridge_client.go
 	go build -v -o out/echo_main_x64_darwin apps/echo_main.go
 	go build -v -o out/echo_client_x64_darwin apps/echo_client.go
@@ -50,7 +51,9 @@ buildlinux: export GO111MODULE=on
 buildlinux:
 	mkdir -p out
 	rm -f  out/bridgeserver_x64_linux
+	rm -f  out/bridgeserver_test_x64_linux
 	go build -v -o out/bridgeserver_x64_linux apps/bridge_server.go
+	go build -v -o out/bridgeserver_test_x64_linux apps/bridge_server_test.go
 	go build -v -o out/bridgeclient_x64_linux apps/bridge_client.go
 	go build -v -o out/echo_main_x64_linux apps/echo_main.go
 	go build -v -o out/echo_client_x64_linux apps/echo_client.go
