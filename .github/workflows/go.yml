@@ -77,8 +77,8 @@ jobs:
         with:
           name: echo_main_x64_linux
       - name: Get the IP of the server
-          id: ip
-          uses: haythem/public-ip@v1.2
+        id: ip
+        uses: haythem/public-ip@v1.2
       - name: Save the IP of the server
         run: echo ${{ steps.ip.outputs.ipv4 }} > out/server_ip.txt
       - name: Upload the IP of the server
@@ -91,15 +91,15 @@ jobs:
           docker pull nats
           docker run -d -p 4222:4222 nats:latest
       - name: Install redis
-          run: |
-            docker pull redis
-            docker run -d redis
+        run: |
+          docker pull redis
+          docker run -d redis
       - name: Run the server
-          run: |
-            chmod +x bridgeserver_x64_linux
-            chmod +x echo_main_x64_linux
-            ./bridgeserver_x64_linux &
-            ./echo_main_x64_linux "Test message" > test_response.txt
+        run: |
+          chmod +x bridgeserver_x64_linux
+          chmod +x echo_main_x64_linux
+          ./bridgeserver_x64_linux &
+          ./echo_main_x64_linux "Test message" > test_response.txt
       - name: Upload the echo response
         uses: actions/upload-artifact@v2
         with:
