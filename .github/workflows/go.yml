@@ -104,6 +104,7 @@ jobs:
   echotest:
     name: Run echo test
     needs: Client
+    runs-on: ubuntu-latest
     steps:
       - name: Download bridgeserver from the build job
         uses: actions/download-artifact@v2
