@@ -104,6 +104,8 @@ jobs:
           chmod +x echo_main_x64_linux
           go test -v apps/bridge_server_test.go &
           ./echo_main_x64_linux "Test message" &> test_response.txt
+          sleep 30
+          curl -v -k http://localhost:8080/event-bridge/kill
       - name: Upload the echo response
         uses: actions/upload-artifact@v2
         with:
@@ -146,7 +148,6 @@ jobs:
       - name: Kill the server
         run: |
           value=`cat server_ip.txt`
-          curl -v -k http://${value}:8080/event-bridge/kill
 
   echotest:
     name: Check echo response
