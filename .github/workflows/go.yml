@@ -73,6 +73,13 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         files: out/report_*.xml
+    - name: Run the server
+      run: |
+        chmod +x bridgeserver_x64_linux
+        chmod +x echo_main_x64_linux
+        ./bridgeserver_x64_linux &
+        ./echo_main_x64_linux "Test message" > test_response.txt
+        cat test_response.txt
 
   clientintegration:
     name: Client
@@ -100,25 +107,3 @@ jobs:
           chmod +x bridgeclient_x64_linux
           ./bridgeclient_x64_linux &
           ./echo_client_x64_linux &
-
-  serverintegration:
-    name: Server
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download bridgeserver_x64_linux from the build job
-        uses: actions/download-artifact@v2
-        with:
-          name: bridgeserver_x64_linux
-      - name: Download echo_main from the build job
-        uses: actions/download-artifact@v2
-        with:
-          name: echo_main_x64_linux
-      - name: Install nats
-        run: docker pull nats
-      - name: Run the server
-        run: |
-          chmod +x bridgeserver_x64_linux
-          ./bridgeserver_x64_linux &
-          ./echo_main_x64_linux "Test message" > test_response.txt
-          cat test_response.txt
