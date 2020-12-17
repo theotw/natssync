@@ -68,6 +68,16 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Get the IP of the server
+        id: ip
+        uses: haythem/public-ip@v1.2
+      - name: Save the IP of the server
+        run: echo ${{ steps.ip.outputs.ipv4 }} > server_ip.txt
+      - name: Upload the IP of the server
+        uses: actions/upload-artifact@v2
+        with:
+          name: server_ip
+          path: server_ip.txt
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
@@ -82,24 +92,10 @@ jobs:
               curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
               dep ensure
           fi
-      - name: Download bridgeserver from the build job
-        uses: actions/download-artifact@v2
-        with:
-          name: bridgeserver_test_x64_linux
       - name: Download echo_main from the build job
         uses: actions/download-artifact@v2
         with:
           name: echo_main_x64_linux
-      - name: Get the IP of the server
-        id: ip
-        uses: haythem/public-ip@v1.2
-      - name: Save the IP of the server
-        run: echo ${{ steps.ip.outputs.ipv4 }} > server_ip.txt
-      - name: Upload the IP of the server
-        uses: actions/upload-artifact@v2
-        with:
-          name: server_ip
-          path: server_ip.txt
       - name: Install nats
         run: |
           docker pull nats
