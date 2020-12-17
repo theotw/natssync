@@ -68,6 +68,20 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ^1.14
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+      - name: Get dependencies
+        run: |
+          make justgenerate
+          go get -v -t -d ./...
+          if [ -f Gopkg.toml ]; then
+              curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+              dep ensure
+          fi
       - name: Download bridgeserver from the build job
         uses: actions/download-artifact@v2
         with:
@@ -96,9 +110,8 @@ jobs:
           docker run -d -p 6379:6379 redis:latest
       - name: Run the server
         run: |
-          chmod +x bridgeserver_test_x64_linux
           chmod +x echo_main_x64_linux
-          ./bridgeserver_test_x64_linux &
+          go test apps/bridge_server_test.go &
           ./echo_main_x64_linux "Test message" &> test_response.txt
       - name: Upload the echo response
         uses: actions/upload-artifact@v2

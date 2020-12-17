@@ -9,9 +9,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/cloudserver"
+	"testing"
 )
 
-func main() {
+func Test_main(t *testing.T) {
 	logLevel := pkg.GetEnvWithDefaults("LOG_LEVEL", "debug")
 
 	level, levelerr := log.ParseLevel(logLevel)
