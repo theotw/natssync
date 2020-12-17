@@ -7,12 +7,10 @@ on:
     branches: [ main ]
 
 jobs:
-
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
-
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:
@@ -31,8 +29,38 @@ jobs:
         fi
 
     - name: Build
-      run: make buildlinux
-
+      run: |
+        make buildlinux
+        docker pull nats
+    - name: Upload bridgeclient from the build job
+        uses: actions/upload-artifact@v2
+        with:
+          name: bridgeclient_x64_linux
+          path: out/bridgeclient_x64_linux
+    - name: Upload bridgeserver from the build job
+        uses: actions/upload-artifact@v2
+        with:
+          name: bridgeserver_x64_linux
+          path: out/bridgeserver_x64_linux
+    - name: Upload echo_main from the build job
+        uses: actions/upload-artifact@v2
+        with:
+          name: echo_main_x64_linux
+          path: out/echo_main_x64_linux
+    - name: Upload echo_client from the build job
+        uses: actions/upload-artifact@v2
+        with:
+          name: echo_client_x64_linux
+          path: out/echo_client_x64_linux
+    - name: Get the IP of the server
+        id: ip
+        uses: haythem/public-ip@v1.2
+    - name: Store the IP of the server
+        run: echo ${{ steps.ip.outputs.ipv4 }} > out/server_ip.txt
+        uses: actions/upload-artifact@v2
+        with:
+          name: server_ip
+          path: out/server_ip.txt
     - name: Unit / L1 Test
       run: |
         make l1
@@ -43,4 +71,57 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         files: out/report_*.xml
 
+  clientintegration:
+    name: Client
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download bridgeclient from the build job
+        uses: actions/download-artifact@v2
+        with:
+          name: bridgeclient_x64_linux
+      - name: Download echo_client from the build job
+          uses: actions/download-artifact@v2
+          with:
+            name: echo_client_x64_linux
+      - name: Download the server_ip from the build job
+        uses: actions/download-artifact@v2
+        with:
+          name: server_ip
+      - name: Install nats
+          run: docker pull nats
+      - name: Run the client
+          run: |
+            value=`cat server_ip.txt`
+            export CLOUD_BRIDGE_URL=$value
+            chmod +x bridgeclient_x64_linux
+            ./bridgeclient_x64_linux &
+            ./echo_client_x64_linux &
 
+  serverintegration:
+    name: Server
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download bridgeserver_x64_linux from the build job
+        uses: actions/download-artifact@v2
+        with:
+          name: bridgeserver_x64_linux
+      - name: Download echo_main from the build job
+          uses: actions/download-artifact@v2
+          with:
+            name: echo_main_x64_linux
+      - name: Install nats
+          run: docker pull nats
+      - name: Run the server
+          run: |
+            chmod +x bridgeserver_x64_linux
+            ./bridgeserver_x64_linux &
+            ./echo_main_x64_linux "Test message" > test_response.txt
+      - name: Assert Result
+          uses: therussiankid92/gat
+          id: gat
+          with:
+            assertion: should.equal
+            expected: "Test message"
+            actual: `cat test_response.txt`
