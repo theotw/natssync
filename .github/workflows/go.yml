@@ -112,7 +112,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Sleep to wait for the server_ip artifact
-          run: sleep 30
+        run: sleep 30
       - name: Download bridgeclient from the build job
         uses: actions/download-artifact@v2
         with:
