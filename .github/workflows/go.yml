@@ -101,6 +101,7 @@ jobs:
           docker run -d -p 6379:6379 redis:latest
       - name: Run the server
         run: |
+          ls
           chmod +x echo_main_x64_linux
           go test apps/bridge_server_test.go &
           ./echo_main_x64_linux "Test message" &> test_response.txt
