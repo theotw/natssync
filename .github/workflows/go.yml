@@ -93,7 +93,7 @@ jobs:
       - name: Install redis
         run: |
           docker pull redis
-          docker run -d redis
+          docker run -d -p 6379:6379 redis:latest
       - name: Run the server
         run: |
           chmod +x bridgeserver_x64_linux
@@ -137,6 +137,8 @@ jobs:
           chmod +x echo_client_x64_linux
           ./bridgeclient_x64_linux &
           ./echo_client_x64_linux &
+      - name: Sleep to wait for the server message
+        run: sleep 30
 
   echotest:
     name: Check echo response
