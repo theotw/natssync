@@ -145,7 +145,7 @@ jobs:
           chmod +x echo_main_x64_linux
           ./bridgeclient_x64_linux &
           CLIENT_PID=$!
-          ./echo_main_x64_linux &> 1
+          ./echo_main_x64_linux &> 1 &
           ECHO_PID=$!
       - name: Sleep to wait for the server message
         run: sleep 30
