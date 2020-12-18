@@ -21,9 +21,10 @@ func main() {
 	}
 	clientID := pkg.GetEnvWithDefaults("PREM_ID", "client1")
 	subj := fmt.Sprintf("astra.%s.echo", clientID)
+	log.Infof("Subscribing to subject %s", subj)
 
 	nc.Subscribe(subj, func(msg *nats.Msg) {
-		log.Infof("Got message %s : ", subj, msg.Reply)
+		log.Infof("Got message %s : %s", subj, msg.Reply)
 		echoMsg := fmt.Sprintf("From %s message=%s \n", clientID, string(msg.Data))
 		nc.Publish(msg.Reply, []byte(echoMsg))
 		nc.Flush()
