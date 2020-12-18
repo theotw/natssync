@@ -104,7 +104,7 @@ jobs:
           chmod +x echo_client_x64_linux
           go test -v apps/bridge_server_test.go 2>&1 &
           SERVER_PID=$!
-          echo "Server PID $PID"
+          echo "Server PID SERVER_PID"
           sleep 30
           ./echo_client_x64_linux &> test_response.txt
           kill -9 $SERVER_PID
@@ -141,18 +141,21 @@ jobs:
         run: |
           value=`cat server_ip.txt`
           export CLOUD_BRIDGE_URL="http://${value}"
+          echo "CLOUD_BRIDGE_URL: ${CLOUD_BRIDGE_URL}"
           chmod +x bridgeclient_x64_linux
           chmod +x echo_main_x64_linux
           ./bridgeclient_x64_linux &
           CLIENT_PID=$!
+          echo "Bridgeclient PID ${CLIENT_PID}"
           ./echo_main_x64_linux &> 1 &
           ECHO_PID=$!
+          echo "Echomain PID ${ECHO_PID}"
       - name: Sleep to wait for the server message
         run: sleep 30
       - name: Kill the processes
         run: |
-          kill -9 $CLIENT_PID
-          kill -9 $ECHO_PID
+          kill -9 ${CLIENT_PID}
+          kill -9 ${ECHO_PID}
 
   echotest:
     name: Check echo response
