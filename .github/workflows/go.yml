@@ -101,7 +101,7 @@ jobs:
           docker run -d -p 6379:6379 redis:latest
       - name: Run the server
         run: |
-          chmod +x echo_main_x64_linux
+          chmod +x echo_client_x64_linux
           go test -v apps/bridge_server_test.go 2>&1 &
           PID=$!
           echo "Server PID $PID"
