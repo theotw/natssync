@@ -87,10 +87,10 @@ jobs:
               curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
               dep ensure
           fi
-      - name: Download echo_main from the build job
+      - name: Download echo_client from the build job
         uses: actions/download-artifact@v2
         with:
-          name: echo_main_x64_linux
+          name: echo_client_x64_linux
       - name: Install nats
         run: |
           docker pull nats
@@ -105,7 +105,7 @@ jobs:
           go test -v apps/bridge_server_test.go 2>&1 &
           PID=$!
           echo "Server PID $PID"
-          ./echo_main_x64_linux "Test message" &> test_response.txt &
+          ./echo_client_x64_linux &> test_response.txt &
           sleep 30
           kill -9 $PID
       - name: Upload the echo response
@@ -125,10 +125,10 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: bridgeclient_x64_linux
-      - name: Download echo_client from the build job
+      - name: Download echo_main from the build job
         uses: actions/download-artifact@v2
         with:
-          name: echo_client_x64_linux
+          name: echo_main_x64_linux
       - name: Download the server_ip from the build job
         uses: actions/download-artifact@v2
         with:
@@ -142,9 +142,9 @@ jobs:
           value=`cat server_ip.txt`
           export CLOUD_BRIDGE_URL="http://${value}"
           chmod +x bridgeclient_x64_linux
-          chmod +x echo_client_x64_linux
+          chmod +x echo_main_x64_linux
           ./bridgeclient_x64_linux &
-          ./echo_client_x64_linux &
+          ./echo_main_x64_linux &
       - name: Sleep to wait for the server message
         run: sleep 30
       - name: Kill the server
