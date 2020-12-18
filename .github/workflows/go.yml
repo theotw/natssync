@@ -107,6 +107,7 @@ jobs:
           echo "Server PID SERVER_PID"
           sleep 30
           ./echo_client_x64_linux &> test_response.txt
+          echo "Killing the server with PID $SERVER_PID"
           kill -9 $SERVER_PID
       - name: Upload the echo response
         uses: actions/upload-artifact@v2
@@ -150,11 +151,10 @@ jobs:
           ./echo_main_x64_linux &> 1 &
           ECHO_PID=$!
           echo "Echomain PID ${ECHO_PID}"
-      - name: Sleep to wait for the server message
-        run: sleep 30
-      - name: Kill the processes
-        run: |
+          sleep 30
+          echo "Killing the client with PID $CLIENT_PID"
           kill -9 ${CLIENT_PID}
+          echo "Killing the echolet with PID $ECHO_PID"
           kill -9 ${ECHO_PID}
 
   echotest:
