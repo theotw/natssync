@@ -15,20 +15,73 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
 	"io/ioutil"
 	"os"
 	"path"
 )
 
+func InitCloudKey() {
+	//first checkout the keys
+	_, keyErr := loadPrivateKey(CLOUD_ID)
+	if keyErr != nil {
+		log.Debugf("Unable to find cloud master private key %s \n", keyErr.Error())
+	}
+	_, pubKeyErr := LoadPublicKey(CLOUD_ID)
+	if pubKeyErr != nil {
+		log.Debugf("Unable to find cloud master public key %s \n", pubKeyErr.Error())
+	}
+	if keyErr != nil || pubKeyErr != nil {
+		generateAndSaveKey(CLOUD_ID)
+	}
+
+}
+func generateAndSaveKey(locationID string) error {
+	pair, err := generateNewKeyPair(locationID)
+	if err != nil {
+		log.Errorf("Unable to generate new key pair %s \n", err.Error())
+		return err
+	}
+	pubFileName := MakePublicKeyFileName(locationID)
+	keyFileName := MakePrivateFileName(locationID)
+
+	pubFile, err := os.Create(pubFileName)
+	if err != nil {
+		log.Errorf("Unable to open pub key file %s \n", err.Error())
+		return err
+	}
+	defer pubFile.Close()
+
+	keyFile, err := os.Create(keyFileName)
+	if err != nil {
+		log.Errorf("Unable to open key file %s \n", err.Error())
+		return err
+	}
+	defer keyFile.Close()
+	fileBits := x509.MarshalPKCS1PrivateKey(pair)
+	publickey := &pair.PublicKey
+	pubFileBits, e := x509.MarshalPKIXPublicKey(publickey)
+	if e != nil {
+		return e
+	}
+	privateKeyBlock := &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: fileBits,
+	}
+	pem.Encode(keyFile, privateKeyBlock)
+	publicKeyBlock := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubFileBits,
+	}
+	pem.Encode(pubFile, publicKeyBlock)
+
+	return nil
+}
 func loadPrivateKey(clientID string) (*rsa.PrivateKey, error) {
 	basePath := pkg.GetEnvWithDefaults("CERT_DIR", "/certs")
 	var keyFile string
-	if clientID == CLOUD_ID {
-		keyFile = "actmaster.pem"
-	} else {
-		keyFile = fmt.Sprintf("%s.pem", clientID)
-	}
+	keyFile = fmt.Sprintf("%s.pem", clientID)
 	masterPemPath := path.Join(basePath, keyFile)
 	f, err := os.Open(masterPemPath)
 	if err != nil {
@@ -124,11 +177,7 @@ func ReadPrivateKeyFile(clientID string) ([]byte, error) {
 
 func MakePublicKeyFileName(clientID string) string {
 	var keyFile string
-	if clientID == CLOUD_ID {
-		keyFile = "actmaster_public.pem"
-	} else {
-		keyFile = fmt.Sprintf("%s_public.pem", clientID)
-	}
+	keyFile = fmt.Sprintf("%s_public.pem", clientID)
 
 	basePath := pkg.GetEnvWithDefaults("CERT_DIR", "/certs")
 	masterPemPath := path.Join(basePath, keyFile)
@@ -136,11 +185,7 @@ func MakePublicKeyFileName(clientID string) string {
 }
 func MakePrivateFileName(clientID string) string {
 	var keyFile string
-	if clientID == CLOUD_ID {
-		keyFile = "actmaster.pem"
-	} else {
-		keyFile = fmt.Sprintf("%s.pem", clientID)
-	}
+	keyFile = fmt.Sprintf("%s.pem", clientID)
 
 	basePath := pkg.GetEnvWithDefaults("CERT_DIR", "/certs")
 	masterPemPath := path.Join(basePath, keyFile)

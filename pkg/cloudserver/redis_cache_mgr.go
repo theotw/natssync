@@ -22,6 +22,7 @@ func (t *RedisCacheMgr) GetMessages(clientID string) ([]*CachedMsg, error) {
 	log.Tracef("redis Get message %s", clientID)
 	listName := mkListName(clientID)
 	var data string
+
 	err := t.Pool.Do(radix.Cmd(&data, "LPOP", listName))
 	ret := make([]*CachedMsg, 0)
 	if err == nil && len(data) > 0 {

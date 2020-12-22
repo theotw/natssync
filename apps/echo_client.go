@@ -1,9 +1,14 @@
+/*
+ * Copyright (c)  The One True Way 2020. Use as described in the license. The authors accept no libility for the use of this software.  It is offered "As IS"  Have fun with it
+ */
+
 package main
 
 import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
+	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/msgs"
 	"log"
 	"os"
@@ -17,7 +22,9 @@ import (
 //that indicates which part of the journey has been hit.
 // the loop ends when it sees echolet.
 func main() {
-	nc, err := nats.Connect("nats://127.0.0.1:4222")
+	naturl := pkg.GetEnvWithDefaults("NATS_SERVER_URL", "nats://127.0.0.1:4222")
+	fmt.Printf("Using NATS Server %s \n", naturl)
+	nc, err := nats.Connect(naturl)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -26,25 +33,28 @@ func main() {
 		panic("Must have 2 arguments <target localtionID> <message>")
 	}
 	defer nc.Close()
-	reply := fmt.Sprintf("%s.%s.%s.*", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID, uuid.New().String())
+	randomClientUUID := uuid.New().String()
+	reply := fmt.Sprintf("%s.%s.%s", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID, randomClientUUID)
 	clientID := os.Args[1]
 	text = os.Args[2]
-	sub := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, clientID,msgs.ECHO_SUBJECT_BASE)
+	sub := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, clientID, msgs.ECHO_SUBJECT_BASE)
+	replyListenSub := fmt.Sprintf("%s.%s.%s.*", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID, randomClientUUID)
+	sync, err := nc.SubscribeSync(replyListenSub)
+
 	nc.PublishRequest(sub, reply, []byte(text))
 	nc.Flush()
-	sync, err := nc.SubscribeSync(reply)
 	if err != nil {
 		fmt.Printf("Got Error %s", err.Error())
 		os.Exit(1)
 	}
-	for ; true; {
-		msg, err := sync.NextMsg(1 * time.Minute)
+	for true {
+		msg, err := sync.NextMsg(5 * time.Minute)
 		if err != nil {
-			fmt.Printf("Got Error %s", err.Error())
+			fmt.Printf("Got Error %s \n", err.Error())
 			break
 		} else {
-			fmt.Printf("Got response %s", string(msg.Data))
-			if strings.HasSuffix(msg.Subject,"proxylet"){
+			fmt.Printf("Got response %s \n", string(msg.Data))
+			if strings.HasSuffix(msg.Subject, msgs.ECHOLET_SUFFIX) {
 				break
 			}
 		}

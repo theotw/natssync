@@ -63,16 +63,22 @@ clean:
 
 
 cloudimage:
-	docker build -f CloudServer.dockerfile --tag bmason42/cloudbridgeserver:latest .
+	docker build -f CloudServer.dockerfile --tag theotw/natssync-server:latest .
 
 clientimage:
-	docker build -f CloudClient.dockerfile --tag bmason42/cloudbridgeclient:latest .
+	docker build -f CloudClient.dockerfile --tag theotw/natssync-client:latest .
 
 echoproxylet:
-	docker build -f EchoProxylet.dockerfile --tag bmason42/echoproxylet:latest .
+	docker build -f EchoProxylet.dockerfile --tag theotw/echo-proxylet:latest .
 
 
 allimages: cloudimage clientimage echoproxylet
+
+pushall:
+	docker push theotw/natssync-server:latest
+	docker push theotw/natssync-client:latest
+	docker push theotw/echo-proxylet:latest
+
 
 l1: export CERT_DIR=${PWD}/testfiles
 l1:

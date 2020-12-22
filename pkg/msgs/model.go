@@ -4,12 +4,15 @@
 
 package msgs
 
+import "crypto"
+
 const ENVELOPE_VERSION_1 = 1
-const CLOUD_ID = "cloud"
-const NB_MSG_PREFIX="natssync-nb"
-const SB_MSG_PREFIX="natssync-sb"
-const ECHOLET_SUFFIX="echolet"
-const ECHO_SUBJECT_BASE="echo"
+const CLOUD_ID = "cloud-master"
+const NB_MSG_PREFIX = "natssync-nb"
+const SB_MSG_PREFIX = "natssync-sb"
+const ECHOLET_SUFFIX = "echolet"
+const ECHO_SUBJECT_BASE = "echo"
+
 type MessageEnvelope struct {
 	EnvelopeVersion int
 	RecipientID     string
@@ -17,4 +20,12 @@ type MessageEnvelope struct {
 	Message         string
 	Signature       string
 	MsgKey          string
+}
+
+type LocationKeyStore interface {
+	StorePrivateKey(locationID string, key *crypto.PrivateKey) error
+	StorePublicKey(locationID string, key *crypto.PublicKey) error
+
+	LoadPrivateKey(locationID string) (*crypto.PrivateKey, error)
+	LoadPublicKey(locationID string) (*crypto.PublicKey, error)
 }

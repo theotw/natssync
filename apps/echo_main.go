@@ -1,3 +1,7 @@
+/*
+ * Copyright (c)  The One True Way 2020. Use as described in the license. The authors accept no libility for the use of this software.  It is offered "As IS"  Have fun with it
+ */
+
 package main
 
 import (
@@ -8,6 +12,7 @@ import (
 	"github.com/theotw/natssync/pkg/msgs"
 	"os"
 	"runtime"
+	"time"
 )
 
 func main() {
@@ -21,12 +26,12 @@ func main() {
 		os.Exit(2)
 	}
 	clientID := pkg.GetEnvWithDefaults("PREM_ID", "client1")
-	subj := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX,clientID,msgs.ECHO_SUBJECT_BASE)
+	subj := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, clientID, msgs.ECHO_SUBJECT_BASE)
 
 	nc.Subscribe(subj, func(msg *nats.Msg) {
 		log.Infof("Got message %s : ", subj, msg.Reply)
-		echoMsg := fmt.Sprintf("From %s message=%s \n", clientID, string(msg.Data))
-		replysub:=fmt.Sprintf("%s.%s",msg.Reply,msgs.ECHOLET_SUFFIX)
+		echoMsg := fmt.Sprintf("%s From %s message=%s \n", time.Now().String(), clientID, string(msg.Data))
+		replysub := fmt.Sprintf("%s.%s", msg.Reply, msgs.ECHOLET_SUFFIX)
 		nc.Publish(replysub, []byte(echoMsg))
 		nc.Flush()
 	})

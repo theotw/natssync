@@ -12,8 +12,8 @@ import (
 
 type CachedMsg struct {
 	Timestamp time.Time
-	ClientID string
-	Data     string
+	ClientID  string
+	Data      string
 }
 type MsgCacheManager interface {
 	GetMessages(clientID string) ([]*CachedMsg, error)
@@ -24,7 +24,7 @@ type MsgCacheManager interface {
 var cacheMgr MsgCacheManager
 
 func InitCacheMgr() error {
-	mgrToUse := pkg.GetEnvWithDefaults("CACHE_MGR", "redis")
+	mgrToUse := pkg.GetEnvWithDefaults("CACHE_MGR", "mem")
 	var err error
 	switch mgrToUse {
 	case "mem":

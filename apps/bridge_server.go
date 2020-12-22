@@ -22,12 +22,13 @@ func main() {
 	}
 	log.SetLevel(level)
 
+	msgs.InitCloudKey()
 	fmt.Println("Init Cache Mgr")
 	err := cloudserver.InitCacheMgr()
 	if err != nil {
 		log.Fatalf("Unable to initialize the cache manager %s", err.Error())
 	}
-	subjectString:=fmt.Sprintf("%s.>",msgs.SB_MSG_PREFIX)
+	subjectString := fmt.Sprintf("%s.>", msgs.SB_MSG_PREFIX)
 	go cloudserver.RunMsgHandler(subjectString)
 	fmt.Println("Starting Server")
 	cloudserver.RunBridgeServer(false)

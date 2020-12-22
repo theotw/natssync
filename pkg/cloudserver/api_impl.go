@@ -85,6 +85,7 @@ func handlePostMessage(c *gin.Context) {
 		c.JSON(code, resp)
 
 	}
+	log.Debugf("Got message %s ", natmsg.Subject)
 	natsURL := pkg.GetEnvWithDefaults("NATS_SERVER_URL", "nats://127.0.0.1:4322")
 	log.Infof("Connecting to NATS server %s", natsURL)
 	nc, err := nats.Connect(natsURL)
