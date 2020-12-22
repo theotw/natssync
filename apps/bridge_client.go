@@ -31,7 +31,7 @@ func main() {
 		level = log.DebugLevel
 	}
 	log.SetLevel(level)
-
+	msgs.InitLocationKeyStore()
 	err := cloudclient.RunBridgeClient(false)
 	if err != nil {
 		log.Errorf("Error starting API server %s", err.Error())

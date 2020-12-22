@@ -17,7 +17,6 @@ import (
 	"math"
 	"net/http"
 
-	"os"
 	"time"
 )
 
@@ -110,17 +109,11 @@ func handlePostRegister(c *gin.Context) {
 		c.JSON(code, &ret)
 		return
 	}
-	filename := msgs.MakePublicKeyFileName(in.PremID)
-	fout, err := os.Create(filename)
-	if err != nil {
-		code, x := bridgemodel.HandleError(c, err)
-		c.JSON(code, x)
-		return
-	}
-	fout.Write([]byte(in.PublicKey))
-	fout.Close()
+	store := msgs.GetKeyStore()
+	bits := []byte(in.PublicKey)
+	store.WritePublicKey(in.PremID, bits)
 	var resp v1.RegisterOnPremResponse
-	pkBits, err := msgs.ReadPublicKeyFile(msgs.CLOUD_ID)
+	pkBits, err := store.ReadPublicKeyData(msgs.CLOUD_ID)
 	if err != nil {
 		code, ret := bridgemodel.HandleErrors(c, e)
 		c.JSON(code, &ret)

@@ -43,15 +43,15 @@ func handlePostRegister(c *gin.Context) {
 	premID := uuid.New().String()
 	req.PremID = premID
 	log.Debugf("Generating new key for prem ID %s", premID)
-	err := msgs.GenerateNewKeyPairPOCVersion(premID)
+	err := msgs.GenerateAndSaveKey(premID)
 	if err != nil {
 		log.Errorf("Error generating key %s", err.Error())
 		code, ret := bridgemodel.HandleErrors(c, err)
 		c.JSON(code, &ret)
 		return
 	}
-
-	pkBits, err := msgs.ReadPublicKeyFile(premID)
+	store := msgs.GetKeyStore()
+	pkBits, err := store.ReadPublicKeyData(premID)
 	if err != nil {
 		log.Errorf("Error reading pub key")
 		code, ret := bridgemodel.HandleErrors(c, err)

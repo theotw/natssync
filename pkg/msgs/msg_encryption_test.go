@@ -27,7 +27,7 @@ func TestEncryption(t *testing.T) {
 }
 func doTestMessageEnvelope(t *testing.T) {
 	InitCloudKey()
-	generateAndSaveKey("client1")
+	GenerateAndSaveKey("client1")
 	msg := []byte("Hello World")
 	envelope, err := PutMessageInEnvelope(msg, CLOUD_ID, "client1")
 	if err != nil {
@@ -50,7 +50,7 @@ func doTestMessageEnvelope(t *testing.T) {
 
 func doTest_loadMaster(t *testing.T) {
 	InitCloudKey()
-	master, err := loadPrivateKey(CLOUD_ID)
+	master, err := LoadPrivateKey(CLOUD_ID)
 	assert.Nil(t, err)
 	assert.NotNil(t, master)
 }

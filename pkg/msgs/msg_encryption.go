@@ -5,6 +5,7 @@
 package msgs
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -14,17 +15,16 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg"
-	"io/ioutil"
-	"os"
-	"path"
 )
 
-func InitCloudKey() {
+func InitCloudKey() error {
+	err := InitLocationKeyStore()
+	if err != nil {
+		return err
+	}
 	//first checkout the keys
-	_, keyErr := loadPrivateKey(CLOUD_ID)
+	_, keyErr := LoadPrivateKey(CLOUD_ID)
 	if keyErr != nil {
 		log.Debugf("Unable to find cloud master private key %s \n", keyErr.Error())
 	}
@@ -32,74 +32,33 @@ func InitCloudKey() {
 	if pubKeyErr != nil {
 		log.Debugf("Unable to find cloud master public key %s \n", pubKeyErr.Error())
 	}
-	if keyErr != nil || pubKeyErr != nil {
-		generateAndSaveKey(CLOUD_ID)
-	}
 
+	if keyErr != nil || pubKeyErr != nil {
+		err = GenerateAndSaveKey(CLOUD_ID)
+	}
+	return err
 }
-func generateAndSaveKey(locationID string) error {
+func GenerateAndSaveKey(locationID string) error {
 	pair, err := generateNewKeyPair(locationID)
 	if err != nil {
 		log.Errorf("Unable to generate new key pair %s \n", err.Error())
 		return err
 	}
-	pubFileName := MakePublicKeyFileName(locationID)
-	keyFileName := MakePrivateFileName(locationID)
-
-	pubFile, err := os.Create(pubFileName)
+	err = StorePrivateKey(locationID, pair)
 	if err != nil {
-		log.Errorf("Unable to open pub key file %s \n", err.Error())
 		return err
 	}
-	defer pubFile.Close()
-
-	keyFile, err := os.Create(keyFileName)
+	err = StorePublicKey(locationID, &pair.PublicKey)
 	if err != nil {
-		log.Errorf("Unable to open key file %s \n", err.Error())
 		return err
 	}
-	defer keyFile.Close()
-	fileBits := x509.MarshalPKCS1PrivateKey(pair)
-	publickey := &pair.PublicKey
-	pubFileBits, e := x509.MarshalPKIXPublicKey(publickey)
-	if e != nil {
-		return e
-	}
-	privateKeyBlock := &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: fileBits,
-	}
-	pem.Encode(keyFile, privateKeyBlock)
-	publicKeyBlock := &pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: pubFileBits,
-	}
-	pem.Encode(pubFile, publicKeyBlock)
 
 	return nil
 }
-func loadPrivateKey(clientID string) (*rsa.PrivateKey, error) {
-	basePath := pkg.GetEnvWithDefaults("CERT_DIR", "/certs")
-	var keyFile string
-	keyFile = fmt.Sprintf("%s.pem", clientID)
-	masterPemPath := path.Join(basePath, keyFile)
-	f, err := os.Open(masterPemPath)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	all, err := ioutil.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-	data, _ := pem.Decode(all)
-	privateKeyImported, err := x509.ParsePKCS1PrivateKey(data.Bytes)
-	return privateKeyImported, err
-}
 
-//use a blank client ID for the master key
-func LoadPublicKey(clientID string) (*rsa.PublicKey, error) {
-	all, err := ReadPublicKeyFile(clientID)
+func LoadPublicKey(locationID string) (*rsa.PublicKey, error) {
+	t := GetKeyStore()
+	all, err := t.ReadPublicKeyData(locationID)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +70,52 @@ func LoadPublicKey(clientID string) (*rsa.PublicKey, error) {
 	}
 
 	return ret, err
+}
 
+func LoadPrivateKey(locationID string) (*rsa.PrivateKey, error) {
+	t := GetKeyStore()
+	all, err := t.ReadPrivateKeyData(locationID)
+	if err != nil {
+		return nil, err
+	}
+
+	data, _ := pem.Decode(all)
+	privateKeyImported, err := x509.ParsePKCS1PrivateKey(data.Bytes)
+	return privateKeyImported, err
+}
+
+func StorePrivateKey(locationID string, key *rsa.PrivateKey) error {
+	t := GetKeyStore()
+	fileBits := x509.MarshalPKCS1PrivateKey(key)
+	privateKeyBlock := &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: fileBits,
+	}
+	var buf bytes.Buffer
+	err := pem.Encode(&buf, privateKeyBlock)
+	if err == nil {
+		err = t.WritePrivateKey(locationID, buf.Bytes())
+	}
+	return err
+}
+func StorePublicKey(locationID string, key *rsa.PublicKey) error {
+	t := GetKeyStore()
+	pubFileBits, e := x509.MarshalPKIXPublicKey(key)
+	if e != nil {
+		return e
+	}
+	publicKeyBlock := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubFileBits,
+	}
+
+	var buf bytes.Buffer
+	err := pem.Encode(&buf, publicKeyBlock)
+	if err == nil {
+		err = t.WritePublicKey(locationID, buf.Bytes())
+	}
+
+	return err
 }
 func generateNewKeyPair(clientID string) (*rsa.PrivateKey, error) {
 	// Private Key generation
@@ -128,69 +132,7 @@ func generateNewKeyPair(clientID string) (*rsa.PrivateKey, error) {
 
 	return privateKey, nil
 }
-func GenerateNewKeyPairPOCVersion(clientID string) error {
-	pubFilePath := MakePublicKeyFileName(clientID)
-	prvFilePath := MakePrivateFileName(clientID)
 
-	pubOut, puberr := os.Create(pubFilePath)
-	if puberr != nil {
-		return puberr
-	}
-	defer pubOut.Close()
-	privOut, priverr := os.Create(prvFilePath)
-	if priverr != nil {
-		return priverr
-	}
-	defer privOut.Close()
-	pubBits, err := ReadPublicKeyFile("client1")
-	if err != nil {
-		return err
-	}
-	privBits, err := ReadPrivateKeyFile("client1")
-	if err != nil {
-		return err
-	}
-	pubOut.Write(pubBits)
-	privOut.Write(privBits)
-	return nil
-}
-func ReadPublicKeyFile(clientID string) ([]byte, error) {
-	masterPemPath := MakePublicKeyFileName(clientID)
-	f, err := os.Open(masterPemPath)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	all, err := ioutil.ReadAll(f)
-	return all, err
-}
-func ReadPrivateKeyFile(clientID string) ([]byte, error) {
-	masterPemPath := MakePublicKeyFileName(clientID)
-	f, err := os.Open(masterPemPath)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	all, err := ioutil.ReadAll(f)
-	return all, err
-}
-
-func MakePublicKeyFileName(clientID string) string {
-	var keyFile string
-	keyFile = fmt.Sprintf("%s_public.pem", clientID)
-
-	basePath := pkg.GetEnvWithDefaults("CERT_DIR", "/certs")
-	masterPemPath := path.Join(basePath, keyFile)
-	return masterPemPath
-}
-func MakePrivateFileName(clientID string) string {
-	var keyFile string
-	keyFile = fmt.Sprintf("%s.pem", clientID)
-
-	basePath := pkg.GetEnvWithDefaults("CERT_DIR", "/certs")
-	masterPemPath := path.Join(basePath, keyFile)
-	return masterPemPath
-}
 func PutObjectInEnvelope(ob interface{}, senderID string, recipientID string) (*MessageEnvelope, error) {
 	bits, err := json.Marshal(ob)
 	if err != nil {
@@ -199,7 +141,7 @@ func PutObjectInEnvelope(ob interface{}, senderID string, recipientID string) (*
 	return PutMessageInEnvelope(bits, senderID, recipientID)
 }
 func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*MessageEnvelope, error) {
-	master, err := loadPrivateKey(senderID)
+	master, err := LoadPrivateKey(senderID)
 
 	if err != nil {
 		return nil, err
@@ -285,8 +227,7 @@ func rsaEncrypt(plain []byte, clientID string) (string, error) {
 	return cipherText, nil
 }
 func rsaDecrypt(cipherText string, clientID string) ([]byte, error) {
-
-	privkey, err := loadPrivateKey(clientID)
+	privkey, err := LoadPrivateKey(clientID)
 	if err != nil {
 		return nil, err
 	}

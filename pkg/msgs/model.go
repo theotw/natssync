@@ -4,8 +4,6 @@
 
 package msgs
 
-import "crypto"
-
 const ENVELOPE_VERSION_1 = 1
 const CLOUD_ID = "cloud-master"
 const NB_MSG_PREFIX = "natssync-nb"
@@ -23,9 +21,19 @@ type MessageEnvelope struct {
 }
 
 type LocationKeyStore interface {
-	StorePrivateKey(locationID string, key *crypto.PrivateKey) error
-	StorePublicKey(locationID string, key *crypto.PublicKey) error
+	ReadPrivateKeyData(locationID string) ([]byte, error)
+	ReadPublicKeyData(locationID string) ([]byte, error)
+	WritePublicKey(locationID string, buf []byte) error
+	WritePrivateKey(locationID string, buf []byte) error
+}
 
-	LoadPrivateKey(locationID string) (*crypto.PrivateKey, error)
-	LoadPublicKey(locationID string) (*crypto.PublicKey, error)
+var keystore LocationKeyStore
+
+func GetKeyStore() LocationKeyStore {
+	return keystore
+}
+func InitLocationKeyStore() error {
+	ret, err := NewFileKeyStore()
+	keystore = ret
+	return err
 }
