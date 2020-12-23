@@ -15,7 +15,7 @@ import (
 
 func DoMongoStuff() error {
 	uid := "admin"
-	pwd := "NetApp1!!"
+	pwd := "changeit"
 	host := "localhost"
 	urlToUse := fmt.Sprintf("mongodb://%s:%s@%s:27017", uid, pwd, host)
 	client, err := mongo.NewClient(options.Client().ApplyURI(urlToUse))
