@@ -18,8 +18,13 @@ import (
 	"github.com/theotw/natssync/pkg/bridgemodel/errors"
 	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
 	"github.com/theotw/natssync/pkg/msgs"
+	"io"
+	"io/ioutil"
 	"math"
+	"mime"
+	"mime/multipart"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -104,41 +109,97 @@ func handlePostMessage(c *gin.Context) {
 	}
 
 }
+func handleMultipartFormRegistration(c *gin.Context) (ret *v1.RegisterOnPremReq, reterr error) {
+	contentType, params, parseErr := mime.ParseMediaType(c.Request.Header.Get("Content-Type"))
+	fmt.Println(contentType)
+	fmt.Println(params)
+	if parseErr != nil {
+		fmt.Println(parseErr.Error())
+	}
+	multipartReader := multipart.NewReader(c.Request.Body, params["boundary"])
+	defer c.Request.Body.Close()
+	ret = new(v1.RegisterOnPremReq)
+	for {
+		part, parseErr := multipartReader.NextPart()
+		if parseErr != nil {
+			if parseErr == io.EOF {
+				break
+			} else {
+				reterr = parseErr
+				return
+			}
+		}
+
+		bits, err := ioutil.ReadAll(part)
+		if err != nil {
+			reterr = err
+			return
+		}
+		fieldName := part.FormName()
+		switch fieldName {
+		case "userID":
+			{
+				ret.UserID = string(bits)
+				break
+			}
+		case "secret":
+			{
+				ret.Secret = string(bits)
+				break
+			}
+		case "publicKey":
+			{
+				ret.PublicKey = string(bits)
+				break
+			}
+		}
+	}
+
+	return
+}
 func handlePostRegister(c *gin.Context) {
-	var in v1.RegisterOnPremReq
-	e := c.ShouldBindJSON(&in)
-	if e != nil {
-		code, ret := bridgemodel.HandleErrors(c, e)
-		c.JSON(code, &ret)
-		return
+	var in *v1.RegisterOnPremReq
+	if strings.HasPrefix(c.Request.Header.Get("Content-Type"), "multipart/form-data") {
+		var err error
+		in, err = handleMultipartFormRegistration(c)
+		if err != nil {
+			c.JSON(bridgemodel.HandleError(c, err))
+		}
+	} else {
+		in = new(v1.RegisterOnPremReq)
+		e := c.ShouldBindJSON(in)
+		if e != nil {
+			code, ret := bridgemodel.HandleErrors(c, e)
+			c.JSON(code, &ret)
+			return
+		}
 	}
-	response, e := sendRegResponse(c, in)
-	if e != nil {
-		code, ret := bridgemodel.HandleErrors(c, e)
-		c.JSON(code, &ret)
-		return
-	}
-
-
-	if !response.Success{
-		ierr:=errors.NewInernalError(errors.BRIDGE_ERROR,errors.INVALID_REGISTRATION_REQ,nil)
-		c.JSON(bridgemodel.HandleError(c,ierr))
-		return
-	}
-	locationID:=uuid.New().String()
-	store := msgs.GetKeyStore()
 	pubKeyBits := []byte(in.PublicKey)
-	validPubKey:=false
+	validPubKey := false
 	pubKeyBlock, _ := pem.Decode(pubKeyBits)
-	if pubKeyBlock != nil{
+	if pubKeyBlock != nil {
 		pubKey, perr := x509.ParsePKIXPublicKey(pubKeyBlock.Bytes)
-		validPubKey=pubKey != nil && perr ==nil
+		validPubKey = pubKey != nil && perr == nil
 	}
-	if !validPubKey{
-		ierr:=errors.NewInernalError(errors.BRIDGE_ERROR,errors.INVALID_REGISTRATION_REQ,nil)
-		c.JSON(bridgemodel.HandleError(c,ierr))
+	if !validPubKey {
+		ierr := errors.NewInernalError(errors.BRIDGE_ERROR, errors.INVALID_PUB_KEY, nil)
+		c.JSON(bridgemodel.HandleError(c, ierr))
 		return
 	}
+	response, e := sendRegRequestToAuthServer(c, in)
+	if e != nil {
+		code, ret := bridgemodel.HandleErrors(c, e)
+		c.JSON(code, &ret)
+		return
+	}
+
+	if !response.Success {
+		ierr := errors.NewInernalError(errors.BRIDGE_ERROR, errors.INVALID_REGISTRATION_REQ, nil)
+		c.JSON(bridgemodel.HandleError(c, ierr))
+		return
+	}
+	locationID := uuid.New().String()
+	store := msgs.GetKeyStore()
 
 	var resp v1.RegisterOnPremResponse
 	pkBits, err := store.ReadPublicKeyData(msgs.CLOUD_ID)
@@ -153,33 +214,33 @@ func handlePostRegister(c *gin.Context) {
 	c.JSON(201, &resp)
 }
 
-func sendRegResponse(c *gin.Context, in v1.RegisterOnPremReq) (*bridgemodel.RegistrationResponse,error) {
+func sendRegRequestToAuthServer(c *gin.Context, in *v1.RegisterOnPremReq) (*bridgemodel.RegistrationResponse, error) {
 	timeout := time.Second * 30
 
 	natsURL := pkg.GetEnvWithDefaults("NATS_SERVER_URL", "nats://127.0.0.1:4322")
 	log.Infof("Connecting to NATS server for regustration %s", natsURL)
 	nc, err := nats.Connect(natsURL)
-	ret:=new (bridgemodel.RegistrationResponse)
+	ret := new(bridgemodel.RegistrationResponse)
 	if err != nil {
 		log.Errorf("Error connecting to NATS %s", err.Error())
-		return nil,err
+		return nil, err
 	} else {
 		log.Tracef("Posting message to nats ")
 		regReq := bridgemodel.RegistrationRequest{UserID: in.UserID, Secret: in.Secret}
 		reqBits, _ := json.Marshal(&regReq)
 		respMsg, err := nc.Request(bridgemodel.REGISTRATION_AUTH_SUBJECT, reqBits, timeout)
 		nc.Close()
-		if err != nil{
+		if err != nil {
 			log.Errorf("Error sending to NATS %s", err.Error())
-			return nil,err
+			return nil, err
 		}
-		err=json.Unmarshal(respMsg.Data,ret)
-		if err != nil{
+		err = json.Unmarshal(respMsg.Data, ret)
+		if err != nil {
 			log.Errorf("Error decoding nats response %s", err.Error())
-			return nil,err
+			return nil, err
 		}
 	}
-	return ret,nil
+	return ret, nil
 }
 func aboutGetUnversioned(c *gin.Context) {
 	var resp v1.AboutResponse
