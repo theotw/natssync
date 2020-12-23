@@ -41,7 +41,6 @@ func handlePostRegister(c *gin.Context) {
 	}
 	var req v1.RegisterOnPremReq
 	premID := uuid.New().String()
-	req.PremID = premID
 	log.Debugf("Generating new key for prem ID %s", premID)
 	err := msgs.GenerateAndSaveKey(premID)
 	if err != nil {

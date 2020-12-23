@@ -41,6 +41,7 @@ buildmac:
 	go build -v -o out/bridgeclient_x64_darwin apps/bridge_client.go
 	go build -v -o out/echo_main_x64_darwin apps/echo_main.go
 	go build -v -o out/echo_client_x64_darwin apps/echo_client.go
+	go build -v -o out/simple_auth_x64_darwin apps/simple_reg_auth_server.go
 
 
 buildlinux:	export GOOS=linux
@@ -54,6 +55,7 @@ buildlinux:
 	go build -v -o out/bridgeclient_x64_linux apps/bridge_client.go
 	go build -v -o out/echo_main_x64_linux apps/echo_main.go
 	go build -v -o out/echo_client_x64_linux apps/echo_client.go
+	go build -v -o out/simple_auth_x64_linux apps/simple_reg_auth_server.go
 
 clean:
 	rm -r -f tmp
@@ -71,8 +73,10 @@ clientimage:
 echoproxylet:
 	docker build -f EchoProxylet.dockerfile --tag theotw/echo-proxylet:latest .
 
+simpleauth:
+	docker build -f SimpleAuthServer.dockerfile --tag theotw/simple-reg-auth:latest .
 
-allimages: cloudimage clientimage echoproxylet
+allimages: cloudimage clientimage echoproxylet simpleauth
 
 pushall:
 	docker push theotw/natssync-server:latest

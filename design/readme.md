@@ -35,3 +35,39 @@ Messages coming back to the server (aka cloud side or north side) must be prepen
  
  natssync-(sb|nb).locationID.application-specific-data
  
+# Registration of Cloud Clients 
+To have messages delivered to a client, the cloud server must know about the client.
+Specifically the server needs to generate a location ID (aka premID or client ID) for the client and the client needs
+to give the server its public key for message exchange.
+
+The bridge server has a REST API that the client uses.  However to use the REST API, the user ID and secret for the request must be authenticated and authorized.
+
+The way the server does this is by posting an auth request message on the server side NATS queue.
+
+The subject to listen for is `natssync.regauth.request`
+
+The message is a JSON package in this format:
+
+`
+{
+
+    "userID":"some id",
+    
+    "secret":"some secret",
+    
+    "locationID":"some id string"
+    
+}
+`
+
+The return message has a single field
+`
+{
+    
+    success: true | false
+
+}
+`
+
+This allows the user to deploy a customer or one of the pre-canned auth servers.  
+The docker hub container theotw/simple-reg-auth  is available for use 
