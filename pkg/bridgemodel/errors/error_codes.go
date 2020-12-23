@@ -1,5 +1,5 @@
 /*
- * Copyright (c)  The One True Way 2020. Use as described in the license. The authors accept no libility for the use of this software.  It is offered "As IS"  Have fun with it
+ * Copyright (c) The One True Way 2020. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package errors
@@ -13,12 +13,10 @@ const (
 
 //network errors
 const (
-	NETWORK_ERROR_INVALID_URL       = "invalidurl"
-	NETWORK_ERROR_INVALID_IP_FORMAT = "invalid.ip"
-	NETWORK_ERROR_CONNECT_FAIL      = "connectfailed"
-	NETWORK_ERROR_IP_IN_USE         = "ip.inuse"
-	NETWORK_ERROR_IP_NOT_ACCESSIBLE = "ip.not.accessable"
-	NETWORK_ERROR_IP_NOT_IN_SUBNET  = "ip.not.in.subnet"
+	NETWORK_ERROR_INVALID_URL      = "invalidurl"
+	NETWORK_ERROR_IP_NOT_IN_SUBNET = "ip.not.in.subnet"
+	INVALID_REGISTRATION_REQ       = "invalid.reg.request"
+	INVALID_PUB_KEY                = "invalid.pub.key"
 )
 
 const (

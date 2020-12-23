@@ -33,7 +33,8 @@ jobs:
         fi
 
     - name: Build
-      run: make buildlinux
+      run: |
+        make buildlinux
 
     - name: Unit / L1 Test
       run: |

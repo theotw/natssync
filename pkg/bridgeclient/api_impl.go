@@ -1,5 +1,5 @@
 /*
- * Copyright (c)  The One True Way 2020. Use as described in the license. The authors accept no libility for the use of this software.  It is offered "As IS"  Have fun with it
+ * Copyright (c) The One True Way 2020. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package cloudclient
@@ -41,17 +41,16 @@ func handlePostRegister(c *gin.Context) {
 	}
 	var req v1.RegisterOnPremReq
 	premID := uuid.New().String()
-	req.PremID = premID
 	log.Debugf("Generating new key for prem ID %s", premID)
-	err := msgs.GenerateNewKeyPairPOCVersion(premID)
+	err := msgs.GenerateAndSaveKey(premID)
 	if err != nil {
 		log.Errorf("Error generating key %s", err.Error())
 		code, ret := bridgemodel.HandleErrors(c, err)
 		c.JSON(code, &ret)
 		return
 	}
-
-	pkBits, err := msgs.ReadPublicKeyFile(premID)
+	store := msgs.GetKeyStore()
+	pkBits, err := store.ReadPublicKeyData(premID)
 	if err != nil {
 		log.Errorf("Error reading pub key")
 		code, ret := bridgemodel.HandleErrors(c, err)

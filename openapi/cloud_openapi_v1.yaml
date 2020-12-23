@@ -34,6 +34,17 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/RegisterOnPremReq'
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                userID:
+                  type: string
+                secret:
+                  type: string
+                publicKey:
+                  type: string
+                  format: binary
       responses:
         '201':
           description: registration accepted
@@ -123,12 +134,12 @@ components:
     RegisterOnPremReq:
       type: object
       properties:
-        authToken:
+        userID:
           type: string
-          description: Token with permissions to register a On Prem location/region
-        premID:
+          description: User wishing to register, the use of this field depends on the registration system used
+        secret:
           type: string
-          description: prem ID to use.  Should be UUID
+          description:  the use of this field depends on the registration system used
         publicKey:
           type: string
           description: Public key for the On Prem region

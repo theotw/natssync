@@ -1,11 +1,12 @@
 /*
- * Copyright (c)  The One True Way 2020. Use as described in the license. The authors accept no libility for the use of this software.  It is offered "As IS"  Have fun with it
+ * Copyright (c) The One True Way 2020. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package cloudserver
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
@@ -43,6 +44,10 @@ func RunMsgHandler(subjectString string) {
 				for listenForMsgs {
 					m, err := subscription.NextMsg(10 * time.Second)
 					if err == nil {
+						if strings.HasSuffix(m.Subject, msgs.ECHO_SUBJECT_BASE) {
+							echosub := fmt.Sprintf("%s.bridge-msg-handler", m.Reply)
+							nc.Publish(echosub, []byte(time.Now().String()+" message handler"))
+						}
 						clientID := FindClientID(m.Subject)
 						if len(clientID) != 0 {
 							cm := new(CachedMsg)

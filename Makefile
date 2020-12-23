@@ -41,6 +41,7 @@ buildmac:
 	go build -v -o out/bridgeclient_x64_darwin apps/bridge_client.go
 	go build -v -o out/echo_main_x64_darwin apps/echo_main.go
 	go build -v -o out/echo_client_x64_darwin apps/echo_client.go
+	go build -v -o out/simple_auth_x64_darwin apps/simple_reg_auth_server.go
 
 
 buildlinux:	export GOOS=linux
@@ -54,6 +55,7 @@ buildlinux:
 	go build -v -o out/bridgeclient_x64_linux apps/bridge_client.go
 	go build -v -o out/echo_main_x64_linux apps/echo_main.go
 	go build -v -o out/echo_client_x64_linux apps/echo_client.go
+	go build -v -o out/simple_auth_x64_linux apps/simple_reg_auth_server.go
 
 clean:
 	rm -r -f tmp
@@ -63,16 +65,25 @@ clean:
 
 
 cloudimage:
-	docker build -f CloudServer.dockerfile --tag bmason42/cloudbridgeserver:latest .
+	docker build -f CloudServer.dockerfile --tag theotw/natssync-server:latest .
 
 clientimage:
-	docker build -f CloudClient.dockerfile --tag bmason42/cloudbridgeclient:latest .
+	docker build -f CloudClient.dockerfile --tag theotw/natssync-client:latest .
 
 echoproxylet:
-	docker build -f EchoProxylet.dockerfile --tag bmason42/echoproxylet:latest .
+	docker build -f EchoProxylet.dockerfile --tag theotw/echo-proxylet:latest .
 
+simpleauth:
+	docker build -f SimpleAuthServer.dockerfile --tag theotw/simple-reg-auth:latest .
 
-allimages: cloudimage clientimage echoproxylet
+allimages: cloudimage clientimage echoproxylet simpleauth
+
+pushall:
+	docker push theotw/natssync-server:latest
+	docker push theotw/natssync-client:latest
+	docker push theotw/echo-proxylet:latest
+	docker push theotw/simple-reg-auth:latest
+
 
 l1: export CERT_DIR=${PWD}/testfiles
 l1:
