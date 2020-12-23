@@ -15,6 +15,7 @@ import (
 	"time"
 )
 
+//The client/south side echo proxylet.  Answers echo calls
 func main() {
 	natsURL := pkg.GetEnvWithDefaults("NATS_SERVER_URL", "nats://127.0.0.1:4222")
 

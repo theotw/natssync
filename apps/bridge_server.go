@@ -12,6 +12,7 @@ import (
 	"github.com/theotw/natssync/pkg/msgs"
 )
 
+//The main app for the server that runs in the cloud
 func main() {
 	logLevel := pkg.GetEnvWithDefaults("LOG_LEVEL", "debug")
 

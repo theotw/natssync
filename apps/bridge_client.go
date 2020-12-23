@@ -22,6 +22,11 @@ import (
 	"time"
 )
 
+//The main class for the on site (southside) client.
+//Env vars needed are:
+//NATS_SERVER_URL=nats://127.0.0.1:4222
+//CLOUD_BRIDGE_URL=http://somehost:port
+//PREM_ID=the location ID from a registration request
 func main() {
 	logLevel := pkg.GetEnvWithDefaults("LOG_LEVEL", "debug")
 

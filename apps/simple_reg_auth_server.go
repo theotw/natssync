@@ -14,6 +14,10 @@ import (
 	"runtime"
 )
 
+//the main for an example of a simple auth server.  Authorizes a requeest if the user ID and secret matches what is set in the env
+//env vars to set are:
+//USER_ID= the valid user ID defaults to natssync
+//SECRET = the valid user secret.  defaults to changeit
 func main() {
 	natsURL := pkg.GetEnvWithDefaults("NATS_SERVER_URL", "nats://127.0.0.1:4222")
 
@@ -25,7 +29,7 @@ func main() {
 		os.Exit(2)
 	}
 	userID := pkg.GetEnvWithDefaults("USER_ID", "natssync")
-	password := pkg.GetEnvWithDefaults("USER_ID", "changeit")
+	password := pkg.GetEnvWithDefaults("SECRET", "changeit")
 	subj := bridgemodel.REGISTRATION_AUTH_SUBJECT
 	nc.Subscribe(subj, func(msg *nats.Msg) {
 		log.Infof("Got message %s : ", subj, msg.Reply)

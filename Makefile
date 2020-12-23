@@ -82,6 +82,7 @@ pushall:
 	docker push theotw/natssync-server:latest
 	docker push theotw/natssync-client:latest
 	docker push theotw/echo-proxylet:latest
+	docker push theotw/simple-reg-auth:latest
 
 
 l1: export CERT_DIR=${PWD}/testfiles
