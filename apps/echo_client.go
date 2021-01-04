@@ -1,5 +1,5 @@
 /*
- * Copyright (c) The One True Way 2020. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package main
@@ -53,7 +53,7 @@ func main() {
 			fmt.Printf("Got Error %s \n", err.Error())
 			break
 		} else {
-			fmt.Printf("Got response %s \n", string(msg.Data))
+			fmt.Printf(" %s \n", string(msg.Data))
 			if strings.HasSuffix(msg.Subject, msgs.ECHOLET_SUFFIX) {
 				break
 			}
