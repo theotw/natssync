@@ -1,5 +1,5 @@
 /*
- * Copyright (c) The One True Way 2020. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package cloudserver
@@ -24,7 +24,7 @@ type MsgCacheManager interface {
 var cacheMgr MsgCacheManager
 
 func InitCacheMgr() error {
-	mgrToUse := pkg.GetEnvWithDefaults("CACHE_MGR", "mem")
+	mgrToUse := pkg.GetEnvWithDefaults("CACHE_MGR", "redis")
 	var err error
 	switch mgrToUse {
 	case "mem":

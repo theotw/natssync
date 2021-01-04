@@ -1,5 +1,5 @@
 /*
- * Copyright (c) The One True Way 2020. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package msgs
@@ -39,7 +39,7 @@ func InitCloudKey() error {
 	return err
 }
 func GenerateAndSaveKey(locationID string) error {
-	pair, err := generateNewKeyPair(locationID)
+	pair, err := GenerateNewKeyPair(locationID)
 	if err != nil {
 		log.Errorf("Unable to generate new key pair %s \n", err.Error())
 		return err
@@ -117,7 +117,7 @@ func StorePublicKey(locationID string, key *rsa.PublicKey) error {
 
 	return err
 }
-func generateNewKeyPair(clientID string) (*rsa.PrivateKey, error) {
+func GenerateNewKeyPair(clientID string) (*rsa.PrivateKey, error) {
 	// Private Key generation
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: natssync-server
+  name: natssync-node
 
 spec:
   template:
@@ -22,7 +22,7 @@ spec:
             - name: LOG_LEVEL
               value: "trace"
             - name: NATS_SERVER_URL
-              value: "nats://natsmaster-service:4222"
+              value: "nats://nats:4222"
             - name: REDIS_URL
               value: "redis-cache-poc.tkxust.ng.0001.usw2.cache.amazonaws.com:6379"
 

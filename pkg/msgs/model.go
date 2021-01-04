@@ -1,8 +1,10 @@
 /*
- * Copyright (c) The One True Way 2020. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package msgs
+
+import "github.com/theotw/natssync/pkg"
 
 const ENVELOPE_VERSION_1 = 1
 const CLOUD_ID = "cloud-master"
@@ -32,8 +34,24 @@ var keystore LocationKeyStore
 func GetKeyStore() LocationKeyStore {
 	return keystore
 }
+func CreateLocationKeyStore(ksType string) (ret LocationKeyStore, err error) {
+	switch ksType {
+	case "file":
+		{
+			ret, err = NewFileKeyStore()
+			break
+		}
+	case "redis":
+		{
+			ret, err = NewRedisLocationKeyStore()
+			break
+		}
+	}
+	return
+}
 func InitLocationKeyStore() error {
-	ret, err := NewFileKeyStore()
+	ksType := pkg.GetEnvWithDefaults("KEYSTORE", "redis")
+	ret, err := CreateLocationKeyStore(ksType)
 	keystore = ret
 	return err
 }
