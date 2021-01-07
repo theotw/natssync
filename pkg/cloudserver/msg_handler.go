@@ -1,5 +1,5 @@
 /*
- * Copyright (c) The One True Way 2020. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package cloudserver
@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/bridgemodel"
+	"github.com/theotw/natssync/pkg/metrics"
 	"github.com/theotw/natssync/pkg/msgs"
 	"strings"
 	"time"
@@ -43,6 +44,7 @@ func RunMsgHandler(subjectString string) {
 			if err == nil {
 				for listenForMsgs {
 					m, err := subscription.NextMsg(10 * time.Second)
+					metrics.IncrementMessageRecieved(1)
 					if err == nil {
 						if strings.HasSuffix(m.Subject, msgs.ECHO_SUBJECT_BASE) {
 							echosub := fmt.Sprintf("%s.bridge-msg-handler", m.Reply)
@@ -67,6 +69,7 @@ func RunMsgHandler(subjectString string) {
 								} else {
 									cm.Data = string(jsonData)
 									GetCacheMgr().PutMessage(cm)
+									metrics.IncrementMessagePosted(1)
 								}
 							}
 						}

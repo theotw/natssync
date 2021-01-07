@@ -1,5 +1,5 @@
 /*
- * Copyright (c) The One True Way 2020. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package cloudserver
@@ -9,6 +9,7 @@ import (
 	"context"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
 	"io/ioutil"
@@ -65,9 +66,11 @@ func RunBridgeServer(test bool) error {
 
 func newRouter(test bool) *gin.Engine {
 	router := gin.Default()
-	root := router.Group("/event-bridge/")
+	root := router.Group("/")
+	root.Handle("GET", "/metrics", gin.WrapH(promhttp.Handler()))
+	bidgeRoot := router.Group("/event-bridge/")
 	if test {
-		root.Handle("GET", "/kill", func(c *gin.Context) {
+		bidgeRoot.Handle("GET", "/kill", func(c *gin.Context) {
 			quit <- os.Interrupt
 		})
 	}
