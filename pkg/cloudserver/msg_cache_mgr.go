@@ -18,6 +18,8 @@ type CachedMsg struct {
 type MsgCacheManager interface {
 	GetMessages(clientID string) ([]*CachedMsg, error)
 	PutMessage(message *CachedMsg) error
+	//depth of each queue per client/location ID
+	GetQueueDepths() map[string]int
 	Init() error
 }
 
@@ -60,6 +62,15 @@ func GetCacheMgr() MsgCacheManager {
 type InMemMessageCache struct {
 	messages map[string][]*CachedMsg
 	mapSync  sync.RWMutex
+}
+
+//depth of each queue per client/location ID
+func (t *InMemMessageCache) GetQueueDepths() map[string]int {
+	ret := make(map[string]int)
+	for k, v := range t.messages {
+		ret[k] = len(v)
+	}
+	return ret
 }
 
 func (t *InMemMessageCache) Init() error {

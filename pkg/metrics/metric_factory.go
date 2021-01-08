@@ -27,6 +27,7 @@ func InitMetrics() {
 		Name: "natssync_message_posted_total",
 		Help: "The total number of messages posted for sending to clients",
 	})
+
 	totalQueuedMessages = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "natssync_queue_messages_total",
 		Help: "Total messages queued for retrieval",
@@ -35,6 +36,7 @@ func InitMetrics() {
 		Name: "natssync_retrieve_time",
 		Help: "Time waiting for messages",
 	})
+
 }
 
 func IncrementTotalQueries(count int) {

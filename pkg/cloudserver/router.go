@@ -9,7 +9,6 @@ import (
 	"context"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
 	"io/ioutil"
@@ -67,7 +66,7 @@ func RunBridgeServer(test bool) error {
 func newRouter(test bool) *gin.Engine {
 	router := gin.Default()
 	root := router.Group("/")
-	root.Handle("GET", "/metrics", gin.WrapH(promhttp.Handler()))
+	root.Handle("GET", "/metrics", metricGetHandlers)
 	bidgeRoot := router.Group("/event-bridge/")
 	if test {
 		bidgeRoot.Handle("GET", "/kill", func(c *gin.Context) {

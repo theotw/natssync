@@ -1,5 +1,5 @@
 /*
- * Copyright (c) The One True Way 2020. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package cloudserver
@@ -12,11 +12,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	"github.com/theotw/natssync/pkg/bridgemodel/errors"
 	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
+	"github.com/theotw/natssync/pkg/metrics"
 	"github.com/theotw/natssync/pkg/msgs"
 	"io"
 	"io/ioutil"
@@ -34,7 +36,7 @@ func handleGetMessages(c *gin.Context) {
 	clientID := c.Param("premid")
 	fmt.Println(clientID)
 	mgr := GetCacheMgr()
-
+	metrics.IncrementTotalQueries(1)
 	now := time.Now().Unix()
 	start := now
 	var messages []*CachedMsg
@@ -64,6 +66,9 @@ func handleGetMessages(c *gin.Context) {
 		ret[i].FormatVersion = "1"
 		ret[i].MessageData = x.Data
 	}
+	end := time.Now().Unix()
+	metrics.AddCountToWaitTimes(int(end - start))
+
 	c.JSON(200, ret)
 }
 func handlePostMessage(c *gin.Context) {
@@ -255,4 +260,14 @@ func healthCheckGetUnversioned(c *gin.Context) {
 }
 func swaggerUIGetHandler(c *gin.Context) {
 	c.Redirect(302, "/event-bridge/api/index_v1.html")
+}
+
+func metricGetHandlers(c *gin.Context) {
+	depths := GetCacheMgr().GetQueueDepths()
+	var total int
+	for _, count := range depths {
+		total = total + count
+	}
+	metrics.SetTotalMessagesQueued(total)
+	promhttp.Handler().ServeHTTP(c.Writer, c.Request)
 }
