@@ -3,8 +3,8 @@ openapicli_jar=third_party/openapi-generator-cli.jar
 
 generate: maketmp justgenerate rmtmp
 maketmp:
-	#sudo rm -r -f tmpcloud
-	mkdir tmpcloud
+	sudo rm -r -f tmpcloud
+	mkdir -p tmpcloud
 
 rmtmp:
 	rm -r -f tmpcloud
