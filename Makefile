@@ -7,7 +7,7 @@ maketmp:
 	mkdir -p tmpcloud
 
 rmtmp:
-	rm -r -f tmpcloud
+	sudo rm -r -f tmpcloud
 
 justgenerate:
 	docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate -g go-server --package-name v1 -i /local/${CLOUD_OPENAPIDEF_FILE} -o /local/tmpcloud
