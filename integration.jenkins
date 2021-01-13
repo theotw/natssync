@@ -6,39 +6,33 @@ pipeline {
 
     agent {
         kubernetes {
-            label 'image-builder'
-            defaultContainer 'jnlp'
+            defaultContainer 'pipeline-runner'
             yaml """
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: jenkins
-    component: builder
-spec:
-  serviceAccountName: jenkins
-  containers:
-    - name: golang
-      image: docker.io/golang:latest
-      tty: true
-    - name: dind
-      image: docker:18.05-dind
-      securityContext:
-        privileged: true
-      volumeMounts:
-        - name: dind-storage
-          mountPath: /var/lib/docker
-  volumes:
-    - name: dind-storage
-      emptyDir: {}
-"""
+        spec:
+          tolerations:
+          - key: "cattle.io/os"
+            operator: "Equal"
+            value: "linux"
+            effect: "NoSchedule"
+          containers:
+          - name: pipeline-runner
+            image: docker.repo.eng.netapp.com/jharrod/acp-bridge-pipeline:latest
+            customWorkspace: /home/jenkins
+            command:
+            - cat
+            tty: true
+            volumeMounts:
+            - mountPath: /var/run/docker.sock
+              name: dockersock
+          volumes:
+          - name: dockersock
+            hostPath:
+              path: /var/run/docker.sock
+
+      """
         }
     }
-    environment {
-        REGISTRY_URL = 'index.docker.io/v1/'
-        COMMIT_SLUG = "${GIT_COMMIT}".substring(0,8)
-        REGISTRY_CREDENTIALS = credentials('Docker')
-    }
+
     stages {
         stage ('Prepare') {
             steps {
@@ -53,7 +47,7 @@ spec:
 
         stage ('Test') {
             steps {
-                container('golang') {
+                container('pipeline-runner') {
                     sh """
                         echo 'tests passed :)'
                     """
@@ -64,7 +58,7 @@ spec:
 
         stage ('Build Image') {
             steps {
-                container('dind') {
+                container('pipeline-runner') {
                     sh """
                         echo 'building'
                         """
@@ -74,7 +68,7 @@ spec:
 
         stage ('Push Image') {
             steps {
-                container('dind') {
+                container('pipeline-runner') {
                     sh """
                         echo 'Pushing '
                         """
