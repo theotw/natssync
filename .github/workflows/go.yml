@@ -34,6 +34,7 @@ jobs:
 
     - name: Build
       run: |
+        make generate
         make buildlinux
 
     - name: Unit / L1 Test

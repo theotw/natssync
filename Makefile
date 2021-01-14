@@ -34,7 +34,7 @@ buildmac: export CGO_ENABLED=0
 buildmac: export GO111MODULE=on
 buildmac: export GOPROXY=${GOPROXY_ENV}
 buildmac: export GOSUM=${GOSUM_ENV}
-buildmac: generate
+buildmac:
 	mkdir -p out
 	rm -f  out/bridgeserver_x64_darwin
 	go build -v -o out/bridgeserver_x64_darwin apps/bridge_server.go
@@ -48,7 +48,7 @@ buildlinux:	export GOOS=linux
 buildlinux: export GOARCH=amd64
 buildlinux: export CGO_ENABLED=0
 buildlinux: export GO111MODULE=on
-buildlinux: generate
+buildlinux:
 	mkdir -p out
 	rm -f  out/bridgeserver_x64_linux
 	go build -v -o out/bridgeserver_x64_linux apps/bridge_server.go
