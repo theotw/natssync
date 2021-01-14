@@ -3,11 +3,11 @@ openapicli_jar=third_party/openapi-generator-cli.jar
 
 generate: maketmp justgenerate rmtmp
 maketmp:
-	sudo rm -r -f tmpcloud
+	rm -r -f tmpcloud
 	mkdir -p tmpcloud
 
 rmtmp:
-	sudo rm -r -f tmpcloud
+	rm -r -f tmpcloud
 
 justgenerate:
 	docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate -g go-server --package-name v1 -i /local/${CLOUD_OPENAPIDEF_FILE} -o /local/tmpcloud
