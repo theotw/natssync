@@ -1,6 +1,15 @@
 CLOUD_OPENAPIDEF_FILE=openapi/cloud_openapi_v1.yaml
 openapicli_jar=third_party/openapi-generator-cli.jar
 
+
+ifndef DEV_BUILD_NUMBER
+	DEV_BUILD_NUMBER:=$(shell date '+%Y%m%d%H%M')
+endif
+ifndef IMAGE_REPO
+	IMAGE_REPO=theotw
+endif
+
+IMAGE_TAG=latest
 generate: maketmp justgenerate rmtmp
 maketmp:
 	rm -r -f tmpcloud
@@ -64,25 +73,38 @@ clean:
 	rm go.sum
 
 
+dev-cloudimage: IMAGE_TAG=dev-${DEV_BUILD_NUMBER}
+dev-cloudimage: cloudimage
 cloudimage:
-	docker build -f CloudServer.dockerfile --tag theotw/natssync-server:latest .
+	docker build -f CloudServer.dockerfile --tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} .
 
+dev-clientimage: IMAGE_TAG=dev-${DEV_BUILD_NUMBER}
+dev-clientimage: clientimage
 clientimage:
-	docker build -f CloudClient.dockerfile --tag theotw/natssync-client:latest .
+	docker build -f CloudClient.dockerfile --tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} .
 
+dev-echoproxylet:IMAGE_TAG=dev-${DEV_BUILD_NUMBER}
+dev-echoproxylet:echoproxylet
 echoproxylet:
-	docker build -f EchoProxylet.dockerfile --tag theotw/echo-proxylet:latest .
+	docker build -f EchoProxylet.dockerfile --tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} .
 
+dev-simpleauth: IMAGE_TAG=dev-${DEV_BUILD_NUMBER}
+dev-simpleauth: simpleauth
 simpleauth:
-	docker build -f SimpleAuthServer.dockerfile --tag theotw/simple-reg-auth:latest .
+	docker build -f SimpleAuthServer.dockerfile --tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} .
 
+devallimages: dev-cloudimage dev-clientimage dev-echoproxylet dev-simpleauth
 allimages: cloudimage clientimage echoproxylet simpleauth
 
+devpushall: IMAGE_TAG=dev-${DEV_BUILD_NUMBER}
+devpushall: pushall
+
+
 pushall:
-	docker push theotw/natssync-server:latest
-	docker push theotw/natssync-client:latest
-	docker push theotw/echo-proxylet:latest
-	docker push theotw/simple-reg-auth:latest
+	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
 
 
 l1: export CERT_DIR=${PWD}/testfiles
