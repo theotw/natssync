@@ -16,7 +16,7 @@ func TestServerAPI(t *testing.T) {
 	t.Run("Test About", testAbout)
 }
 func testAbout(t *testing.T) {
-	url := pkg.GetEnvWithDefaults("syncserver_url", "http://sync-server:8080")
+	url := pkg.GetEnvWithDefaults("syncserver_url", "http://syncserver:8080")
 	aboutURL := fmt.Sprintf("%s/event-bridge/1/about", url)
 	resp, err := http.Get(aboutURL)
 	if !assert.Nil(t, err) {
