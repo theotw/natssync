@@ -10,7 +10,7 @@ export KEYSTORE=file
 #go test -v -coverpkg=github.com/theotw/natssync/pkg/... -coverprofile=out/server_coverage.out tests/apps/bridge_server_test.go  2>&1 >out/server-stdout.txt
 rm -r -f /out/current/server
 mkdir -p /out/current/server
-go test -v -coverpkg=github.com/theotw/natssync/pkg/... -coverprofile=/out/current/server_coverage.out tests/apps/bridge_server_test.go   2>&1 | tee /out/current/server-stdout.txt
+go test -v -coverpkg=github.com/theotw/natssync/pkg/... -coverprofile=/out/current/server/server_coverage.out tests/apps/bridge_server_test.go   2>&1 | tee /out/current/server/server-stdout.txt
 
-mkdir -p /out/previous/server
-cp /out/current/server/* /out/previous/server
+#mkdir -p /out/previous/
+#cp -R /out/current/* /out/previous/
