@@ -10,6 +10,8 @@ echo 'test version 1'
 rm -r -f /out/current/integration
 mkdir -p /out/current/integration
 go test -v -tests/apps/server_api_test.go   2>&1 | tee /out/current/integration/server_api_test-stdout.txt
+curl http://syncserver:8080/kill
+sleep 2m
 mkdir -p /out/previous/integration
-cp -R /out/current/integration/* /out/previous/integration
+cp -R /out/current/* /out/previous/
 
