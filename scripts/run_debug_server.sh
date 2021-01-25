@@ -11,6 +11,11 @@ export KEYSTORE=file
 rm -r -f /out/current/server
 mkdir -p /out/current/server
 go test -v -coverpkg=github.com/theotw/natssync/pkg/... -coverprofile=/out/current/server/server_coverage.out tests/apps/bridge_server_test.go   2>&1 | tee /out/current/server/server-stdout.txt
-
+go get github.com/t-yuki/gocover-cobertura
+go get github.com/wadey/gocovmerge
+export PATH=/root/go/bin:$PATH
+echo $PATH
+ls -l /root/go
+gocover-cobertura < /out/current/server/server_coverage.out  > /out/current/server/coverage.xml
 #mkdir -p /out/previous/
 #cp -R /out/current/* /out/previous/
