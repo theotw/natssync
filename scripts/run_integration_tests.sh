@@ -6,11 +6,10 @@
 
 export CACHE_MGR=mem
 export KEYSTORE=file
-
-#go test -v -coverpkg=github.com/theotw/natssync/pkg/... -coverprofile=out/server_coverage.out tests/apps/bridge_server_test.go  2>&1 >out/server-stdout.txt
+echo 'test version 1'
 rm -r -f /out/current/integration
 mkdir -p /out/current/integration
-go test -v -coverpkg=github.com/theotw/natssync/pkg/... -coverprofile=/out/current/integration/server_coverage.out tests/apps/bridge_server_test.go   2>&1 | tee /out/current/integration/server-stdout.txt
+go test -v -tests/apps/server_api_test.go   2>&1 | tee /out/current/integration/server_api_test-stdout.txt
 mkdir -p /out/previous/integration
 cp -R /out/current/integration/* /out/previous/integration
 
