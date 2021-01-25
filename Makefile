@@ -78,6 +78,13 @@ dev-cloudimage: cloudimage
 cloudimage:
 	docker build -f CloudServer.dockerfile --tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} .
 
+
+debug-cloudimage:
+	docker build -f CloudServer-debug.dockerfile --tag ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG} .
+
+testimage:
+	docker build -f NatssyncTestImage.dockerfile  --tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} .
+
 dev-clientimage: IMAGE_TAG=dev-${DEV_BUILD_NUMBER}
 dev-clientimage: clientimage
 clientimage:
@@ -105,6 +112,7 @@ pushall:
 	docker push ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/natssync-tests:latest
 
 
 l1: export CERT_DIR=${PWD}/testfiles
