@@ -17,5 +17,5 @@ export PATH=/root/go/bin:$PATH
 echo $PATH
 ls -l /root/go
 gocover-cobertura < /out/current/server/server_coverage.out  > /out/current/server/coverage.xml
-#mkdir -p /out/previous/
-#cp -R /out/current/* /out/previous/
+mkdir -p /out/previous/
+cp -R /out/current/server/* /out/previous/server
