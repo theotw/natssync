@@ -6,10 +6,10 @@
 
 export CACHE_MGR=mem
 export KEYSTORE=file
-echo 'test version 2'
+echo 'test version 3'
 rm -r -f /out/current/integration
 mkdir -p /out/current/integration
-go test -v -tests/apps/server_api_test.go   2>&1 | tee /out/current/integration/server_api_test-stdout.txt
+go test -v tests/integration/server_api_test.go   2>&1 | tee /out/current/integration/server_api_test-stdout.txt
 curl http://syncserver:8080/kill
 sleep 1m
 mkdir -p /out/previous/integration
