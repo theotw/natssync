@@ -22,8 +22,8 @@ rmtmp:
 	rm -r -f tmpcloud
 
 echoenv:
-	echo 'REPO $IMAGE_REPO'
-	echo 'TAG $IMAGE_TAG'
+	echo "REPO ${IMAGE_REPO}"
+	echo "TAG ${IMAGE_TAG}"
 justgenerate:
 	docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate -g go-server --package-name v1 -i /local/${CLOUD_OPENAPIDEF_FILE} -o /local/tmpcloud
 	rm -r -f pkg/bridgemodel/generated/v1
