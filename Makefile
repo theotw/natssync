@@ -120,7 +120,7 @@ pushall:
 	docker push ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
-	docker push ${IMAGE_REPO}/natssync-tests:latest
+	docker push ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
 
 
 l1: export CERT_DIR=${PWD}/testfiles
