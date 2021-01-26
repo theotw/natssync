@@ -5,6 +5,8 @@ WORKDIR /build
 COPY ./ ./
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin/
 ENV GOSUMDB=off
+ARG IMAGE_REPO=theotw
+ARG IMAGE_TAG=latest
 RUN make incontainergenerate
 RUN make buildlinux
 

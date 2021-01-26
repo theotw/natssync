@@ -8,15 +8,13 @@ endif
 
 
 ifndef IMAGE_TAG
-	echo "IMAGE_TAG not set, defaulting"
 	IMAGE_TAG=latest
 endif
 ifndef IMAGE_REPO
-	echo "IMAGE_REPO not set, defaulting"
 	IMAGE_REPO=theotw
 endif
 
-init:
+
 
 generate: maketmp justgenerate rmtmp
 maketmp:
@@ -26,7 +24,7 @@ maketmp:
 rmtmp:
 	rm -r -f tmpcloud
 
-echoenv: init
+echoenv:
 	echo "Version 1"
 	echo "PATH ${PATH}"
 	echo "REPO ${IMAGE_REPO}"
@@ -89,8 +87,7 @@ clean:
 dev-cloudimage: IMAGE_TAG=dev-${DEV_BUILD_NUMBER}
 dev-cloudimage: cloudimage
 cloudimage:
-	echo "Build cloud image ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}"
-	docker build -f CloudServer.dockerfile --tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} .
+	docker build --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f CloudServer.dockerfile --tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} .
 
 
 testimage:
