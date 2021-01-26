@@ -9,7 +9,10 @@ ifndef IMAGE_REPO
 	IMAGE_REPO=theotw
 endif
 
-IMAGE_TAG=latest
+ifndef IMAGE_TAG
+	IMAGE_TAG=latest
+endif
+
 generate: maketmp justgenerate rmtmp
 maketmp:
 	rm -r -f tmpcloud
@@ -76,11 +79,9 @@ clean:
 dev-cloudimage: IMAGE_TAG=dev-${DEV_BUILD_NUMBER}
 dev-cloudimage: cloudimage
 cloudimage:
+	echo "Build cloud image ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}"
 	docker build -f CloudServer.dockerfile --tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} .
 
-
-debug-cloudimage:
-	docker build -f CloudServer-debug.dockerfile --tag ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG} .
 
 testimage:
 	docker build -f NatssyncTestImage.dockerfile  --tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} .
