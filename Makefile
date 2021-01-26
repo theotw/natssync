@@ -9,9 +9,12 @@ ifndef IMAGE_REPO
 	#IMAGE_REPO=theotw
 endif
 
-#ifndef IMAGE_TAG
-#	IMAGE_TAG=latest
-#endif
+
+init:
+	ifndef IMAGE_TAG
+		echo "IMAGE_TAG not set, defaulting"
+		IMAGE_TAG=latest
+	endif
 
 generate: maketmp justgenerate rmtmp
 maketmp:
@@ -21,7 +24,7 @@ maketmp:
 rmtmp:
 	rm -r -f tmpcloud
 
-echoenv:
+echoenv: init
 	echo "PATH ${PATH}"
 	echo "REPO ${IMAGE_REPO}"
 	echo "TAG ${IMAGE_TAG}"
