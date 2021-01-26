@@ -109,7 +109,7 @@ simpleauth:
 	docker build -f SimpleAuthServer.dockerfile --tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} .
 
 devallimages: dev-cloudimage dev-clientimage dev-echoproxylet dev-simpleauth
-allimages: cloudimage clientimage echoproxylet simpleauth
+allimages: cloudimage clientimage echoproxylet simpleauth testimage
 
 devpushall: IMAGE_TAG=dev-${DEV_BUILD_NUMBER}
 devpushall: pushall
