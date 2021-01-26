@@ -5,9 +5,7 @@ openapicli_jar=third_party/openapi-generator-cli.jar
 ifndef DEV_BUILD_NUMBER
 	DEV_BUILD_NUMBER:=$(shell date '+%Y%m%d%H%M')
 endif
-ifndef IMAGE_REPO
-	#IMAGE_REPO=theotw
-endif
+
 
 
 init:
