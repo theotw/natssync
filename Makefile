@@ -27,6 +27,7 @@ rmtmp:
 	rm -r -f tmpcloud
 
 echoenv: init
+	echo "Version 1"
 	echo "PATH ${PATH}"
 	echo "REPO ${IMAGE_REPO}"
 	echo "TAG ${IMAGE_TAG}"
