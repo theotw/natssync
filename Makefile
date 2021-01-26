@@ -11,6 +11,10 @@ ifndef IMAGE_TAG
 	echo "IMAGE_TAG not set, defaulting"
 	IMAGE_TAG=latest
 endif
+ifndef IMAGE_REPO
+	echo "IMAGE_REPO not set, defaulting"
+	IMAGE_REPO=theotw
+endif
 
 init:
 
