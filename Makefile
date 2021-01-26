@@ -7,12 +7,12 @@ ifndef DEV_BUILD_NUMBER
 endif
 
 
+ifndef IMAGE_TAG
+	echo "IMAGE_TAG not set, defaulting"
+	IMAGE_TAG=latest
+endif
 
 init:
-	ifndef IMAGE_TAG
-		echo "IMAGE_TAG not set, defaulting"
-		IMAGE_TAG=latest
-	endif
 
 generate: maketmp justgenerate rmtmp
 maketmp:
