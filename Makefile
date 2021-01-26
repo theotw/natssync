@@ -9,9 +9,7 @@ ifndef IMAGE_REPO
 	IMAGE_REPO=theotw
 endif
 
-ifndef IMAGE_TAG
-	IMAGE_TAG=latest
-endif
+
 
 generate: maketmp justgenerate rmtmp
 maketmp:
