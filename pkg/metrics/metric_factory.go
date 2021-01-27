@@ -12,6 +12,9 @@ var totalMessagesRecieved prometheus.Counter
 var totalValidMessagesPosted prometheus.Counter
 var totalQueuedMessages prometheus.Gauge
 var timeWaitingForMessages prometheus.Histogram
+var totalClientRegistrationSuccesses prometheus.Counter
+var totalClientRegistrationFailures prometheus.Counter
+var timeToPushMessage prometheus.Histogram
 
 //uses this page https://prometheus.io/docs/guides/go-application/
 func InitMetrics() {
@@ -36,7 +39,18 @@ func InitMetrics() {
 		Name: "natssync_retrieve_time",
 		Help: "Time waiting for messages",
 	})
-
+	totalClientRegistrationSuccesses = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "natssync_client_registration_successes",
+		Help: "The total number of times client registration succeeded.",
+	})
+	totalClientRegistrationFailures = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "natssync_client_registration_failurees",
+		Help: "The total number of times client registration failed.",
+	})
+	timeToPushMessage = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name: "natssync_message_post_time",
+		Help: "Time post a message including failed messages",
+	})
 }
 
 func IncrementTotalQueries(count int) {
@@ -62,5 +76,20 @@ func IncrementMessagePosted(count int) {
 func SetTotalMessagesQueued(count int) {
 	if totalQueuedMessages != nil {
 		totalQueuedMessages.Set(float64(count))
+	}
+}
+func IncrementClientRegistrationSuccess(count int) {
+	if totalClientRegistrationSuccesses != nil {
+		totalClientRegistrationSuccesses.Add(float64(count))
+	}
+}
+func IncrementClientRegistrationFailure(count int) {
+	if totalClientRegistrationFailures != nil {
+		totalClientRegistrationFailures.Add(float64(count))
+	}
+}
+func RecordTimeToPushMessage(count int) {
+	if timeToPushMessage != nil {
+		timeToPushMessage.Observe(float64(count))
 	}
 }

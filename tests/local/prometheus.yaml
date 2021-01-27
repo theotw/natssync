@@ -1,0 +1,497 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+  - apiGroups: [""]
+    resources:
+      - endpoints
+      - namespaces
+      - nodes
+      - nodes/proxy
+      - secrets
+      - services
+      - pods
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["extensions"]
+    resources:
+      - ingresses
+      - replicasets
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+    verbs: ["get", "list", "watch"]
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+  - kind: ServiceAccount
+    name: prometheus-service-account
+    namespace: default
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-service-account
+  labels:
+    run: prometheus
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: prometheus
+  name: prometheus
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      run: prometheus
+  template:
+    metadata:
+      labels:
+        run: prometheus
+    spec:
+      serviceAccountName: prometheus-service-account
+      containers:
+        - name: prometheus
+          resources:
+            requests:
+              memory: 256Mi
+            limits:
+              memory: 1024Mi
+          image: prom/prometheus:v2.24.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9090
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.retention.time=60d"
+          volumeMounts:
+            - name: prometheus-config
+              mountPath: /etc/prometheus/prometheus.yml
+              subPath: prometheus.yml
+            - name: prometheus-alert-rules
+              mountPath: /etc/prometheus/alert.rules
+              subPath: alert.rules
+          # Any docker container built without default permissions has to have non root security context in order to use a static PersistentVolume
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        runAsNonRoot: false
+      volumes:
+        - name: prometheus-config
+          configMap:
+            name: prometheus-config
+        - name: prometheus-alert-rules
+          configMap:
+            name: prometheus-alert-rules
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: prometheus
+  name: prometheus
+spec:
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 9090
+      targetPort: 9090
+  selector:
+    run: prometheus
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    run: prometheus
+  name: prometheus-config
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s # By default, scrape targets every 15 seconds.
+    alerting:
+       alertmanagers:
+          - scheme: http
+            static_configs:
+            - targets:
+              - "alertmanager.default.svc.cluster.local:9093"
+            timeout: 10s
+            api_version: v1
+    rule_files:
+      - /etc/prometheus/alert.rules
+    # A scrape configuration containing exactly one endpoint to scrape:
+    scrape_configs:
+      # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+      - job_name: 'prometheus'
+        # Override the global default and scrape targets from this job every 5 seconds.
+        scrape_interval: 60s
+        static_configs:
+          - targets: ['localhost:9090']
+      # The following jobs directly scrape internal kubernetes metrics
+      - job_name: 'kubernetes-apiservers'
+        scrape_interval: 60s
+        kubernetes_sd_configs:
+        - role: endpoints
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: default;kubernetes;https
+      ##
+      - job_name: 'kubernetes-nodes'
+        scrape_interval: 60s
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs:
+        - role: node
+        relabel_configs:
+        - action: labelmap
+          regex: __meta_kubernetes_node_label_(.+)
+        - target_label: __address__
+          replacement: kubernetes.default.svc:443
+        - source_labels: [__meta_kubernetes_node_name]
+          regex: (.+)
+          target_label: __metrics_path__
+          replacement: /api/v1/nodes/${1}/proxy/metrics
+      ##
+      - job_name: 'kubernetes-pods'
+        scrape_interval: 60s
+        kubernetes_sd_configs:
+        - role: pod
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+          action: keep
+          regex: true
+        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+          action: replace
+          target_label: __metrics_path__
+          regex: (.+)
+        - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+          action: replace
+          regex: ([^:]+)(?::\d+)?;(\d+)
+          replacement: $1:$2
+          target_label: __address__
+        - source_labels: [__meta_kubernetes_pod_label_run]
+          target_label: service
+          action: replace
+        - action: labelmap
+          regex: __meta_kubernetes_pod_label_(.+)
+        - source_labels: [__meta_kubernetes_namespace]
+          action: replace
+          target_label: kubernetes_namespace
+        - source_labels: [__meta_kubernetes_pod_name]
+          action: replace
+          target_label: instance
+      ##
+      - job_name: 'kubernetes-cadvisor'
+        scrape_interval: 60s
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs:
+        - role: node
+        relabel_configs:
+        - action: labelmap
+          regex: __meta_kubernetes_node_label_(.+)
+        - target_label: __address__
+          replacement: kubernetes.default.svc:443
+        - source_labels: [__meta_kubernetes_node_name]
+          regex: (.+)
+          target_label: __metrics_path__
+          replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+      ## Node exporter for worker nodes only
+      - job_name: workernode
+        honor_timestamps: true
+        scrape_interval: 1m
+        scrape_timeout: 10s
+        metrics_path: metrics
+        scheme: http
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    run: prometheus
+  name: prometheus-alert-rules
+data:
+  alert.rules: |
+    groups:
+    - name: alert.rules
+      rules:
+      - alert: InstanceDown
+        expr: up{job="node",instance=~"^k3d-nats.*"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          description: "{{ $labels.instance }} has been down for more than 5 minutes."
+      - alert: NodeOutOfMemory
+        expr: avg_over_time(node_memory_MemFree_bytes{job="node"}[10m]) < 262144
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          description: "{{ $labels.instance }} has less than 256MB of available memory."
+      - alert: NodeOutOfDiskSpace
+        expr: avg_over_time(node_filesystem_avail_bytes{job="node",fstype=~"xfs|ext4"}[10m])
+          < 2147483648
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          description: "{{ $labels.instance }} has less than 2GB disk space remaining."
+      - alert: PersistentVolumeOutOfDiskSpace
+        expr: avg_over_time(kubelet_volume_stats_available_bytes{job="kubernetes-nodes"}[10m]) < 2147483648
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          description: "{{ $labels.persistentvolumeclaim }} has less than 2GB disk space remaining."
+      - alert: OutOfMemoryProcessKilled
+        expr: oom_count{job="mtailoom"} > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          description: "{{ $labels.instance }} killed a process because it was out of\
+            \ memory."
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    run: prometheus-node-exporter
+  name: prometheus-node-exporter
+spec:
+  selector:
+    matchLabels:
+      run: prometheus-node-exporter
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        run: prometheus-node-exporter
+    spec:
+      containers:
+        - name: prometheus-node-exporter
+          #image: "prom/node-exporter:v1.0.1"
+          image: "prom/node-exporter:latest"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - --path.procfs=/host/proc
+            - --path.sysfs=/host/sys
+            - --web.listen-address=:9100
+          ports:
+            - name: metrics
+              containerPort: 9100
+              hostPort: 9100
+          resources:
+            {}
+          volumeMounts:
+            - name: proc
+              mountPath: /host/proc
+              readOnly:  true
+            - name: sys
+              mountPath: /host/sys
+              readOnly: true
+      hostNetwork: true
+      hostPID: true
+      volumes:
+        - name: proc
+          hostPath:
+            path: /proc
+        - name: sys
+          hostPath:
+            path: /sys
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: alertmanager
+  name: alertmanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: alertmanager
+  template:
+    metadata:
+      labels:
+        run: alertmanager
+    spec:
+      serviceAccountName: prometheus-service-account
+      containers:
+        - name: alertmanager
+          #image: prom/alertmanager:v0.21.0
+          image: prom/alertmanager:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9093
+              protocol: TCP
+          volumeMounts:
+            - name: alertmanager-config
+              mountPath: /etc/alertmanager/alertmanager.yml
+              subPath: alertmanager.yml
+            - name: notification-template
+              mountPath: /etc/alertmanager/notifications.tpl
+              subPath: notifications.tpl
+            - name: tmp
+              mountPath: /tmp
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        runAsNonRoot: false
+      volumes:
+        - name: alertmanager-config
+          configMap:
+            name: alertmanager-config
+        - name: notification-template
+          configMap:
+            name: notification-template
+        - name: tmp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: alertmanager
+  name: alertmanager
+spec:
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 9093
+      nodePort: 30913
+  selector:
+    run: alertmanager
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    run: alertmanager
+  name: alertmanager-config
+data:
+  alertmanager.yml: |
+    global:
+      smtp_smarthost: localhost:25
+      smtp_from: alertmanager@localhost
+    templates:
+    - "/etc/alertmanager/*.tpl"
+    inhibit_rules:
+    - source_match:
+        severity: critical
+      target_match:
+        severity: warning
+      equal:
+      - alertname
+      - cluster
+      - service
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    run: alertmanager
+  name: notification-template
+data:
+  notifications.tpl: |
+    {{ define "__annotation_url_suffix" }}{{ if eq .Annotations.url_suffix "grafana-timewindow" }}&from={{ printf "%v%s" .StartsAt.Unix "000" }}&to=now{{ end }}{{ end }}
+    {{ define "__alert_link" }}{{ if .Annotations.url }}<{{ .Annotations.url }}{{ template "__annotation_url_suffix" . }}|View>{{ end }}{{ end }}
+    {{ define "custom_message" }}
+    {{ if gt (len .Alerts.Firing) 0 }}{{ range .Alerts.Firing }}{{ .Annotations.description }} {{ template "__alert_link" . }}
+    {{ end }}{{ end }}
+    {{ if gt (len .Alerts.Resolved) 0 }}{{ range .Alerts.Resolved }}{{ if .Annotations.resolved }}{{ .Annotations.resolved }}{{ else }}{{ .Annotations.description }}{{ end }} {{ template "__alert_link" . }}
+    {{ end }}{{ end }}
+    {{ end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: grafana
+  name: grafana
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      run: grafana
+  template:
+    metadata:
+      labels:
+        run: grafana
+    spec:
+      serviceAccountName: prometheus-service-account
+      containers:
+        - name: grafana
+          resources:
+            requests:
+              memory: 256Mi
+            limits:
+              memory: 1024Mi
+          image: grafana/grafana:7.3.7
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          # Grafana docker containers default to UID:GID 472
+          securityContext:
+            runAsUser: 472
+            runAsGroup: 472
+            runAsNonRoot: true
+            allowPrivilegeEscalation: true
+          env:
+            - name: GF_SERVER_HTTP_PORT
+              value: "3000"
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: "solidfire"
+            - name: GF_INSTALL_PLUGINS
+              value: "grafana-kubernetes-app"
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "true"
+            - name: GF_AUTH_ANONYMOUS_ORG_NAME
+              value: "Main Org."
+            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+              value: "Admin"
+            - name: GF_USERS_ALLOW_SIGN_UP
+              value: "false"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: grafana
+  name: grafana
+spec:
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+  selector:
+    run: grafana
