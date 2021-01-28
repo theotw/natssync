@@ -1,7 +1,6 @@
 package pkg
 
 import (
-	"log"
 	"os"
 	"testing"
 	"time"
@@ -47,7 +46,7 @@ func TestNewConfiguration(t *testing.T) {
 
 	for _, envVar := range envVarDefaults {
 		if envVar.value != envVar.expected {
-			log.Panicf("Unexpected value: '%s' != '%s'", envVar.value, envVar.expected)
+			t.Errorf("Unexpected value: '%s' != '%s'", envVar.value, envVar.expected)
 		}
 	}
 }
