@@ -11,8 +11,12 @@ import (
 )
 
 func init() {
+	newConfig := pkg.NewConfiguration()
 	path, _ := os.Getwd()
-	pkg.Config.CertDir = path+"/../../testfiles"
-	pkg.Config.CacheMgr = "mem"
-	pkg.Config.Keystore = "file"
+
+	newConfig.CertDir = path+"/../../testfiles"
+	newConfig.CacheMgr = "mem"
+	newConfig.Keystore = "file"
+
+	pkg.Config = newConfig
 }
