@@ -35,7 +35,7 @@ func FindClientID(subject string) string {
 func RunMsgHandler(subjectString string) {
 	for listenForMsgs {
 
-		natsURL := pkg.GetEnvWithDefaults("NATS_SERVER_URL", "nats://127.0.0.1:4222")
+		natsURL := pkg.Config.NatsServerUrl
 		log.Infof("Connecting to NATS server %s", natsURL)
 		nc, err := nats.Connect(natsURL)
 		if err == nil {

@@ -19,11 +19,7 @@ import (
 //USER_ID= the valid user ID defaults to natssync
 //SECRET = the valid user secret.  defaults to changeit
 func main() {
-	natsURL := pkg.GetEnvWithDefaults("NATS_SERVER_URL", "nats://127.0.0.1:4222")
-
-	log.Infof("Connecting to NATS server %s", natsURL)
-
-	nc, err := nats.Connect(natsURL)
+	nc, err := nats.Connect(pkg.Config.NatsServerUrl)
 	if err != nil {
 		log.Errorf("Unable to connect to NATS, exiting %s", err.Error())
 		os.Exit(2)

@@ -24,7 +24,7 @@ const PUBLIC_HASH_NAME = "natssync_public_key_store"
 
 func NewRedisLocationKeyStore() (*RedisKeyStore, error) {
 	ret := new(RedisKeyStore)
-	ret.RedisURL = pkg.GetEnvWithDefaults("REDIS_URL", "localhost:6379")
+	ret.RedisURL = pkg.Config.RedisUrl
 	err := ret.Init()
 	return ret, err
 }

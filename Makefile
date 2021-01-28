@@ -121,9 +121,6 @@ pushall:
 	docker push ${IMAGE_REPO}/natssync-tests:latest
 
 
-l1: export CERT_DIR=${PWD}/testfiles
-l1: export CACHE_MGR=mem
-l1: export KEYSTORE=file
 l1:
 	echo ${PATH}
 	go get github.com/jstemmer/go-junit-report
