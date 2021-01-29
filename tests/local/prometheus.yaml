@@ -296,7 +296,6 @@ spec:
     spec:
       containers:
         - name: prometheus-node-exporter
-          #image: "prom/node-exporter:v1.0.1"
           image: "prom/node-exporter:latest"
           imagePullPolicy: "IfNotPresent"
           args:

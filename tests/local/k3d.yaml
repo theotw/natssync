@@ -19,3 +19,4 @@ ports:
   - port: 3000:3000
     nodeFilters:
       - loadbalancer
+
