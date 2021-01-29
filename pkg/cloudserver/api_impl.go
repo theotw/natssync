@@ -168,12 +168,14 @@ func handlePostRegister(c *gin.Context) {
 		var err error
 		in, err = handleMultipartFormRegistration(c)
 		if err != nil {
+			metrics.IncrementClientRegistrationFailure(1)
 			c.JSON(bridgemodel.HandleError(c, err))
 		}
 	} else {
 		in = new(v1.RegisterOnPremReq)
 		e := c.ShouldBindJSON(in)
 		if e != nil {
+			metrics.IncrementClientRegistrationFailure(1)
 			code, ret := bridgemodel.HandleErrors(c, e)
 			c.JSON(code, &ret)
 			return
@@ -187,15 +189,19 @@ func handlePostRegister(c *gin.Context) {
 		validPubKey = pubKey != nil && perr == nil
 	}
 	if !validPubKey {
+		metrics.IncrementClientRegistrationFailure(1)
 		ierr := errors.NewInernalError(errors.BRIDGE_ERROR, errors.INVALID_PUB_KEY, nil)
 		c.JSON(bridgemodel.HandleError(c, ierr))
 		return
 	}
 	response, e := sendRegRequestToAuthServer(c, in)
 	if e != nil {
+		metrics.IncrementClientRegistrationFailure(1)
 		code, ret := bridgemodel.HandleErrors(c, e)
 		c.JSON(code, &ret)
 		return
+	} else {
+		metrics.IncrementClientRegistrationSuccess(1)
 	}
 
 	if !response.Success {

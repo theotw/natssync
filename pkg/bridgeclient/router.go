@@ -9,6 +9,7 @@ import (
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"github.com/theotw/natssync/pkg"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -19,9 +20,11 @@ var quit chan os.Signal
 // Run - configures and starts the web server
 func RunBridgeClient(test bool) error {
 
+	ginPort := ":" + pkg.GetEnvWithDefaults("GIN_PORT", "8080")
+
 	r := newRouter(test)
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    ginPort,
 		Handler: r,
 	}
 
@@ -38,6 +41,7 @@ func RunBridgeClient(test bool) error {
 func newRouter(test bool) *gin.Engine {
 	router := gin.Default()
 	root := router.Group("/onprem-bridge/")
+	root.Handle("GET", "/metrics", metricGetHandlers)
 	if test {
 		root.Handle("GET", "/kill", func(c *gin.Context) {
 			quit <- os.Interrupt

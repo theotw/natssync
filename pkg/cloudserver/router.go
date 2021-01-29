@@ -23,6 +23,7 @@ var quit chan os.Signal
 // Run - configures and starts the web server
 func RunBridgeServer(test bool) error {
 	logLevel := pkg.GetEnvWithDefaults("LOG_LEVEL", "info")
+	ginPort := ":" + pkg.GetEnvWithDefaults("GIN_PORT", "8080")
 
 	level, levelerr := log.ParseLevel(logLevel)
 	if levelerr != nil {
@@ -34,7 +35,7 @@ func RunBridgeServer(test bool) error {
 
 	r := newRouter(test)
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    ginPort,
 		Handler: r,
 	}
 

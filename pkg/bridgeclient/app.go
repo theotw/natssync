@@ -13,8 +13,10 @@ import (
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
+	"github.com/theotw/natssync/pkg/metrics"
 	"github.com/theotw/natssync/pkg/msgs"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"os"
 	"strings"
@@ -106,7 +108,10 @@ func RunClient(test bool) {
 						var echomsg nats.Msg
 						echomsg.Subject = fmt.Sprintf("%s.bridge-client", natmsg.Reply)
 						echomsg.Data = []byte(time.Now().String() + " bridge client")
+						startpost := time.Now()
 						go sendMessageToCloud(&echomsg, serverURL, clientID)
+						endpost := time.Now()
+						metrics.RecordTimeToPushMessage(int(math.Round(endpost.Sub(startpost).Seconds())))
 					}
 
 					nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data)

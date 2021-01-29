@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/bridgemodel"
@@ -93,4 +94,8 @@ func swaggerUIGetHandler(c *gin.Context) {
 
 func uiGetHandler(c *gin.Context) {
 	c.Redirect(302, "/onprem-bridge/ui/index.html")
+}
+
+func metricGetHandlers(c *gin.Context) {
+	promhttp.Handler().ServeHTTP(c.Writer, c.Request)
 }

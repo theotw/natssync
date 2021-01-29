@@ -4,7 +4,10 @@ name: nats
 servers: 2
 agents: 2
 ports:
-  - port: 8080:80
+  - port: 9081:8081
+    nodeFilters:
+      - loadbalancer
+  - port: 9082:8082
     nodeFilters:
       - loadbalancer
   - port: 9093:9093
