@@ -26,7 +26,7 @@ spec:
               memory: 1024Mi
           # You may need to udpate the port in the image path to hit the local registry
           image: k3d-nats-registry:55519/theotw/natssync-client:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8081
           env:
@@ -83,7 +83,7 @@ spec:
               memory: 1024Mi
           # You may need to udpate the port in the image path to hit the local registry
           image: k3d-nats-registry:55519/theotw/natssync-server:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8082
           env:
@@ -140,6 +140,7 @@ spec:
               memory: 1024Mi
           # You may need to udpate the port in the image path to hit the local registry
           image: library/redis:6.0.10-alpine3.12
+          imagePullPolicy: IfNotPresent
           command:
             - redis-server
           env:
