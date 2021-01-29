@@ -25,9 +25,9 @@ When k3d is running, deploy a prometheus stack using:
 ```bash
 kubectl apply -f prometheus.yaml
 ```
-I did not configure this with any persistent storage which means you should connect the prometheus data source at first run in grafana.
+I did not configure this with any persistent storage which means you should **connect the prometheus data source at first run in grafana**.
 Grafana is configured with no authentication.
-After the data source exists you can import the defined graph json files.
+After the data source exists you can import the defined graph json files such as `NATSsyncDevelopmentDashboard.json`.
 *The alertmanger config is currently empty and therefore broken but this is ok for now*
 
 Add a line for the local registry to /etc/hosts
