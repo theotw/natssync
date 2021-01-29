@@ -17,7 +17,9 @@ import (
 
 //The client/south side echo proxylet.  Answers echo calls
 func main() {
-	nc, err := nats.Connect(pkg.Config.NatsServerUrl)
+	natsURL := pkg.Config.NatsServerUrl
+	log.Infof("Connecting to NATS server %s", natsURL)
+	nc, err := nats.Connect(natsURL)
 	if err != nil {
 		log.Errorf("Unable to connect to NATS, exiting %s", err.Error())
 		os.Exit(2)

@@ -22,7 +22,9 @@ import (
 //that indicates which part of the journey has been hit.
 // the loop ends when it sees echolet.
 func main() {
-	nc, err := nats.Connect(pkg.Config.NatsServerUrl)
+	natsURL := pkg.Config.NatsServerUrl
+	fmt.Printf("Using NATS Server %s \n", natsURL)
+	nc, err := nats.Connect(natsURL)
 	if err != nil {
 		log.Fatal(err)
 	}
