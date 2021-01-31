@@ -19,10 +19,10 @@ func TestNATSClustering(t *testing.T) {
 	nats0 := os.Getenv("nats0")
 	nats1 := os.Getenv("nats1")
 	if !assert.Greater(t, len(nats0), 0, "need an env var called nats0") {
-		t.Fail()
+		t.Fatal()
 	}
 	if !assert.Greater(t, len(nats1), 0, "need an env var called nats1") {
-		t.Fail()
+		t.Fatal()
 	}
 	nc0, err := nats.Connect(nats0)
 	if err != nil {
