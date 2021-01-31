@@ -11,6 +11,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 )
 
 //tests nats cluster by sending a message to nats0 and listening for it on nats1
@@ -42,11 +43,12 @@ func TestNATSClustering(t *testing.T) {
 
 	// Subscribe
 	if _, err := nc1.Subscribe("*", func(m *nats.Msg) {
-		fmt.Printf("%s.%s", m.Subject, m.Data)
+		fmt.Printf("Hello %s.%s", m.Subject, m.Data)
 		wg.Done()
 	}); err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(4 * time.Second)
 	fmt.Println("Publishing")
 	if err := nc0.Publish("updates", []byte("All is Well")); err != nil {
 		t.Fatal(err)
