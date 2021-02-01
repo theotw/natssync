@@ -5,14 +5,17 @@
 package msgs
 
 import (
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	_ "github.com/theotw/natssync/tests/unit"
 )
 
 func TestEncryption(t *testing.T) {
-	dirName, err := ioutil.TempDir("", "encrptTest")
+	dirName, err := ioutil.TempDir("", "encryptTest")
 	if !assert.Nil(t, err, "Error setting up test dir") {
 		t.Fail()
 	} else {

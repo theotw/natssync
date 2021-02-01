@@ -22,9 +22,7 @@ import (
 )
 
 func RunClient(test bool) {
-	logLevel := pkg.GetEnvWithDefaults("LOG_LEVEL", "debug")
-
-	level, levelerr := log.ParseLevel(logLevel)
+	level, levelerr := log.ParseLevel(pkg.Config.LogLevel)
 	if levelerr != nil {
 		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
 		level = log.DebugLevel
@@ -37,20 +35,17 @@ func RunClient(test bool) {
 		os.Exit(1)
 	}
 
-	natsURL := pkg.GetEnvWithDefaults("NATS_SERVER_URL", "nats://127.0.0.1:4222")
-	serverURL := pkg.GetEnvWithDefaults("CLOUD_BRIDGE_URL", "http://localhost:8080")
-	clientID := pkg.GetEnvWithDefaults("PREM_ID", "client1")
+	serverURL := pkg.Config.CloudBridgeUrl
+	clientID := pkg.Config.PremId
 	if len(clientID) == 0 {
 		log.Errorf("No client ID, exiting")
 		os.Exit(2)
 	}
-	log.Infof("Connecting to NATS server %s", natsURL)
-
 	var nc *nats.Conn
 
 	for true {
 		if nc == nil {
-			nc, err = nats.Connect(natsURL)
+			nc, err = nats.Connect(pkg.Config.NatsServerUrl)
 			if err != nil {
 				log.Errorf("Unable to connect to NATS, retrying... error: %s", err.Error())
 				nc = nil

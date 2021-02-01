@@ -22,9 +22,9 @@ import (
 //that indicates which part of the journey has been hit.
 // the loop ends when it sees echolet.
 func main() {
-	naturl := pkg.GetEnvWithDefaults("NATS_SERVER_URL", "nats://127.0.0.1:4222")
-	fmt.Printf("Using NATS Server %s \n", naturl)
-	nc, err := nats.Connect(naturl)
+	natsURL := pkg.Config.NatsServerUrl
+	fmt.Printf("Using NATS Server %s \n", natsURL)
+	nc, err := nats.Connect(natsURL)
 	if err != nil {
 		log.Fatal(err)
 	}
