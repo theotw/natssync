@@ -50,15 +50,15 @@ func (t *RedisCacheMgr) GetAgeOfOldestTimestamp() time.Duration {
 	var keys []string
 	err := t.Pool.Do(radix.Cmd(&keys, "KEYS", LIST_PREFIX+"*"))
 	if err != nil {
-		log.Errorf("Error getting keys in get queue depths %s \n", err.Error())
+		log.Errorf("Error getting keys in get oldest timestamp %s \n", err.Error())
 		return ret
 	}
 
 	for _, key := range keys {
 		var data []time.Time
-		err := t.Pool.Do(radix.Cmd(&data, "TIMESTAMP", key))
+		err := t.Pool.Do(radix.Cmd(&data,"GET", "timestamp", key))
 		if err != nil {
-			log.Errorf("Error getting timestamp for key %s in get queue depths %s \n", key, err.Error())
+			log.Errorf("Error getting timestamp for key %s in get oldest timestamp %s \n", key, err.Error())
 			return ret
 		} else {
 			for _, s := range data {
