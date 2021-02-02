@@ -20,6 +20,7 @@ type MsgCacheManager interface {
 	PutMessage(message *CachedMsg) error
 	//depth of each queue per client/location ID
 	GetQueueDepths() map[string]int
+	GetAgeOfOldestTimestamp() time.Duration
 	Init() error
 }
 
@@ -71,6 +72,19 @@ func (t *InMemMessageCache) GetQueueDepths() map[string]int {
 		ret[k] = len(v)
 	}
 	return ret
+}
+
+//oldest message timestamp in the cache
+func (t *InMemMessageCache) GetAgeOfOldestTimestamp() time.Duration {
+	oldest, start := time.Now(), time.Now()
+	for _, v := range t.messages {
+		for _, m := range v {
+			if m.Timestamp.Before(oldest) {
+				oldest = m.Timestamp
+			}
+		}
+	}
+	return start.Sub(oldest)
 }
 
 func (t *InMemMessageCache) Init() error {

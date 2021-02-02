@@ -15,6 +15,7 @@ var timeWaitingForMessages prometheus.Histogram
 var totalClientRegistrationSuccesses prometheus.Counter
 var totalClientRegistrationFailures prometheus.Counter
 var timeToPushMessage prometheus.Histogram
+var oldestMessageQueued prometheus.Histogram
 
 //uses this page https://prometheus.io/docs/guides/go-application/
 func InitMetrics() {
@@ -50,6 +51,10 @@ func InitMetrics() {
 	timeToPushMessage = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name: "natssync_message_post_time",
 		Help: "Time post a message including failed messages",
+	})
+	oldestMessageQueued = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name: "natssync_time_message_queued",
+		Help: "Age of the oldest message in the cache",
 	})
 }
 
@@ -91,5 +96,10 @@ func IncrementClientRegistrationFailure(count int) {
 func RecordTimeToPushMessage(count int) {
 	if timeToPushMessage != nil {
 		timeToPushMessage.Observe(float64(count))
+	}
+}
+func RecordAgeOfMessageQueue(count int) {
+	if oldestMessageQueued != nil {
+		oldestMessageQueued.Observe(float64(count))
 	}
 }
