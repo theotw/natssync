@@ -45,7 +45,7 @@ func getArguments() Arguments {
 func main() {
 	args := getArguments()
 
-	fmt.Printf("Using NATS Server %s \n", *args.natsURL)
+	fmt.Printf("Connecting to NATS Server %s \n", *args.natsURL)
 	nc, err := nats.Connect(*args.natsURL)
 	if err != nil {
 		log.Fatal(err)
@@ -60,10 +60,14 @@ func main() {
 	sync, err := nc.SubscribeSync(replyListenSub)
 	if err != nil {
 		log.Fatalf("Error subscribing: %e", err)
+	} else {
+		log.Printf("Subscribed to %s", replyListenSub)
 	}
 
 	if err = nc.PublishRequest(sub, reply, []byte(*args.message)); err != nil {
 		log.Fatalf("Error publishing message: %e", err)
+	} else {
+		log.Print("Published message")
 	}
 	if err = nc.Flush(); err != nil {
 		log.Fatalf("Error flushing NATS connection: %e", err)
@@ -72,10 +76,10 @@ func main() {
 	for {
 		msg, err := sync.NextMsg(5 * time.Minute)
 		if err != nil {
-			fmt.Printf("Got Error %s \n", err.Error())
+			log.Printf("Got Error %s \n", err.Error())
 			break
 		} else {
-			fmt.Printf(" %s \n", string(msg.Data))
+			log.Printf("Message received: %s \n", string(msg.Data))
 			if strings.HasSuffix(msg.Subject, msgs.ECHOLET_SUFFIX) {
 				break
 			}
