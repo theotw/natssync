@@ -45,30 +45,27 @@ func getArguments() Arguments {
 func main() {
 	args := getArguments()
 
-	fmt.Printf("Connecting to NATS Server %s \n", *args.natsURL)
+	log.Printf("Connecting to NATS Server %s \n", *args.natsURL)
 	nc, err := nats.Connect(*args.natsURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer nc.Close()
 
-	randomClientUUID := uuid.New().String()
-	reply := fmt.Sprintf("%s.%s.%s", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID, randomClientUUID)
-
-	sub := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, *args.clientID, msgs.ECHO_SUBJECT_BASE)
-	replyListenSub := fmt.Sprintf("%s.%s.%s.*", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID, randomClientUUID)
+	subject := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, *args.clientID, msgs.ECHO_SUBJECT_BASE)
+	replySubject := fmt.Sprintf("%s.%s.%s", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID, uuid.New().String())
+	replyListenSub := fmt.Sprintf("%s.*", replySubject)
 	sync, err := nc.SubscribeSync(replyListenSub)
 	if err != nil {
 		log.Fatalf("Error subscribing: %e", err)
-	} else {
-		log.Printf("Subscribed to %s", replyListenSub)
 	}
+	log.Printf("Subscribed to %s", replyListenSub)
 
-	if err = nc.PublishRequest(sub, reply, []byte(*args.message)); err != nil {
+	if err = nc.PublishRequest(subject, replySubject, []byte(*args.message)); err != nil {
 		log.Fatalf("Error publishing message: %e", err)
-	} else {
-		log.Print("Published message")
 	}
+	log.Printf("Published message: %s", *args.message)
+
 	if err = nc.Flush(); err != nil {
 		log.Fatalf("Error flushing NATS connection: %e", err)
 	}
@@ -79,7 +76,7 @@ func main() {
 			log.Printf("Got Error %s \n", err.Error())
 			break
 		} else {
-			log.Printf("Message received: %s \n", string(msg.Data))
+			log.Printf("Message received [%s]: %s \n", msg.Subject, string(msg.Data))
 			if strings.HasSuffix(msg.Subject, msgs.ECHOLET_SUFFIX) {
 				break
 			}
