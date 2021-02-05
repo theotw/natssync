@@ -77,7 +77,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BridgeMessages'
+              $ref: '#/components/schemas/BridgeMessagePostReq'
       responses:
         '202':
           description: Messages accepted
@@ -86,7 +86,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/ErrorResponseList'
+        '401':
+          description: Unauthorized, Invalid Auth Challenge
+
         '500':
           description: Bad juju happened
           content:
@@ -102,6 +105,11 @@ paths:
           name: premid
           required: true
           description: the premise ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthChallenge'
       responses:
         '200':
           description: Messages for the prem ID.  If not messages were available in the timeout period then an empty array is returned
@@ -115,6 +123,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized, Invalid Auth Challenge
+
         '500':
           description: Bad juju happened
           content:
@@ -125,6 +136,24 @@ paths:
 components:
 
   schemas:
+    AuthChallenge:
+      type: object
+      properties:
+        version:
+          type: number
+        authChallengeA:
+          type: string
+        authChellengeB:
+          type: string
+
+    BridgeMessagePostReq:
+      type: object
+      properties:
+        authChallenge:
+          $ref: '#/components/schemas/AuthChallenge'
+        messages:
+          $ref: '#/components/schemas/BridgeMessages'
+
     BridgeMessages:
       type: array
       items:
@@ -164,6 +193,12 @@ components:
         messageData:
           description: Encrypted message data.
           type: string
+
+    ErrorResponseList:
+      type: array
+      items:
+        $ref: '#/components/schemas/ErrorResponse'
+
     ErrorResponse:
       type: object
       required:

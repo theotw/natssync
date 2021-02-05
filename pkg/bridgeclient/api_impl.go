@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
 	v1 "github.com/theotw/natssync/pkg/bridgeclient/generated/v1"
@@ -41,7 +40,7 @@ func handlePostRegister(c *gin.Context) {
 		return
 	}
 	var req serverv1.RegisterOnPremReq
-	premID := uuid.New().String()
+	premID := bridgemodel.MakeRandomString()
 	log.Debugf("Generating new key for prem ID %s", premID)
 	err := msgs.GenerateAndSaveKey(premID)
 	if err != nil {
