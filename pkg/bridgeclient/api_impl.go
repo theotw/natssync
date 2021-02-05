@@ -1,5 +1,5 @@
 /*
- * Copyright (c) The One True Way 2020. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package cloudclient
@@ -88,6 +88,5 @@ func healthCheckGetUnversioned(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 func swaggerUIGetHandler(c *gin.Context) {
-	c.Redirect(302, "/onprem-bridge/api/index_onprem_v1.html")
+	c.Redirect(302, "/bridge-client/api/index_bridge_client_v1.html")
 }
-

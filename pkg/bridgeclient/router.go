@@ -1,5 +1,5 @@
 /*
- * Copyright (c) The One True Way 2020. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package cloudclient
@@ -37,14 +37,13 @@ func RunBridgeClient(test bool) error {
 
 func newRouter(test bool) *gin.Engine {
 	router := gin.Default()
-	root := router.Group("/onprem-bridge/")
+	root := router.Group("/bridge-client/")
 	if test {
 		root.Handle("GET", "/kill", func(c *gin.Context) {
 			quit <- os.Interrupt
 		})
 	}
-	root.Handle("GET", "/healthcheck", healthCheckGetUnversioned)
-	v1 := router.Group("/onprem-bridge/1", routeMiddleware)
+	v1 := router.Group("/bridge-client/1", routeMiddleware)
 	v1.Handle("GET", "/about", aboutGetUnversioned)
 	v1.Handle("POST", "/register", handlePostRegister)
 	v1.Handle("GET", "/healthcheck", healthCheckGetUnversioned)
@@ -55,8 +54,8 @@ func newRouter(test bool) *gin.Engine {
 	return router
 }
 func addUnversionedRoutes(router *gin.Engine) {
-	router.Handle("GET", "/onprem-bridge/about", aboutGetUnversioned)
-	router.Handle("GET", "/onprem-bridge/healthcheck", healthCheckGetUnversioned)
+	router.Handle("GET", "/bridge-client/about", aboutGetUnversioned)
+	router.Handle("GET", "/bridge-client/healthcheck", healthCheckGetUnversioned)
 }
 
 //router middle ware
@@ -78,15 +77,15 @@ func routeMiddleware(c *gin.Context) {
 	c.Next()
 }
 func addOpenApiDefRoutes(router *gin.Engine) {
-	router.StaticFile("/onprem-bridge/api/onprem_openapi_v1.yaml", "openapi/onprem_openapi_v1.yaml")
-	router.StaticFile("/onprem-bridge/api/swagger.yaml", "openapi/onprem_openapi_v1.yaml")
+	router.StaticFile("/bridge-client/api/bridge_client_v1.yaml", "openapi/bridge_client_v1.yaml")
+	router.StaticFile("/bridge-client/api/swagger.yaml", "openapi/bridge_client_v1.yaml")
 }
 func addSwaggerUIRoutes(router *gin.Engine) {
-	router.Handle("GET", "/onprem-bridge/api/index.html", swaggerUIGetHandler)
-	router.Handle("GET", "/onprem-bridge/api", swaggerUIGetHandler)
-	router.Handle("GET", "/onprem-bridge/api/", swaggerUIGetHandler)
+	router.Handle("GET", "/bridge-client/api/index.html", swaggerUIGetHandler)
+	router.Handle("GET", "/bridge-client/api", swaggerUIGetHandler)
+	router.Handle("GET", "/bridge-client/api/", swaggerUIGetHandler)
 	swaggerUI := static.LocalFile("third_party/swaggerui/", false)
-	webHandler := static.Serve("/onprem-bridge/api", swaggerUI)
+	webHandler := static.Serve("/bridge-client/api", swaggerUI)
 	router.Use(webHandler)
 }
 func addUIRoutes(router *gin.Engine) {

@@ -15,7 +15,7 @@ FROM alpine:3.12.0
 RUN mkdir -p web
 COPY --from=build /build/out/bridgeserver_x64_linux ./bridgeserver_x64_linux
 COPY --from=build /build/third_party/swaggerui/ ./third_party/swaggerui/
-COPY --from=build /build/openapi/cloud_openapi_v1.yaml ./openapi/
+COPY --from=build /build/openapi/bridge_server_v1.yaml ./openapi/
 ENV GIN_MODE=release
 ENTRYPOINT ["./bridgeserver_x64_linux"]
 

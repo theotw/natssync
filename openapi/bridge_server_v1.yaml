@@ -7,7 +7,7 @@ info:
     name: Apache
 
 servers:
-  - url: /event-bridge/1
+  - url: /bridge-server/1
 
 paths:
   /about:

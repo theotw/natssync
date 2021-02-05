@@ -1,5 +1,5 @@
-CLOUD_OPENAPIDEF_FILE=openapi/cloud_openapi_v1.yaml
-CLIENT_OPENAPIDEF_FILE=openapi/client_openapi_v1.yaml
+CLOUD_OPENAPIDEF_FILE=openapi/bridge_server_v1.yaml
+CLIENT_OPENAPIDEF_FILE=openapi/bridge_client_v1.yaml
 openapicli_jar=third_party/openapi-generator-cli.jar
 
 

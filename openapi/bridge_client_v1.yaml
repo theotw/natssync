@@ -7,7 +7,7 @@ info:
     name: Apache
 
 servers:
-  - url: /onprem-bridge/1
+  - url: /bridge-client/1
 
 paths:
   /about:

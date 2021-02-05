@@ -259,7 +259,7 @@ func healthCheckGetUnversioned(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 func swaggerUIGetHandler(c *gin.Context) {
-	c.Redirect(302, "/event-bridge/api/index_v1.html")
+	c.Redirect(302, "/bridge-server/api/index_bridge_server_v1.html")
 }
 
 func metricGetHandlers(c *gin.Context) {
