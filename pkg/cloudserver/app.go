@@ -13,9 +13,7 @@ import (
 )
 
 func RunBridgeServerApp(test bool) {
-	logLevel := pkg.GetEnvWithDefaults("LOG_LEVEL", "debug")
-
-	level, levelerr := log.ParseLevel(logLevel)
+	level, levelerr := log.ParseLevel(pkg.Config.LogLevel)
 	if levelerr != nil {
 		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
 		level = log.DebugLevel

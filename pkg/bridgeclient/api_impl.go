@@ -60,8 +60,7 @@ func handlePostRegister(c *gin.Context) {
 	}
 	req.PublicKey = string(pkBits)
 	jsonBits, _ := json.Marshal(&req)
-	serverURL := pkg.GetEnvWithDefaults("CLOUD_BRIDGE_URL", "http://localhost:8080")
-	url := fmt.Sprintf("%s/event-bridge/1/register/", serverURL)
+	url := fmt.Sprintf("%s/event-bridge/1/register/", pkg.Config.CloudBridgeUrl)
 	resp, err := http.DefaultClient.Post(url, "application/json", bytes.NewReader(jsonBits))
 
 	if err != nil {

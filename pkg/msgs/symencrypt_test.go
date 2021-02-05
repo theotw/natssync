@@ -7,8 +7,11 @@ package msgs
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	_ "github.com/theotw/natssync/tests/unit"
 )
 
 func Test_AesEnryption(t *testing.T) {

@@ -50,7 +50,7 @@ func CreateLocationKeyStore(ksType string) (ret LocationKeyStore, err error) {
 	return
 }
 func InitLocationKeyStore() error {
-	ksType := pkg.GetEnvWithDefaults("KEYSTORE", "redis")
+	ksType := pkg.Config.Keystore
 	ret, err := CreateLocationKeyStore(ksType)
 	keystore = ret
 	return err

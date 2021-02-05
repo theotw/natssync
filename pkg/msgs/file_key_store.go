@@ -19,7 +19,7 @@ type FileKeyStore struct {
 
 func NewFileKeyStore() (*FileKeyStore, error) {
 	ret := new(FileKeyStore)
-	ret.basePath = pkg.GetEnvWithDefaults("CERT_DIR", "/certs")
+	ret.basePath = pkg.Config.CertDir
 	return ret, nil
 }
 
