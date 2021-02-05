@@ -38,9 +38,9 @@ paths:
             schema:
               type: object
               properties:
-                userID:
+                authToken:
                   type: string
-                secret:
+                metaData:
                   type: string
                 publicKey:
                   type: string
@@ -134,12 +134,12 @@ components:
     RegisterOnPremReq:
       type: object
       properties:
-        userID:
+        authToken:
           type: string
-          description: User wishing to register, the use of this field depends on the registration system used
-        secret:
+          description: the format of the auth token can be what ever is needed for authentication.  The auth service used on the back end will determine that.  In its simpliest form it is userID:Password
+        metaData:
           type: string
-          description:  the use of this field depends on the registration system used
+          description: the meta data used to visually identify the user/on prem instance.  this string must be unique to the server but can be anything and be changed
         publicKey:
           type: string
           description: Public key for the On Prem region

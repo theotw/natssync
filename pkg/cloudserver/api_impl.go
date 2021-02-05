@@ -142,14 +142,14 @@ func handleMultipartFormRegistration(c *gin.Context) (ret *v1.RegisterOnPremReq,
 		}
 		fieldName := part.FormName()
 		switch fieldName {
-		case "userID":
+		case "authToken":
 			{
-				ret.UserID = string(bits)
+				ret.AuthToken = string(bits)
 				break
 			}
-		case "secret":
+		case "metaData":
 			{
-				ret.Secret = string(bits)
+				ret.MetaData = string(bits)
 				break
 			}
 		case "publicKey":
@@ -231,7 +231,7 @@ func sendRegRequestToAuthServer(c *gin.Context, in *v1.RegisterOnPremReq) (*brid
 		return nil, err
 	} else {
 		log.Tracef("Posting message to nats ")
-		regReq := bridgemodel.RegistrationRequest{UserID: in.UserID, Secret: in.Secret}
+		regReq := bridgemodel.RegistrationRequest{AuthToken: in.AuthToken}
 		reqBits, _ := json.Marshal(&regReq)
 		respMsg, err := nc.Request(bridgemodel.REGISTRATION_AUTH_SUBJECT, reqBits, timeout)
 		nc.Close()

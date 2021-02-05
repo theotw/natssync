@@ -38,13 +38,12 @@ paths:
             schema:
               type: object
               properties:
-                userID:
+                authToken:
                   type: string
-                secret:
+                  description: String to be sent for auth to the server
+                userMetaData:
                   type: string
-                publicKey:
-                  type: string
-                  format: binary
+                  description: meta data used to identify this instance/user
       responses:
         '202':
           description: registration accepted no data
