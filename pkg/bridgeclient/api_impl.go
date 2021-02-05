@@ -13,8 +13,9 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
+	v1 "github.com/theotw/natssync/pkg/bridgeclient/generated/v1"
 	"github.com/theotw/natssync/pkg/bridgemodel"
-	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
+	serverv1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
 	"github.com/theotw/natssync/pkg/msgs"
 
 	"net/http"
@@ -32,14 +33,14 @@ func handleGetRegister(c *gin.Context) {
 	}
 }
 func handlePostRegister(c *gin.Context) {
-	var in v1.RegisterOnPremReq
+	var in v1.RegisterReq
 	e := c.ShouldBindJSON(&in)
 	if e != nil {
 		code, ret := bridgemodel.HandleErrors(c, e)
 		c.JSON(code, &ret)
 		return
 	}
-	var req v1.RegisterOnPremReq
+	var req serverv1.RegisterOnPremReq
 	premID := uuid.New().String()
 	log.Debugf("Generating new key for prem ID %s", premID)
 	err := msgs.GenerateAndSaveKey(premID)
@@ -91,6 +92,3 @@ func swaggerUIGetHandler(c *gin.Context) {
 	c.Redirect(302, "/onprem-bridge/api/index_onprem_v1.html")
 }
 
-func uiGetHandler(c *gin.Context) {
-	c.Redirect(302, "/onprem-bridge/ui/index.html")
-}

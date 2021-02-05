@@ -43,10 +43,11 @@ func newRouter(test bool) *gin.Engine {
 			quit <- os.Interrupt
 		})
 	}
+	root.Handle("GET", "/healthcheck", healthCheckGetUnversioned)
 	v1 := router.Group("/onprem-bridge/1", routeMiddleware)
 	v1.Handle("GET", "/about", aboutGetUnversioned)
 	v1.Handle("POST", "/register", handlePostRegister)
-	v1.Handle("GET", "/register", handleGetRegister)
+	v1.Handle("GET", "/healthcheck", healthCheckGetUnversioned)
 	addUnversionedRoutes(router)
 	addOpenApiDefRoutes(router)
 	addSwaggerUIRoutes(router)

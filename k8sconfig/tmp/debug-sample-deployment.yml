@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: debugport
+  labels:
+    app: debugport
+spec:
+  ports:
+    - port: 2345
+      name: nats-cluster
+  selector:
+    app: nats
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: debugapp
+spec:
+  serviceName: "nats-cluster"
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: nats
+  template:
+    metadata:
+      labels:
+        app: nats
+    spec:
+      volumes:
+        - name: config-volume
+          configMap:
+            name: nats-config
+
+      containers:
+        - name: nats
+          image: nats
+
+          ports:
+            - containerPort: 4222
+              name: nats
+            - containerPort: 4224
+              name: cluster
+          args: [ "--debug","--trace","-cluster","nats://0.0.0.0:4224","-routes","nats://nats-0.nats-cluster.default.svc.cluster.local:4224"]
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/nats-config
