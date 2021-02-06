@@ -4,9 +4,10 @@
 
 package bridgemodel
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+)
 
-func MakeRandomString() string {
-	//todo, make this crypto
+func GenerateUUID() string {
 	return uuid.New().String()
 }

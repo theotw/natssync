@@ -23,6 +23,10 @@ type MessageEnvelope struct {
 }
 
 type LocationKeyStore interface {
+	//loads the location ID for this client.  If not initialized, a blank string is returned
+	LoadLocationID() string
+	//loads the location ID
+	SaveLocationID(locationID string) error
 	ReadPrivateKeyData(locationID string) ([]byte, error)
 	ReadPublicKeyData(locationID string) ([]byte, error)
 	WritePublicKey(locationID string, buf []byte) error

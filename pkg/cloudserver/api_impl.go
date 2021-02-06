@@ -228,7 +228,7 @@ func handlePostRegister(c *gin.Context) {
 		c.JSON(bridgemodel.HandleError(c, ierr))
 		return
 	}
-	locationID := bridgemodel.MakeRandomString()
+	locationID := bridgemodel.GenerateUUID()
 	store := msgs.GetKeyStore()
 
 	var resp v1.RegisterOnPremResponse

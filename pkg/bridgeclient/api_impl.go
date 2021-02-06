@@ -40,7 +40,7 @@ func handlePostRegister(c *gin.Context) {
 		return
 	}
 	var req serverv1.RegisterOnPremReq
-	premID := bridgemodel.MakeRandomString()
+	premID := bridgemodel.GenerateUUID()
 	log.Debugf("Generating new key for prem ID %s", premID)
 	err := msgs.GenerateAndSaveKey(premID)
 	if err != nil {

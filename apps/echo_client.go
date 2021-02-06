@@ -51,7 +51,7 @@ func main() {
 	defer nc.Close()
 
 	subject := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, *args.clientID, msgs.ECHO_SUBJECT_BASE)
-	replySubject := fmt.Sprintf("%s.%s.%s", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID, bridgemodel.MakeRandomString())
+	replySubject := fmt.Sprintf("%s.%s.%s", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID, bridgemodel.GenerateUUID())
 	replyListenSub := fmt.Sprintf("%s.*", replySubject)
 	sync, err := nc.SubscribeSync(replyListenSub)
 	if err != nil {
