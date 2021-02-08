@@ -29,21 +29,32 @@ func RunClient(test bool) {
 	}
 	log.SetLevel(level)
 	msgs.InitLocationKeyStore()
-	err := RunBridgeClient(test)
+	store := msgs.GetKeyStore()
+	if store == nil {
+		log.Fatalf("Unable to get keystore \n")
+	}
+	err := RunBridgeClientRestAPI(test)
 	if err != nil {
 		log.Errorf("Error starting API server %s", err.Error())
 		os.Exit(1)
 	}
 
 	serverURL := pkg.Config.CloudBridgeUrl
-	clientID := pkg.Config.PremId
-	if len(clientID) == 0 {
-		log.Errorf("No client ID, exiting")
-		os.Exit(2)
-	}
 	var nc *nats.Conn
-
+	var lastClientID string
 	for true {
+		clientID := store.LoadLocationID()
+		if len(clientID) == 0 {
+			log.Infof("No client ID, sleeping and retrying \n")
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		//in case we re-register and the client ID changes, change what we listen for
+		if (clientID != lastClientID) && nc != nil {
+			nc.Close()
+			nc = nil
+			lastClientID = clientID
+		}
 		if nc == nil {
 			nc, err = nats.Connect(pkg.Config.NatsServerUrl)
 			if err != nil {
@@ -55,11 +66,12 @@ func RunClient(test bool) {
 				subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
 				nc.Subscribe(subj, func(msg *nats.Msg) {
 					log.Debugf("Sending msg to cloud %s", msg.Subject)
+
 					sendMessageToCloud(msg, serverURL, clientID)
 				})
 			}
 		} else {
-			url := fmt.Sprintf("%s/event-bridge/1/message-queue/%s", serverURL, clientID)
+			url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
 			resp, err := http.DefaultClient.Get(url)
 			if err != nil {
 				log.Errorf("Error fetching messages %s", err.Error())
@@ -117,7 +129,7 @@ func RunClient(test bool) {
 }
 
 func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string) {
-	url := fmt.Sprintf("%s/event-bridge/1/message-queue/%s", serverURL, clientID)
+	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
 	natmsg := bridgemodel.NatsMessage{Reply: msg.Reply, Subject: msg.Subject, Data: msg.Data}
 	envelope, enverr := msgs.PutObjectInEnvelope(natmsg, clientID, msgs.CLOUD_ID)
 	if enverr != nil {

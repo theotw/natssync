@@ -6,7 +6,10 @@ package cloudclient
 
 import (
 	"bytes"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -16,16 +19,17 @@ import (
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	serverv1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
 	"github.com/theotw/natssync/pkg/msgs"
+	"io/ioutil"
 
 	"net/http"
 )
 
 const WAIT_MAX = 30
 
-var registed bool
-
 func handleGetRegister(c *gin.Context) {
-	if registed {
+	store := msgs.GetKeyStore()
+	locationID := store.LoadLocationID()
+	if len(locationID) > 0 {
 		c.JSON(200, "")
 	} else {
 		c.JSON(400, "")
@@ -40,26 +44,38 @@ func handlePostRegister(c *gin.Context) {
 		return
 	}
 	var req serverv1.RegisterOnPremReq
-	premID := bridgemodel.GenerateUUID()
-	log.Debugf("Generating new key for prem ID %s", premID)
-	err := msgs.GenerateAndSaveKey(premID)
+	pair, err := msgs.GenerateNewKeyPair()
 	if err != nil {
 		log.Errorf("Error generating key %s", err.Error())
 		code, ret := bridgemodel.HandleErrors(c, err)
 		c.JSON(code, &ret)
 		return
 	}
-	store := msgs.GetKeyStore()
-	pkBits, err := store.ReadPublicKeyData(premID)
+	pubKeyBits, err := x509.MarshalPKIXPublicKey(&pair.PublicKey)
 	if err != nil {
-		log.Errorf("Error reading pub key")
 		code, ret := bridgemodel.HandleErrors(c, err)
 		c.JSON(code, &ret)
 		return
 	}
-	req.PublicKey = string(pkBits)
+
+	publicKeyBlock := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubKeyBits,
+	}
+
+	var buf bytes.Buffer
+	err = pem.Encode(&buf, publicKeyBlock)
+	if err != nil {
+		code, ret := bridgemodel.HandleErrors(c, err)
+		c.JSON(code, &ret)
+		return
+	}
+
+	req.PublicKey = base64.StdEncoding.EncodeToString(buf.Bytes())
+	req.AuthToken = in.AuthToken
+	req.MetaData = in.MetaData
 	jsonBits, _ := json.Marshal(&req)
-	url := fmt.Sprintf("%s/event-bridge/1/register/", pkg.Config.CloudBridgeUrl)
+	url := fmt.Sprintf("%s/bridge-server/1/register/", pkg.Config.CloudBridgeUrl)
 	resp, err := http.DefaultClient.Post(url, "application/json", bytes.NewReader(jsonBits))
 
 	if err != nil {
@@ -72,6 +88,19 @@ func handlePostRegister(c *gin.Context) {
 		c.JSON(code, response)
 		return
 	}
+	bits, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+	var regResp serverv1.RegisterOnPremResponse
+	json.Unmarshal(bits, &resp)
+	msgs.SaveKeyPair(regResp.PermId, pair)
+	msgs.GetKeyStore().WritePublicKey(msgs.CLOUD_ID, []byte(regResp.CloudPublicKey))
+	//this step must be last, other parts of the code watch for this key
+	msgs.GetKeyStore().SaveLocationID(regResp.PermId)
+
 	c.JSON(200, "")
 
 }

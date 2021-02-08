@@ -67,12 +67,12 @@ components:
     RegisterReq:
       type: object
       properties:
-        userID:
+        metaData:
           type: string
-          description: User wishing to register, the use of this field depends on the registration system used
-        secret:
+          description: Metadata to identify this client
+        authToken:
           type: string
-          description:  the use of this field depends on the registration system used
+          description: Auth token for the registration request
     ErrorResponse:
       type: object
       required:

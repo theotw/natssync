@@ -1,7 +1,5 @@
 /*
- * Copyright (c) The One True Way 2020.
- * Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.
- * It is offered "As IS"  Have fun with it!!
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package main
@@ -19,6 +17,10 @@ import (
 
 //The client/south side echo proxylet.  Answers echo calls
 func main() {
+	if len(os.Args) != 2 {
+		fmt.Printf("Must provide a client ID to listen for \n")
+		os.Exit(2)
+	}
 	natsURL := pkg.Config.NatsServerUrl
 	log.Infof("Connecting to NATS server %s", natsURL)
 	nc, err := nats.Connect(natsURL)
@@ -26,7 +28,7 @@ func main() {
 		log.Errorf("Unable to connect to NATS, exiting %s", err.Error())
 		os.Exit(2)
 	}
-	clientID := pkg.Config.PremId
+	clientID := os.Args[1]
 	subj := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, clientID, msgs.ECHO_SUBJECT_BASE)
 
 	nc.Subscribe(subj, func(msg *nats.Msg) {

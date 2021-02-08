@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
+ */
+
 package pkg
 
 import (
@@ -5,7 +9,6 @@ import (
 	"testing"
 	"time"
 )
-
 
 func TestGetEnvWithDefaults(t *testing.T) {
 	timeNowString := time.Now().String()
@@ -29,13 +32,12 @@ func TestNewConfiguration(t *testing.T) {
 	config := NewConfiguration()
 
 	type envVarDefault struct {
-		value string
+		value    string
 		expected string
 	}
 
-	var envVarDefaults = []envVarDefault {
+	var envVarDefaults = []envVarDefault{
 		{config.NatsServerUrl, "nats://127.0.0.1:4222"},
-		{config.PremId, "client1"},
 		{config.CloudBridgeUrl, "http://localhost:8080"},
 		{config.LogLevel, "debug"},
 		{config.RedisUrl, "localhost:6379"},

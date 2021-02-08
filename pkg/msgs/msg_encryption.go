@@ -41,12 +41,21 @@ func InitCloudKey() error {
 	return err
 }
 func GenerateAndSaveKey(locationID string) error {
-	pair, err := GenerateNewKeyPair(locationID)
+	pair, err := GenerateNewKeyPair()
 	if err != nil {
 		log.Errorf("Unable to generate new key pair %s \n", err.Error())
 		return err
 	}
-	err = StorePrivateKey(locationID, pair)
+	err2 := SaveKeyPair(locationID, pair)
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+func SaveKeyPair(locationID string, pair *rsa.PrivateKey) error {
+	err := StorePrivateKey(locationID, pair)
 	if err != nil {
 		return err
 	}
@@ -54,7 +63,6 @@ func GenerateAndSaveKey(locationID string) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -119,7 +127,7 @@ func StorePublicKey(locationID string, key *rsa.PublicKey) error {
 
 	return err
 }
-func GenerateNewKeyPair(clientID string) (*rsa.PrivateKey, error) {
+func GenerateNewKeyPair() (*rsa.PrivateKey, error) {
 	// Private Key generation
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

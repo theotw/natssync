@@ -32,7 +32,7 @@ func RunBridgeServer(test bool) error {
 
 	r := newRouter(test)
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    pkg.Config.ListenString,
 		Handler: r,
 	}
 

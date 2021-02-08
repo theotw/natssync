@@ -6,6 +6,7 @@ package cloudserver
 
 import (
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -204,7 +205,12 @@ func handlePostRegister(c *gin.Context) {
 			return
 		}
 	}
-	pubKeyBits := []byte(in.PublicKey)
+	pubKeyBits, decoderr := base64.StdEncoding.DecodeString(in.PublicKey)
+	if decoderr != nil {
+		ierr := errors.NewInernalError(errors.BRIDGE_ERROR, errors.INVALID_PUB_KEY, nil)
+		c.JSON(bridgemodel.HandleError(c, ierr))
+		return
+	}
 	validPubKey := false
 	pubKeyBlock, _ := pem.Decode(pubKeyBits)
 	if pubKeyBlock != nil {
@@ -247,7 +253,7 @@ func handlePostRegister(c *gin.Context) {
 func sendRegRequestToAuthServer(c *gin.Context, in *v1.RegisterOnPremReq) (*bridgemodel.RegistrationResponse, error) {
 	timeout := time.Second * 30
 
-	natsURL := pkg.GetEnvWithDefaults("NATS_SERVER_URL", "nats://127.0.0.1:4322")
+	natsURL := pkg.Config.NatsServerUrl
 	log.Infof("Connecting to NATS server for regustration %s", natsURL)
 	nc, err := nats.Connect(natsURL)
 	ret := new(bridgemodel.RegistrationResponse)

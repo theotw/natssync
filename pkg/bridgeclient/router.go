@@ -17,7 +17,7 @@ import (
 var quit chan os.Signal
 
 // Run - configures and starts the web server
-func RunBridgeClient(test bool) error {
+func RunBridgeClientRestAPI(test bool) error {
 
 	r := newRouter(test)
 	srv := &http.Server{
