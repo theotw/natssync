@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: simple-reg-auth
+
+spec:
+  template:
+    metadata:
+      name: simple-reg-auth
+      labels:
+        type: simple-reg-auth
+
+    spec:
+      containers:
+        - name: simple-reg-auth
+          image: theotw/simple-reg-auth
+          env:
+            - name: LOG_LEVEL
+              value: "trace"
+            - name: NATS_SERVER_URL
+              value: "nats://nats:4222"
+
+      restartPolicy: Always
+
+  replicas: 1
+
+  selector:
+    matchLabels:
+      type: simple-reg-auth
