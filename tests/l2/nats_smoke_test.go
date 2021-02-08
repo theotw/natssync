@@ -30,7 +30,6 @@ func TestNATSClustering(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer nc0.Close()
-
 	nc1, err := nats.Connect(nats1)
 	if err != nil {
 		t.Fatal(err)
@@ -42,7 +41,7 @@ func TestNATSClustering(t *testing.T) {
 	wg.Add(1)
 
 	// Subscribe
-	if _, err := nc1.Subscribe("*", func(m *nats.Msg) {
+	if _, err := nc1.Subscribe("*.>", func(m *nats.Msg) {
 		fmt.Printf("Hello %s.%s", m.Subject, m.Data)
 		wg.Done()
 	}); err != nil {
@@ -50,7 +49,7 @@ func TestNATSClustering(t *testing.T) {
 	}
 	time.Sleep(4 * time.Second)
 	fmt.Println("Publishing")
-	if err := nc0.Publish("updates", []byte("All is Well")); err != nil {
+	if err := nc0.Publish("one.updates", []byte("All is Well")); err != nil {
 		t.Fatal(err)
 	}
 	fmt.Println("Done Publishing")

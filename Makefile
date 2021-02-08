@@ -11,8 +11,7 @@ ifndef IMAGE_REPO
 endif
 
 
-
-generate: maketmp justgenerate
+generate: maketmp justgenerate rmtmp
 maketmp:
 	rm -r -f tmpcloud
 	mkdir -p tmpcloud

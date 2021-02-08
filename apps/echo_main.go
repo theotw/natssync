@@ -17,9 +17,13 @@ import (
 
 //The client/south side echo proxylet.  Answers echo calls
 func main() {
+	var clientID string
 	if len(os.Args) != 2 {
-		fmt.Printf("Must provide a client ID to listen for \n")
-		os.Exit(2)
+		log.Infof("No client ID provided, defaulting to *")
+		clientID = "*"
+
+	} else {
+		clientID = os.Args[1]
 	}
 	natsURL := pkg.Config.NatsServerUrl
 	log.Infof("Connecting to NATS server %s", natsURL)
@@ -28,7 +32,7 @@ func main() {
 		log.Errorf("Unable to connect to NATS, exiting %s", err.Error())
 		os.Exit(2)
 	}
-	clientID := os.Args[1]
+
 	subj := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, clientID, msgs.ECHO_SUBJECT_BASE)
 
 	nc.Subscribe(subj, func(msg *nats.Msg) {
