@@ -12,7 +12,7 @@ endif
 
 
 
-generate: maketmp justgenerate rmtmp
+generate: maketmp justgenerate
 maketmp:
 	rm -r -f tmpcloud
 	mkdir -p tmpcloud
