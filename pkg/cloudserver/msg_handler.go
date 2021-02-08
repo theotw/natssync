@@ -23,7 +23,7 @@ func StopMessageListener() {
 	listenForMsgs = false
 }
 
-//looks for the client ID in the subject string, if not is foundf, that OK, return empty string
+//Looks for the client ID in the subject string. If not found, return an empty string.
 func FindClientID(subject string) string {
 	parts := strings.Split(subject, ".")
 	var ret string
@@ -32,6 +32,7 @@ func FindClientID(subject string) string {
 	}
 	return ret
 }
+
 func RunMsgHandler(subjectString string) {
 	for listenForMsgs {
 

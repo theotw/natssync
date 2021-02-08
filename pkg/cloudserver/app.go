@@ -31,5 +31,4 @@ func RunBridgeServerApp(test bool) {
 	fmt.Println("Starting Server")
 	RunBridgeServer(test)
 	fmt.Println("Server stopped")
-
 }

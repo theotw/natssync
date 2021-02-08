@@ -17,7 +17,7 @@ import (
 //the main for an example of a simple auth server.  Authorizes a request if the user ID and secret matches what is set in the env
 //env vars to set are:
 //USER_ID= the valid user ID defaults to natssync
-//SECRET = the valid user secret.  defaults to changeit
+//SECRET = the valid user secret. defaults to changeit
 func main() {
 	natsURL := pkg.Config.NatsServerUrl
 	log.Infof("Connecting to NATS server %s", natsURL)
