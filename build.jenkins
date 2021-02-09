@@ -1,0 +1,145 @@
+/*
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
+ */
+
+def IMAGE_TAG = ""
+def IMAGE_REPO =""
+pipeline {
+    parameters {
+        string(name: 'IMAGE_TAG_INPUT', defaultValue: 'dev', description: 'docker image tag to use')
+    }
+    agent {
+        kubernetes {
+            defaultContainer 'pipeline-runner'
+            yaml """
+        spec:
+          tolerations:
+          - key: "cattle.io/os"
+            operator: "Equal"
+            value: "linux"
+            effect: "NoSchedule"
+          containers:
+          - name: pipeline-runner
+            image: ${NATSSYNC_DOCKER_REPO}/fullstackdev:202101211239
+            customWorkspace: /home/jenkins
+            command:
+            - cat
+            tty: true
+            volumeMounts:
+            - mountPath: /var/run/docker.sock
+              name: dockersock
+          volumes:
+          - name: dockersock
+            hostPath:
+              path: /var/run/docker.sock
+
+      """
+        }
+    }
+    environment {
+        DOCKER_CREDS=credentials('natssync-docker-creds')
+        PATH = "$PATH:/usr/local/go/bin/:/root/go/bin"
+
+    }
+
+    stages {
+        stage('Prepare') {
+            steps {
+                container('jnlp') {
+                    script {
+                        IMAGE_REPO= env.DOCKER_REPO
+                        echo 'Using Repo: '  + IMAGE_REPO
+                        def myRepo = checkout scm
+                        def gitCommit = "${GIT_COMMIT}"
+                        def gitBranch = "${GIT_BRANCH}"
+                        if (params.IMAGE_TAG_INPUT == 'dev') {
+                            def tmpstring
+                            tmpstring = sh(script: 'date +%Y%m%d%H%M', returnStdout: true)
+                            IMAGE_TAG = tmpstring.substring(0, tmpstring.length() - 1)
+                        } else {
+                            IMAGE_TAG = params.IMAGE_TAG_INPUT
+                        }
+                        echo 'using image ' + IMAGE_TAG
+                    }
+                }
+            }
+        }
+
+        stage('Test') {
+
+            steps {
+                container('pipeline-runner') {
+                    script {
+                        sh """#!/bin/bash
+                        echo 'IMAGE Tag:  ${IMAGE_TAG}'
+                        export IMAGE_TAG=${IMAGE_TAG}
+                        export IMAGE_REPO=${IMAGE_REPO}
+                        pwd
+                        go get github.com/wadey/gocovmerge
+                        go get github.com/jstemmer/go-junit-report
+                        go get github.com/t-yuki/gocover-cobertura
+                        make incontainergenerate
+                        make l1
+                    """
+                    }
+                }
+            }
+        }
+
+
+        stage('Build Images') {
+            steps {
+                container('pipeline-runner') {
+                    script {
+                        sh """#!/bin/bash
+                            echo $IMAGE_TAG
+                            export IMAGE_TAG=${IMAGE_TAG}
+                            export IMAGE_REPO=${IMAGE_REPO}
+                            pwd
+                            make allimages
+                            
+                        """
+                    }
+                }
+            }
+        }
+        stage('Gen Reports') {
+            steps {
+                sh """#!/bin/bash
+                    pwd
+                    #gocovmerge out/unit_coverage.out out/l2_client_coverage.out  out/l2_server_coverage.out  > out/coverage.out
+                    gocovmerge out/unit_coverage.out  > out/coverage.out
+                    gocover-cobertura < out/coverage.out > out/coverage.xml
+                """
+                cobertura coberturaReportFile: 'natssync/out/coverage.xml'
+                junit allowEmptyResults: true, testResults: 'natssync/out/report_*.xml'
+            }
+
+        }
+
+
+        stage('Push Images') {
+            steps {
+                container('pipeline-runner') {
+                    script {
+                        sh """
+                        cd natssync
+                         pwd
+                         echo $IMAGE_TAG
+                         export IMAGE_TAG=${IMAGE_TAG}
+                         export IMAGE_REPO=${IMAGE_REPO}
+                         docker login $IMAGE_REPO -u $DOCKER_CREDS_USR -p $DOCKER_CREDS_PSW
+                         make echoenv
+                         make pushall
+                        """
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: 'out/**/*'
+        }
+    }
+}
