@@ -42,7 +42,7 @@ func handleGetMessages(c *gin.Context) {
 		c.JSON(400, ret)
 		return
 	}
-	if !validateChallenge(&in) {
+	if !msgs.ValidateAuthChallenge(clientID, &in) {
 		c.JSON(401, "")
 		return
 	}
@@ -83,9 +83,6 @@ func handleGetMessages(c *gin.Context) {
 
 	c.JSON(200, ret)
 }
-func validateChallenge(req *v1.AuthChallenge) bool {
-	return true
-}
 func handlePostMessage(c *gin.Context) {
 	clientID := c.Param("premid")
 	log.Debug(clientID)
@@ -97,7 +94,7 @@ func handlePostMessage(c *gin.Context) {
 		c.JSON(400, ret)
 		return
 	}
-	if !validateChallenge(&in.AuthChallenge) {
+	if !msgs.ValidateAuthChallenge(clientID, &in.AuthChallenge) {
 		c.JSON(401, "")
 		return
 	}

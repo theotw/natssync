@@ -34,67 +34,70 @@ func FindClientID(subject string) string {
 }
 
 func RunMsgHandler(subjectString string) {
+	var nc *nats.Conn
+	var subscription *nats.Subscription
 	for listenForMsgs {
-
 		natsURL := pkg.Config.NatsServerUrl
 		log.Infof("Connecting to NATS server %s", natsURL)
-		nc, err := nats.Connect(natsURL)
-		if err == nil {
-			log.Infof("Connected to NATS server %s", natsURL)
-			subscription, err := nc.SubscribeSync(subjectString)
+		if nc == nil {
+			nctmp, err := nats.Connect(natsURL)
 			if err == nil {
-				for listenForMsgs {
-					m, err := subscription.NextMsg(10 * time.Second)
-					metrics.IncrementMessageRecieved(1)
-					if err == nil {
-						if strings.HasSuffix(m.Subject, msgs.ECHO_SUBJECT_BASE) {
-							echosub := fmt.Sprintf("%s.bridge-msg-handler", m.Reply)
-							nc.Publish(echosub, []byte(time.Now().String()+" message handler"))
-						}
-						clientID := FindClientID(m.Subject)
-						if len(clientID) != 0 {
-							cm := new(CachedMsg)
-							cm.ClientID = clientID
-							plainMsg := new(bridgemodel.NatsMessage)
-							plainMsg.Data = m.Data
-							plainMsg.Reply = m.Reply
-							plainMsg.Subject = m.Subject
-							envelope, err2 := msgs.PutObjectInEnvelope(plainMsg, msgs.CLOUD_ID, clientID)
-							log.Tracef("Recieved Message with Client ID %s, Subject %s", clientID, plainMsg.Subject)
-							if err2 != nil {
-								log.Errorf("Error putting message in Envelope client ID:%s error=%s", clientID, err2.Error())
-							} else {
-								jsonData, marshelError := json.Marshal(&envelope)
-								if marshelError != nil {
-									log.Errorf("Error marshalling envelope with  clientID:%s error=%s", clientID, marshelError.Error())
-								} else {
-									cm.Data = string(jsonData)
-									GetCacheMgr().PutMessage(cm)
-									metrics.IncrementMessagePosted(1)
-								}
-							}
-						}
-					} else if strings.Index(err.Error(), "timeout") < 0 {
-						log.Infof("Failed to GetNextMsg to NATS server %s, pausing  %d", natsURL, 10)
-						time.Sleep(10 * time.Second)
-						break
-					}
+				log.Infof("Connected to NATS server %s", natsURL)
+				subscription, err = nctmp.SubscribeSync(subjectString)
+				if err == nil {
+					nc = nctmp
+					defer nc.Close()
+				} else {
+					nctmp.Close()
 				}
 			} else {
+				var timeout time.Duration
+				timeout = 10
+				log.Infof("Failed to connect to NATS server %s, pausing  %d", natsURL, timeout)
 				//if not joy, back off and try again in 10 seconds
-				log.Infof("Failed to Subscribe to NATS server %s, pausing  %d", natsURL, 10)
-				time.Sleep(10 * time.Second)
+				time.Sleep(timeout * time.Second)
 			}
-
-			nc.Close()
 		} else {
-			var timeout time.Duration
-			timeout = 10
-			log.Infof("Failed to connect to NATS server %s, pausing  %d", natsURL, timeout)
-			//if not joy, back off and try again in 10 seconds
-			time.Sleep(timeout * time.Second)
+			break
 		}
+	}
 
+	for listenForMsgs {
+		m, err := subscription.NextMsg(10 * time.Second)
+		metrics.IncrementMessageRecieved(1)
+		if err == nil {
+			if strings.HasSuffix(m.Subject, msgs.ECHO_SUBJECT_BASE) {
+				echosub := fmt.Sprintf("%s.bridge-msg-handler", m.Reply)
+				tmpstring := time.Now().Format("20060102-15:04:05.000")
+				echoMsg := fmt.Sprintf("%s | %s \n", tmpstring, "message-handler")
+				nc.Publish(echosub, []byte(echoMsg))
+			}
+			clientID := FindClientID(m.Subject)
+			if len(clientID) != 0 {
+				cm := new(CachedMsg)
+				cm.ClientID = clientID
+				plainMsg := new(bridgemodel.NatsMessage)
+				plainMsg.Data = m.Data
+				plainMsg.Reply = m.Reply
+				plainMsg.Subject = m.Subject
+				envelope, err2 := msgs.PutObjectInEnvelope(plainMsg, msgs.CLOUD_ID, clientID)
+				log.Tracef("Recieved Message with Client ID %s, Subject %s", clientID, plainMsg.Subject)
+				if err2 != nil {
+					log.Errorf("Error putting message in Envelope client ID:%s error=%s", clientID, err2.Error())
+				} else {
+					jsonData, marshelError := json.Marshal(&envelope)
+					if marshelError != nil {
+						log.Errorf("Error marshalling envelope with  clientID:%s error=%s", clientID, marshelError.Error())
+					} else {
+						cm.Data = string(jsonData)
+						GetCacheMgr().PutMessage(cm)
+						metrics.IncrementMessagePosted(1)
+					}
+				}
+			}
+		} else {
+			log.Errorf("Error fetching messages %s \n", err.Error())
+		}
 	}
 
 	return

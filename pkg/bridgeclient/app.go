@@ -99,7 +99,9 @@ func RunClient(test bool) {
 					if strings.HasSuffix(natmsg.Subject, msgs.ECHO_SUBJECT_BASE) {
 						var echomsg nats.Msg
 						echomsg.Subject = fmt.Sprintf("%s.bridge-client", natmsg.Reply)
-						echomsg.Data = []byte(time.Now().String() + " bridge client")
+						tmpstring := time.Now().Format("20060102-15:04:05.000")
+						echoMsg := fmt.Sprintf("%s | %s \n", tmpstring, "message-client")
+						echomsg.Data = []byte(echoMsg)
 						go sendMessageToCloud(&echomsg, serverURL, clientID)
 					}
 

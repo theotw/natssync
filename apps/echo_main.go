@@ -37,7 +37,8 @@ func main() {
 
 	nc.Subscribe(subj, func(msg *nats.Msg) {
 		log.Infof("Got message %s : %s  %s \n", subj, msg.Reply, msg.Data)
-		echoMsg := fmt.Sprintf("%s From %s message=%s \n", time.Now().String(), clientID, string(msg.Data))
+		tmpstring := time.Now().Format("20060102-15:04:05.000")
+		echoMsg := fmt.Sprintf("%s | %s %s %s \n", tmpstring, "echoproxylet", clientID, string(msg.Data))
 		replysub := fmt.Sprintf("%s.%s", msg.Reply, msgs.ECHOLET_SUFFIX)
 		nc.Publish(replysub, []byte(echoMsg))
 		nc.Flush()
