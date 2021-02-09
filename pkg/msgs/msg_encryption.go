@@ -16,6 +16,8 @@ import (
 	"encoding/pem"
 	"errors"
 	log "github.com/sirupsen/logrus"
+	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
+	"time"
 )
 
 func InitCloudKey() error {
@@ -39,12 +41,21 @@ func InitCloudKey() error {
 	return err
 }
 func GenerateAndSaveKey(locationID string) error {
-	pair, err := GenerateNewKeyPair(locationID)
+	pair, err := GenerateNewKeyPair()
 	if err != nil {
 		log.Errorf("Unable to generate new key pair %s \n", err.Error())
 		return err
 	}
-	err = StorePrivateKey(locationID, pair)
+	err2 := SaveKeyPair(locationID, pair)
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+func SaveKeyPair(locationID string, pair *rsa.PrivateKey) error {
+	err := StorePrivateKey(locationID, pair)
 	if err != nil {
 		return err
 	}
@@ -52,7 +63,6 @@ func GenerateAndSaveKey(locationID string) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -117,7 +127,7 @@ func StorePublicKey(locationID string, key *rsa.PublicKey) error {
 
 	return err
 }
-func GenerateNewKeyPair(clientID string) (*rsa.PrivateKey, error) {
+func GenerateNewKeyPair() (*rsa.PrivateKey, error) {
 	// Private Key generation
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -159,8 +169,7 @@ func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*Mes
 	if err != nil {
 		return nil, err
 	}
-	hash := sha256.Sum256(cipherMsg)
-	sigBits, err := rsa.SignPKCS1v15(rand.Reader, master, crypto.SHA256, hash[:])
+	sigBits, err := SignData(cipherMsg, master)
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +181,46 @@ func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*Mes
 	ret.Signature = base64.StdEncoding.EncodeToString(sigBits)
 
 	return ret, nil
+}
+func NewAuthChallenge() *v1.AuthChallenge {
+	store := GetKeyStore()
+	locationID := store.LoadLocationID()
+	key, err := LoadPrivateKey(locationID)
+	if err != nil {
+		log.Errorf("Unable to load private Key for location %s error %s", locationID, err.Error())
+		return nil
+	}
+	timeStr := time.Now().String()
+	sig, err := SignData([]byte(timeStr), key)
+	if err != nil {
+		log.Errorf("Error signing data %s \n", err.Error())
+		return nil
+	}
+	ret := new(v1.AuthChallenge)
+	ret.AuthChallengeA = timeStr
+	ret.AuthChellengeB = base64.StdEncoding.EncodeToString(sig)
+	return ret
+}
+func ValidateAuthChallenge(locationID string, challenge *v1.AuthChallenge) bool {
+	pubKey, err := LoadPublicKey(locationID)
+	if err != nil {
+		log.Errorf("Error loading public key for location %s error: %s \n", locationID, err.Error())
+		return false
+	}
+	sigBits, _ := base64.StdEncoding.DecodeString(challenge.AuthChellengeB)
+	hash := sha256.Sum256([]byte(challenge.AuthChallengeA))
+
+	err = rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, hash[:], sigBits)
+	if err != nil {
+		log.Errorf("Signature Verification Failed %s %s \n", locationID, err.Error())
+		return false
+	}
+	return true
+}
+func SignData(dataToSigh []byte, master *rsa.PrivateKey) ([]byte, error) {
+	hash := sha256.Sum256(dataToSigh)
+	sigBits, err := rsa.SignPKCS1v15(rand.Reader, master, crypto.SHA256, hash[:])
+	return sigBits, err
 }
 func PullObjectFromEnvelope(ob interface{}, envelope *MessageEnvelope) error {
 	bits, err := PullMessageFromEnvelope(envelope)

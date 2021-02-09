@@ -7,7 +7,7 @@ info:
     name: Apache
 
 servers:
-  - url: /event-bridge/1
+  - url: /bridge-server/1
 
 paths:
   /about:
@@ -38,9 +38,9 @@ paths:
             schema:
               type: object
               properties:
-                userID:
+                authToken:
                   type: string
-                secret:
+                metaData:
                   type: string
                 publicKey:
                   type: string
@@ -77,7 +77,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BridgeMessages'
+              $ref: '#/components/schemas/BridgeMessagePostReq'
       responses:
         '202':
           description: Messages accepted
@@ -86,7 +86,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/ErrorResponseList'
+        '401':
+          description: Unauthorized, Invalid Auth Challenge
+
         '500':
           description: Bad juju happened
           content:
@@ -102,6 +105,11 @@ paths:
           name: premid
           required: true
           description: the premise ID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthChallenge'
       responses:
         '200':
           description: Messages for the prem ID.  If not messages were available in the timeout period then an empty array is returned
@@ -115,6 +123,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized, Invalid Auth Challenge
+
         '500':
           description: Bad juju happened
           content:
@@ -125,6 +136,24 @@ paths:
 components:
 
   schemas:
+    AuthChallenge:
+      type: object
+      properties:
+        version:
+          type: number
+        authChallengeA:
+          type: string
+        authChellengeB:
+          type: string
+
+    BridgeMessagePostReq:
+      type: object
+      properties:
+        authChallenge:
+          $ref: '#/components/schemas/AuthChallenge'
+        messages:
+          $ref: '#/components/schemas/BridgeMessages'
+
     BridgeMessages:
       type: array
       items:
@@ -134,12 +163,12 @@ components:
     RegisterOnPremReq:
       type: object
       properties:
-        userID:
+        authToken:
           type: string
-          description: User wishing to register, the use of this field depends on the registration system used
-        secret:
+          description: the format of the auth token can be what ever is needed for authentication.  The auth service used on the back end will determine that.  In its simpliest form it is userID:Password
+        metaData:
           type: string
-          description:  the use of this field depends on the registration system used
+          description: the meta data used to visually identify the user/on prem instance.  this string must be unique to the server but can be anything and be changed
         publicKey:
           type: string
           description: Public key for the On Prem region
@@ -164,6 +193,12 @@ components:
         messageData:
           description: Encrypted message data.
           type: string
+
+    ErrorResponseList:
+      type: array
+      items:
+        $ref: '#/components/schemas/ErrorResponse'
+
     ErrorResponse:
       type: object
       required:

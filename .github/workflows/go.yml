@@ -34,7 +34,10 @@ jobs:
 
     - name: Build
       run: |
-        make generate
+        sudo rm -r -f tmpcloud
+        sudo rm -r -f tmpclient
+        sudo rm -r -f out
+        make justgenerate
         make buildlinux
 
     - name: Unit / L1 Test

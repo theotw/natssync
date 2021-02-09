@@ -6,6 +6,7 @@ package l2
 
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/msgs"
 	"os"
 	"path/filepath"
@@ -22,7 +23,7 @@ func TestFileKeyStore(t *testing.T) {
 	privFile := filepath.Join(tmpDir, privkey)
 	os.Remove(pubFile)
 	os.Remove(privFile)
-	os.Setenv("CERT_DIR", tmpDir)
+	pkg.Config.CertDir = tmpDir
 	doKeyStore(t, "file")
 	os.Remove(pubFile)
 	os.Remove(privFile)
@@ -48,5 +49,9 @@ func doKeyStore(t *testing.T, ksType string) {
 	privateData, err := store.ReadPrivateKeyData(privkey)
 	assert.Nil(t, err)
 	assert.Equal(t, testPrivate, privateData)
+
+	store.SaveLocationID("42")
+	id := store.LoadLocationID()
+	assert.Equal(t, "42", id)
 
 }

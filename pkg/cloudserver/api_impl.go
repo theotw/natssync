@@ -6,11 +6,11 @@ package cloudserver
 
 import (
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
@@ -35,6 +35,18 @@ const WAIT_MAX = 30
 func handleGetMessages(c *gin.Context) {
 	clientID := c.Param("premid")
 	fmt.Println(clientID)
+	var in v1.AuthChallenge
+	e := c.ShouldBindJSON(&in)
+	if e != nil {
+		_, ret := bridgemodel.HandleErrors(c, e)
+		c.JSON(400, ret)
+		return
+	}
+	if !msgs.ValidateAuthChallenge(clientID, &in) {
+		c.JSON(401, "")
+		return
+	}
+
 	mgr := GetCacheMgr()
 	metrics.IncrementTotalQueries(1)
 	now := time.Now().Unix()
@@ -74,43 +86,54 @@ func handleGetMessages(c *gin.Context) {
 func handlePostMessage(c *gin.Context) {
 	clientID := c.Param("premid")
 	log.Debug(clientID)
-	var in v1.BridgeMessage
+	var in v1.BridgeMessagePostReq
 	e := c.ShouldBindJSON(&in)
+
 	if e != nil {
-		code, ret := bridgemodel.HandleErrors(c, e)
-		c.JSON(code, &ret)
+		_, ret := bridgemodel.HandleErrors(c, e)
+		c.JSON(400, ret)
 		return
 	}
-	var envl msgs.MessageEnvelope
-	err := json.Unmarshal([]byte(in.MessageData), &envl)
-	if err != nil {
-		log.Errorf("Error unmarshalling envelope %s", err.Error())
-		code, resp := bridgemodel.HandleError(c, err)
-		c.JSON(code, resp)
+	if !msgs.ValidateAuthChallenge(clientID, &in.AuthChallenge) {
+		c.JSON(401, "")
+		return
 	}
-
-	var natmsg bridgemodel.NatsMessage
-	err = msgs.PullObjectFromEnvelope(&natmsg, &envl)
-	if err != nil {
-		log.Errorf("Error decoding envelope %s", err.Error())
-		code, resp := bridgemodel.HandleError(c, err)
-		c.JSON(code, resp)
-
-	}
-	log.Debugf("Got message %s ", natmsg.Subject)
-	natsURL := pkg.GetEnvWithDefaults("NATS_SERVER_URL", "nats://127.0.0.1:4322")
+	natsURL := pkg.Config.NatsServerUrl
 	log.Infof("Connecting to NATS server %s", natsURL)
 	nc, err := nats.Connect(natsURL)
 	if err != nil {
 		log.Errorf("Error connecting to NATS %s", err.Error())
-		code, resp := bridgemodel.HandleError(c, err)
-		c.JSON(code, resp)
+		_, resp := bridgemodel.HandleError(c, err)
+		c.JSON(500, resp)
+		return
+	}
+	defer nc.Close()
+	errors := make([]*v1.ErrorResponse, 0)
+	for _, msg := range in.Messages {
+		var envl msgs.MessageEnvelope
+		err = json.Unmarshal([]byte(msg.MessageData), &envl)
+		if err != nil {
+			log.Errorf("Error unmarshalling envelope %s", err.Error())
+			_, resp := bridgemodel.HandleError(c, err)
+			errors = append(errors, resp)
+			continue
+		}
 
-	} else {
+		var natmsg bridgemodel.NatsMessage
+		err = msgs.PullObjectFromEnvelope(&natmsg, &envl)
+		if err != nil {
+			log.Errorf("Error decoding envelope %s", err.Error())
+			_, resp := bridgemodel.HandleError(c, err)
+			errors = append(errors, resp)
+		}
 		log.Tracef("Posting message to nats %s", natmsg.Subject)
 		nc.Publish(natmsg.Subject, natmsg.Data)
 		nc.Flush()
-		nc.Close()
+	}
+	if len(errors) > 1 {
+		c.JSON(400, errors)
+	} else {
+		c.JSON(202, "")
 	}
 
 }
@@ -142,14 +165,14 @@ func handleMultipartFormRegistration(c *gin.Context) (ret *v1.RegisterOnPremReq,
 		}
 		fieldName := part.FormName()
 		switch fieldName {
-		case "userID":
+		case "authToken":
 			{
-				ret.UserID = string(bits)
+				ret.AuthToken = string(bits)
 				break
 			}
-		case "secret":
+		case "metaData":
 			{
-				ret.Secret = string(bits)
+				ret.MetaData = string(bits)
 				break
 			}
 		case "publicKey":
@@ -179,7 +202,12 @@ func handlePostRegister(c *gin.Context) {
 			return
 		}
 	}
-	pubKeyBits := []byte(in.PublicKey)
+	pubKeyBits, decoderr := base64.StdEncoding.DecodeString(in.PublicKey)
+	if decoderr != nil {
+		ierr := errors.NewInernalError(errors.BRIDGE_ERROR, errors.INVALID_PUB_KEY, nil)
+		c.JSON(bridgemodel.HandleError(c, ierr))
+		return
+	}
 	validPubKey := false
 	pubKeyBlock, _ := pem.Decode(pubKeyBits)
 	if pubKeyBlock != nil {
@@ -203,7 +231,7 @@ func handlePostRegister(c *gin.Context) {
 		c.JSON(bridgemodel.HandleError(c, ierr))
 		return
 	}
-	locationID := uuid.New().String()
+	locationID := bridgemodel.GenerateUUID()
 	store := msgs.GetKeyStore()
 
 	var resp v1.RegisterOnPremResponse
@@ -222,7 +250,7 @@ func handlePostRegister(c *gin.Context) {
 func sendRegRequestToAuthServer(c *gin.Context, in *v1.RegisterOnPremReq) (*bridgemodel.RegistrationResponse, error) {
 	timeout := time.Second * 30
 
-	natsURL := pkg.GetEnvWithDefaults("NATS_SERVER_URL", "nats://127.0.0.1:4322")
+	natsURL := pkg.Config.NatsServerUrl
 	log.Infof("Connecting to NATS server for regustration %s", natsURL)
 	nc, err := nats.Connect(natsURL)
 	ret := new(bridgemodel.RegistrationResponse)
@@ -231,7 +259,7 @@ func sendRegRequestToAuthServer(c *gin.Context, in *v1.RegisterOnPremReq) (*brid
 		return nil, err
 	} else {
 		log.Tracef("Posting message to nats ")
-		regReq := bridgemodel.RegistrationRequest{UserID: in.UserID, Secret: in.Secret}
+		regReq := bridgemodel.RegistrationRequest{AuthToken: in.AuthToken}
 		reqBits, _ := json.Marshal(&regReq)
 		respMsg, err := nc.Request(bridgemodel.REGISTRATION_AUTH_SUBJECT, reqBits, timeout)
 		nc.Close()
@@ -249,7 +277,7 @@ func sendRegRequestToAuthServer(c *gin.Context, in *v1.RegisterOnPremReq) (*brid
 }
 func aboutGetUnversioned(c *gin.Context) {
 	var resp v1.AboutResponse
-	resp.AppVersion = "1.0.0"
+	resp.AppVersion = pkg.VERSION
 	resp.ApiVersions = make([]string, 0)
 	resp.ApiVersions = append(resp.ApiVersions, "1")
 
@@ -259,7 +287,7 @@ func healthCheckGetUnversioned(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 func swaggerUIGetHandler(c *gin.Context) {
-	c.Redirect(302, "/event-bridge/api/index_v1.html")
+	c.Redirect(302, "/bridge-server/api/index_bridge_server_v1.html")
 }
 
 func metricGetHandlers(c *gin.Context) {

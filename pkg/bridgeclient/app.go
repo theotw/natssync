@@ -14,7 +14,6 @@ import (
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
 	"github.com/theotw/natssync/pkg/msgs"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -22,6 +21,8 @@ import (
 )
 
 func RunClient(test bool) {
+	log.Info("Starting NATSSync Client")
+	log.Infof("Build date: %s", pkg.GetBuildDate())
 	level, levelerr := log.ParseLevel(pkg.Config.LogLevel)
 	if levelerr != nil {
 		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
@@ -29,21 +30,32 @@ func RunClient(test bool) {
 	}
 	log.SetLevel(level)
 	msgs.InitLocationKeyStore()
-	err := RunBridgeClient(test)
+	store := msgs.GetKeyStore()
+	if store == nil {
+		log.Fatalf("Unable to get keystore \n")
+	}
+	err := RunBridgeClientRestAPI(test)
 	if err != nil {
 		log.Errorf("Error starting API server %s", err.Error())
 		os.Exit(1)
 	}
 
 	serverURL := pkg.Config.CloudBridgeUrl
-	clientID := pkg.Config.PremId
-	if len(clientID) == 0 {
-		log.Errorf("No client ID, exiting")
-		os.Exit(2)
-	}
 	var nc *nats.Conn
-
+	var lastClientID string
 	for true {
+		clientID := store.LoadLocationID()
+		if len(clientID) == 0 {
+			log.Infof("No client ID, sleeping and retrying \n")
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		//in case we re-register and the client ID changes, change what we listen for
+		if (clientID != lastClientID) && nc != nil {
+			nc.Close()
+			nc = nil
+			lastClientID = clientID
+		}
 		if nc == nil {
 			nc, err = nats.Connect(pkg.Config.NatsServerUrl)
 			if err != nil {
@@ -55,31 +67,20 @@ func RunClient(test bool) {
 				subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
 				nc.Subscribe(subj, func(msg *nats.Msg) {
 					log.Debugf("Sending msg to cloud %s", msg.Subject)
+
 					sendMessageToCloud(msg, serverURL, clientID)
 				})
 			}
 		} else {
-			url := fmt.Sprintf("%s/event-bridge/1/message-queue/%s", serverURL, clientID)
-			resp, err := http.DefaultClient.Get(url)
+			url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
+
+			ac := msgs.NewAuthChallenge()
+			httpclient := bridgemodel.NewHttpClient()
+			var msglist []v1.BridgeMessage
+			err := httpclient.SendAuthorizedRequestWithBodyAndResp("GET", url, ac, &msglist)
 			if err != nil {
 				log.Errorf("Error fetching messages %s", err.Error())
 				time.Sleep(2 * time.Second)
-				continue
-			}
-			if resp.StatusCode >= 300 {
-				log.Errorf("Error code fetching messages %s", resp.Status)
-				time.Sleep(2 * time.Second)
-				continue
-			}
-			bits, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				log.Errorf("Error reading messages %s", err.Error())
-				continue
-			}
-			var msglist []v1.BridgeMessage
-			err = json.Unmarshal(bits, &msglist)
-			if err != nil {
-				log.Errorf("Error unmarshalling messages %s", err.Error())
 				continue
 			}
 			for _, m := range msglist {
@@ -100,7 +101,9 @@ func RunClient(test bool) {
 					if strings.HasSuffix(natmsg.Subject, msgs.ECHO_SUBJECT_BASE) {
 						var echomsg nats.Msg
 						echomsg.Subject = fmt.Sprintf("%s.bridge-client", natmsg.Reply)
-						echomsg.Data = []byte(time.Now().String() + " bridge client")
+						tmpstring := time.Now().Format("20060102-15:04:05.000")
+						echoMsg := fmt.Sprintf("%s | %s \n", tmpstring, "message-client")
+						echomsg.Data = []byte(echoMsg)
 						go sendMessageToCloud(&echomsg, serverURL, clientID)
 					}
 
@@ -117,7 +120,8 @@ func RunClient(test bool) {
 }
 
 func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string) {
-	url := fmt.Sprintf("%s/event-bridge/1/message-queue/%s", serverURL, clientID)
+	log.Debugf("Sending Msg NB %s \n", msg.Subject)
+	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
 	natmsg := bridgemodel.NatsMessage{Reply: msg.Reply, Subject: msg.Subject, Data: msg.Data}
 	envelope, enverr := msgs.PutObjectInEnvelope(natmsg, clientID, msgs.CLOUD_ID)
 	if enverr != nil {
@@ -130,13 +134,17 @@ func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string) {
 		return
 	}
 	bmsg := v1.BridgeMessage{ClientID: clientID, MessageData: string(jsonbits), FormatVersion: "1"}
-	bmsgBits, bmsgerr := json.Marshal(bmsg)
+	var fullPostReq v1.BridgeMessagePostReq
+	fullPostReq.AuthChallenge = *msgs.NewAuthChallenge()
+	fullPostReq.Messages = make([]v1.BridgeMessage, 1)
+	fullPostReq.Messages[0] = bmsg
+	postMsgBits, bmsgerr := json.Marshal(&fullPostReq)
 	if bmsgerr != nil {
 		log.Errorf("Error marshaling bridge message to json bits %s", jsonerr.Error())
 		return
 	}
 
-	r := bytes.NewReader(bmsgBits)
+	r := bytes.NewReader(postMsgBits)
 	resp, posterr := http.DefaultClient.Post(url, "application/json", r)
 	if posterr != nil {
 		log.Errorf("Error sending message to server.  Dropping the message %s  error was %s", msg.Subject, posterr.Error())

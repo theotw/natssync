@@ -1,15 +1,19 @@
-CLOUD_OPENAPIDEF_FILE=openapi/cloud_openapi_v1.yaml
-CLIENT_OPENAPIDEF_FILE=openapi/client_openapi_v1.yaml
+CLOUD_OPENAPIDEF_FILE=openapi/bridge_server_v1.yaml
+CLIENT_OPENAPIDEF_FILE=openapi/bridge_client_v1.yaml
 openapicli_jar=third_party/openapi-generator-cli.jar
 
+VERSION=1.0
 
+ifndef BUILD_NUMBER_TO_USE
+	BUILD_NUMBER_TO_USE=$(shell date '+%Y%m%d%H%M')
+endif
 ifndef IMAGE_TAG
 	IMAGE_TAG=latest
 endif
+
 ifndef IMAGE_REPO
 	IMAGE_REPO=theotw
 endif
-
 
 
 generate: maketmp justgenerate rmtmp
@@ -28,7 +32,7 @@ echoenv:
 	echo "PATH ${PATH}"
 	echo "REPO ${IMAGE_REPO}"
 	echo "TAG ${IMAGE_TAG}"
-justgenerate: generateserver generateclient
+justgenerate: generateserver generateclient generateversion
 generateserver:
 	docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate -g go-server --package-name v1 -i /local/${CLOUD_OPENAPIDEF_FILE} -o /local/tmpcloud
 	rm -r -f pkg/bridgemodel/generated/v1
@@ -41,8 +45,12 @@ generateclient:
 	mkdir -p pkg/bridgeclient/generated/v1
 	cp tmpclient/go/model* pkg/bridgeclient/generated/v1
 
+generateversion:
+	echo "//THIS IS A GENERATED FILE, any changes will be overridden " >pkg/version.go
+	echo "package pkg" >>pkg/version.go
+	echo "const VERSION=\"${VERSION}.${BUILD_NUMBER_TO_USE}\"" >>pkg/version.go
 
-incontainergenerate:
+incontainergenerate:generateversion
 	rm -r -f tmpcloud
 	rm -r -f tmpclient
 	mkdir tmpcloud
@@ -57,7 +65,7 @@ incontainergenerate:
 	cp tmpcloud/go/*  pkg/bridgemodel/generated/v1
 
 	rm -r -f pkg/bridgeclient/generated/v1
-	mkdir -P pkg/bridgeclient/generated/v1
+	mkdir -p pkg/bridgeclient/generated/v1
 	echo "THIS IS A GENERATED DIR, DONT PUT FILES HERE" >pkg/bridgeclient/generated/readme.txt
 	cp tmpclient/go/model* pkg/bridgeclient/generated/v1
 

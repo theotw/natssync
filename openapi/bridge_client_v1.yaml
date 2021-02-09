@@ -7,7 +7,7 @@ info:
     name: Apache
 
 servers:
-  - url: /onprem-bridge/1
+  - url: /bridge-client/1
 
 paths:
   /about:
@@ -38,13 +38,12 @@ paths:
             schema:
               type: object
               properties:
-                userID:
+                authToken:
                   type: string
-                secret:
+                  description: String to be sent for auth to the server
+                userMetaData:
                   type: string
-                publicKey:
-                  type: string
-                  format: binary
+                  description: meta data used to identify this instance/user
       responses:
         '202':
           description: registration accepted no data
@@ -54,6 +53,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
         '500':
           description: Server error
           content:
@@ -67,12 +67,12 @@ components:
     RegisterReq:
       type: object
       properties:
-        userID:
+        metaData:
           type: string
-          description: User wishing to register, the use of this field depends on the registration system used
-        secret:
+          description: Metadata to identify this client
+        authToken:
           type: string
-          description:  the use of this field depends on the registration system used
+          description: Auth token for the registration request
     ErrorResponse:
       type: object
       required:
