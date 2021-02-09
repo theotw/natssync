@@ -4,6 +4,7 @@
 
 def IMAGE_TAG = ""
 def IMAGE_REPO =""
+def BUILD_NUMBER_TO_USE=""
 pipeline {
     parameters {
         string(name: 'IMAGE_TAG_INPUT', defaultValue: 'dev', description: 'docker image tag to use')
@@ -56,8 +57,10 @@ pipeline {
                             def tmpstring
                             tmpstring = sh(script: 'date +%Y%m%d%H%M', returnStdout: true)
                             IMAGE_TAG = tmpstring.substring(0, tmpstring.length() - 1)
+                            BUILD_NUMBER_TO_USE=tmpstring
                         } else {
                             IMAGE_TAG = params.IMAGE_TAG_INPUT
+                            BUILD_NUMBER_TO_USE=env.BUILD_NUMBER
                         }
                         echo 'using image ' + IMAGE_TAG
                         sh """#!/bin/bash
