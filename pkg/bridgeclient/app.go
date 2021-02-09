@@ -116,6 +116,7 @@ func RunClient(test bool) {
 }
 
 func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string) {
+	log.Debugf("Sending Msg NB %s \n", msg.Subject)
 	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
 	natmsg := bridgemodel.NatsMessage{Reply: msg.Reply, Subject: msg.Subject, Data: msg.Data}
 	envelope, enverr := msgs.PutObjectInEnvelope(natmsg, clientID, msgs.CLOUD_ID)
@@ -129,13 +130,17 @@ func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string) {
 		return
 	}
 	bmsg := v1.BridgeMessage{ClientID: clientID, MessageData: string(jsonbits), FormatVersion: "1"}
-	bmsgBits, bmsgerr := json.Marshal(bmsg)
+	var fullPostReq v1.BridgeMessagePostReq
+	fullPostReq.AuthChallenge = *msgs.NewAuthChallenge()
+	fullPostReq.Messages = make([]v1.BridgeMessage, 1)
+	fullPostReq.Messages[0] = bmsg
+	postMsgBits, bmsgerr := json.Marshal(&fullPostReq)
 	if bmsgerr != nil {
 		log.Errorf("Error marshaling bridge message to json bits %s", jsonerr.Error())
 		return
 	}
 
-	r := bytes.NewReader(bmsgBits)
+	r := bytes.NewReader(postMsgBits)
 	resp, posterr := http.DefaultClient.Post(url, "application/json", r)
 	if posterr != nil {
 		log.Errorf("Error sending message to server.  Dropping the message %s  error was %s", msg.Subject, posterr.Error())

@@ -36,11 +36,12 @@ func main() {
 	subj := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, clientID, msgs.ECHO_SUBJECT_BASE)
 
 	nc.Subscribe(subj, func(msg *nats.Msg) {
-		log.Infof("Got message %s : ", subj, msg.Reply)
+		log.Infof("Got message %s : %s  %s \n", subj, msg.Reply, msg.Data)
 		echoMsg := fmt.Sprintf("%s From %s message=%s \n", time.Now().String(), clientID, string(msg.Data))
 		replysub := fmt.Sprintf("%s.%s", msg.Reply, msgs.ECHOLET_SUFFIX)
 		nc.Publish(replysub, []byte(echoMsg))
 		nc.Flush()
+		log.Infof("Flushed message to %s  %s \n", msg.Reply, natsURL)
 	})
 	runtime.Goexit()
 }
