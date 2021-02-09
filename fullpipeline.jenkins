@@ -121,8 +121,7 @@ pipeline {
                         go get github.com/wadey/gocovmerge
                         export PATH=/root/go/bin:$PATH
                         gocovmerge out/coverage.out out/serverl2_coverage.out  > out/full_coverage.out
-                        cd natssync
-                        gocover-cobertura < ../out/full_coverage.out > ../out/full_coverage.xml
+                        gocover-cobertura < out/full_coverage.out > out/full_coverage.xml
                         """
                         junit allowEmptyResults: true, testResults: 'out/report_*.xml'
                         cobertura coberturaReportFile: 'out/full_coverage.xml'

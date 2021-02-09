@@ -123,8 +123,6 @@ pipeline {
                 container('pipeline-runner') {
                     script {
                         sh """
-                        cd natssync
-                         pwd
                          echo $IMAGE_TAG
                          export IMAGE_TAG=${IMAGE_TAG}
                          export IMAGE_REPO=${IMAGE_REPO}
