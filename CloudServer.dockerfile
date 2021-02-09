@@ -16,6 +16,7 @@ RUN mkdir -p web
 COPY --from=build /build/out/bridgeserver_x64_linux ./bridgeserver_x64_linux
 COPY --from=build /build/third_party/swaggerui/ ./third_party/swaggerui/
 COPY --from=build /build/openapi/bridge_server_v1.yaml ./openapi/
+RUN date -uIseconds > ./BUILD_DATE
 ENV GIN_MODE=release
 ENTRYPOINT ["./bridgeserver_x64_linux"]
 

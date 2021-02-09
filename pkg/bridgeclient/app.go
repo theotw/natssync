@@ -21,6 +21,8 @@ import (
 )
 
 func RunClient(test bool) {
+	log.Info("Starting NATSSync Client")
+	log.Infof("Build date: %s", pkg.GetBuildDate())
 	level, levelerr := log.ParseLevel(pkg.Config.LogLevel)
 	if levelerr != nil {
 		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
