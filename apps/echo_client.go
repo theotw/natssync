@@ -1,7 +1,5 @@
 /*
- * Copyright (c) The One True Way 2021. Apache License 2.0.
- * The authors accept no liability, 0 nada for the use of this software.
- * It is offered "As IS"  Have fun with it!!
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package main
@@ -9,11 +7,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/theotw/natssync/pkg/bridgemodel"
 	"log"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 
 	"github.com/theotw/natssync/pkg"
@@ -21,15 +19,15 @@ import (
 )
 
 type Arguments struct {
-	message *string
+	message  *string
 	clientID *string
-	natsURL *string
+	natsURL  *string
 }
 
 func getArguments() Arguments {
 	args := Arguments{
 		flag.String("msg", "", "Message to send to the client"),
-		flag.String("id", pkg.Config.PremId, "ID of the receiving client"),
+		flag.String("id", "", "ID of the receiving client"),
 		flag.String("url", pkg.Config.NatsServerUrl, "URL to connect to NATS"),
 	}
 	flag.Parse()
@@ -53,7 +51,7 @@ func main() {
 	defer nc.Close()
 
 	subject := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, *args.clientID, msgs.ECHO_SUBJECT_BASE)
-	replySubject := fmt.Sprintf("%s.%s.%s", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID, uuid.New().String())
+	replySubject := fmt.Sprintf("%s.%s.%s", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID, bridgemodel.GenerateUUID())
 	replyListenSub := fmt.Sprintf("%s.*", replySubject)
 	sync, err := nc.SubscribeSync(replyListenSub)
 	if err != nil {

@@ -2,39 +2,43 @@
  * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
-package integration
+package l2
 
 import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/theotw/natssync/pkg"
 	"net/http"
 	"testing"
 )
 
-func TestServerAPI(t *testing.T) {
-	t.Run("Test About", testAbout)
-}
-func testAbout(t *testing.T) {
-	url := pkg.GetEnvWithDefaults("syncserver_url", "http://syncserver:8080")
-	aboutURL := fmt.Sprintf("%s/bridge-server/1/about", url)
-	resp, err := http.Get(aboutURL)
-	if !assert.Nil(t, err) {
-		t.Fatalf("Error not nil")
-	}
-	if !assert.NotNil(t, resp) {
-		t.Fatalf("Resp is nil")
-	}
-
-	assert.Equal(t, 200, resp.StatusCode)
-}
+const clientPrefix = "http://localhost:8080/bridge-client"
+const serverPrefix = "http://localhost:8080/bridge-server"
 
 type test_case struct {
 	UrlSuffix      string
 	ExpectedStatus int
 }
 
+func TestClientURLs(t *testing.T) {
+	tests := []test_case{
+		{"healthcheck", 200},
+		{"1/healthcheck", 200},
+		{"about", 200},
+		{"1/about", 200},
+		{"api/bridge_client_v1.yaml", 200},
+		{"api/swagger.yaml", 200},
+		{"api/", 200},
+	}
+	for _, test := range tests {
+		t.Run(test.UrlSuffix, func(t *testing.T) {
+			url := fmt.Sprintf("%s/%s", clientPrefix, test.UrlSuffix)
+			status := get_test(url, t)
+			assert.Equal(t, test.ExpectedStatus, status)
+		})
+
+	}
+}
 func TestServerURLs(t *testing.T) {
 	tests := []test_case{
 		{"healthcheck", 200},
@@ -45,10 +49,9 @@ func TestServerURLs(t *testing.T) {
 		{"api/swagger.yaml", 200},
 		{"api/", 200},
 	}
-	url := pkg.GetEnvWithDefaults("syncserver_url", "http://syncserver:8080")
 	for _, test := range tests {
 		t.Run(test.UrlSuffix, func(t *testing.T) {
-			url := fmt.Sprintf("%s/bridge-server/%s", url, test.UrlSuffix)
+			url := fmt.Sprintf("%s/%s", serverPrefix, test.UrlSuffix)
 			status := get_test(url, t)
 			assert.Equal(t, test.ExpectedStatus, status)
 		})

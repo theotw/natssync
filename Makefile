@@ -1,45 +1,76 @@
-CLOUD_OPENAPIDEF_FILE=openapi/cloud_openapi_v1.yaml
+CLOUD_OPENAPIDEF_FILE=openapi/bridge_server_v1.yaml
+CLIENT_OPENAPIDEF_FILE=openapi/bridge_client_v1.yaml
 openapicli_jar=third_party/openapi-generator-cli.jar
 
+VERSION=1.0
 
+ifndef BUILD_NUMBER_TO_USE
+	BUILD_NUMBER_TO_USE=$(shell date '+%Y%m%d%H%M')
+endif
 ifndef IMAGE_TAG
 	IMAGE_TAG=latest
 endif
+
 ifndef IMAGE_REPO
 	IMAGE_REPO=theotw
 endif
-
 
 
 generate: maketmp justgenerate rmtmp
 maketmp:
 	rm -r -f tmpcloud
 	mkdir -p tmpcloud
+	rm -r -f tmpclient
+	mkdir -p tmpclient
 
 rmtmp:
 	rm -r -f tmpcloud
+	rm -r -f tmpclient
 
 echoenv:
 	echo "Version 1"
 	echo "PATH ${PATH}"
 	echo "REPO ${IMAGE_REPO}"
 	echo "TAG ${IMAGE_TAG}"
-justgenerate:
+justgenerate: generateserver generateclient generateversion
+generateserver:
 	docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate -g go-server --package-name v1 -i /local/${CLOUD_OPENAPIDEF_FILE} -o /local/tmpcloud
 	rm -r -f pkg/bridgemodel/generated/v1
-	mkdir pkg/bridgemodel/generated/v1
+	mkdir -p pkg/bridgemodel/generated/v1
 	cp tmpcloud/go/model* pkg/bridgemodel/generated/v1
 
-incontainergenerate:
+generateclient:
+	docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate -g go-server --package-name v1 -i /local/${CLIENT_OPENAPIDEF_FILE} -o /local/tmpclient
+	rm -r -f pkg/bridgeclient/generated/v1
+	mkdir -p pkg/bridgeclient/generated/v1
+	cp tmpclient/go/model* pkg/bridgeclient/generated/v1
+
+generateversion:
+	echo "//THIS IS A GENERATED FILE, any changes will be overridden " >pkg/version.go
+	echo "package pkg" >>pkg/version.go
+	echo "const VERSION=\"${VERSION}.${BUILD_NUMBER_TO_USE}\"" >>pkg/version.go
+
+incontainergenerate:generateversion
 	rm -r -f tmpcloud
+	rm -r -f tmpclient
 	mkdir tmpcloud
+	mkdir tmpclient
+
 	java -jar ${openapicli_jar} generate -g go-server --package-name v1 -i ${CLOUD_OPENAPIDEF_FILE} -Dmodels -o tmpcloud
+	java -jar ${openapicli_jar} generate -g go-server --package-name v1 -i ${CLIENT_OPENAPIDEF_FILE} -Dmodels -o tmpclient
+
 	rm -r -f pkg/bridgemodel/generated
 	mkdir -p pkg/bridgemodel/generated/v1
 	echo "THIS IS A GENERATED DIR, DONT PUT FILES HERE" >pkg/bridgemodel/generated/readme.txt
 	cp tmpcloud/go/*  pkg/bridgemodel/generated/v1
 
+	rm -r -f pkg/bridgeclient/generated/v1
+	mkdir -p pkg/bridgeclient/generated/v1
+	echo "THIS IS A GENERATED DIR, DONT PUT FILES HERE" >pkg/bridgeclient/generated/readme.txt
+	cp tmpclient/go/model* pkg/bridgeclient/generated/v1
+
 	rm -rf tmpcloud
+	rm -rf tmpclient
 
 buildall: buildlinux buildmac
 
@@ -83,6 +114,10 @@ cloudimage:
 	docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f CloudServer.dockerfile --tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} .
 cloudimageBuildAndPush:cloudimage
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
+
+debugcloudimage:
+	docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f CloudServerDebug.dockerfile --tag ${IMAGE_REPO}/debugnatssync-server:${IMAGE_TAG} .
+
 
 testimage:
 	docker build --no-cache -f NatssyncTestImage.dockerfile  --tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} .

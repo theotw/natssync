@@ -1,5 +1,5 @@
 /*
- * Copyright (c) The One True Way 2020. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package msgs
@@ -76,4 +76,34 @@ func doTest_encrpt(t *testing.T) {
 	}
 	plainText2 := string(plain2)
 	assert.Equal(t, plainText, plainText2)
+}
+
+const unitestLocation = "unittestlocationID"
+
+//test may seem out of place, but we need to know this works for challenge tests
+func TestLocationID(t *testing.T) {
+	store := GetKeyStore()
+	err := store.SaveLocationID(unitestLocation)
+	assert.Nil(t, err, "Not expecting an error for location ID save")
+	id := store.LoadLocationID()
+	assert.Equal(t, unitestLocation, id)
+}
+func TestAuthChallenge(t *testing.T) {
+	InitCloudKey()
+	InitLocationKeyStore()
+	store := GetKeyStore()
+	err := GenerateAndSaveKey(unitestLocation)
+	if !assert.Nil(t, err) {
+		t.Fatalf("Unable to create and store keypair for auth challenge test %s", err.Error())
+	}
+	store.SaveLocationID(unitestLocation)
+	challenge := NewAuthChallenge()
+	if !assert.NotNil(t, challenge) {
+		t.Fatal("Unable to creare auth challenge")
+	}
+	valid := ValidateAuthChallenge(unitestLocation, challenge)
+	assert.True(t, valid, "Auth Challenge should be true")
+	challenge.AuthChallengeA = "not what we think it should be"
+	valid = ValidateAuthChallenge(unitestLocation, challenge)
+	assert.False(t, valid, "Auth Challenge should be false")
 }

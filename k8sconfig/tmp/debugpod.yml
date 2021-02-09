@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-pod
+spec:
+  volumes:
+    - name: miscstuff-pv-storage
+      persistentVolumeClaim:
+        claimName:  miscstuff-pv-claim
+  containers:
+    - name: debugcontainer
+      image: bmason42/fullstackdev
+      ports:
+        - containerPort: 2345
+          name: "debug-port"
+      volumeMounts:
+        - mountPath: "/mnt"
+          name: miscstuff-pv-storage

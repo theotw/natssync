@@ -1,7 +1,5 @@
 /*
-Copyright (c) The One True Way 2020. Apache License 2.0.
-The authors accept no liability, 0 nada for the use of this software.
-It is offered "As IS" Have fun with it!!
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package pkg
@@ -15,17 +13,17 @@ import (
 var Config Configuration
 
 type Configuration struct {
-	NatsServerUrl string
-	PremId string
+	NatsServerUrl  string
 	CloudBridgeUrl string
-	LogLevel string
-	RedisUrl string
-	CacheMgr string
-	Keystore string
-	CertDir string
+	LogLevel       string
+	RedisUrl       string
+	CacheMgr       string
+	Keystore       string
+	CertDir        string
+	ListenString   string
 }
 
-func (c *Configuration) SetValues() {
+func (c *Configuration) LoadValues() {
 	type configOption struct {
 		value        *string
 		name         string
@@ -34,13 +32,13 @@ func (c *Configuration) SetValues() {
 
 	var configOptions = []configOption{
 		{&c.NatsServerUrl, "NATS_SERVER_URL", "nats://127.0.0.1:4222"},
-		{&c.PremId, "PREM_ID", "client1"},
-		{&c.CloudBridgeUrl, "CLOUD_BRIDGE_URL", "http://localhost:8080"},
+		{&c.CloudBridgeUrl, "CLOUD_BRIDGE_URL", "http://localhost:8081"},
 		{&c.LogLevel, "LOG_LEVEL", "debug"},
 		{&c.RedisUrl, "REDIS_URL", "localhost:6379"},
 		{&c.CacheMgr, "CACHE_MGR", "redis"},
 		{&c.Keystore, "KEYSTORE", "redis"},
 		{&c.CertDir, "CERT_DIR", "/certs"},
+		{&c.ListenString, "LISTEN_STRING", ":8080"},
 	}
 
 	for _, option := range configOptions {
@@ -60,7 +58,7 @@ func GetEnvWithDefaults(envKey string, defaultVal string) string {
 
 func NewConfiguration() Configuration {
 	config := Configuration{}
-	config.SetValues()
+	config.LoadValues()
 	return config
 }
 

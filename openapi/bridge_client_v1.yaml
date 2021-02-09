@@ -1,0 +1,101 @@
+openapi: 3.0.0
+info:
+  title: On Prem client side REST API
+  description: Client side service to move messages between on prem and cloud
+  version: 1.0.0
+  license:
+    name: Apache
+
+servers:
+  - url: /bridge-client/1
+
+paths:
+  /about:
+    get:
+      summary: Get information about this API
+      operationId: getAbout
+      x-operationAlias: getAbout
+
+      tags:
+        - about
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AboutResponse'
+  /register:
+    post:
+      summary: Registers an On Prem region
+      description: Registers an On Prem region
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterReq'
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                authToken:
+                  type: string
+                  description: String to be sent for auth to the server
+                userMetaData:
+                  type: string
+                  description: meta data used to identify this instance/user
+      responses:
+        '202':
+          description: registration accepted no data
+        '400':
+          description: Client input error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+
+  schemas:
+    RegisterReq:
+      type: object
+      properties:
+        metaData:
+          type: string
+          description: Metadata to identify this client
+        authToken:
+          type: string
+          description: Auth token for the registration request
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          description: An I18N string
+          type: string
+        parameters:
+          type: object
+          additionalProperties:
+            type: string
+
+    AboutResponse:
+      type: object
+      properties:
+        appVersion:
+          type: string
+        apiVersions:
+          type: array
+          items:
+            type: string
+
