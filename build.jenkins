@@ -111,8 +111,8 @@ pipeline {
                     gocovmerge out/unit_coverage.out  > out/coverage.out
                     gocover-cobertura < out/coverage.out > out/coverage.xml
                 """
-                cobertura coberturaReportFile: 'natssync/out/coverage.xml'
-                junit allowEmptyResults: true, testResults: 'natssync/out/report_*.xml'
+                cobertura coberturaReportFile: 'out/coverage.xml'
+                junit allowEmptyResults: true, testResults: 'out/report_*.xml'
             }
 
         }
