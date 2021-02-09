@@ -50,7 +50,7 @@ generateversion:
 	echo "package pkg" >>pkg/version.go
 	echo "const VERSION=\"${VERSION}.${BUILD_NUMBER_TO_USE}\"" >>pkg/version.go
 
-incontainergenerate:
+incontainergenerate:generateversion
 	rm -r -f tmpcloud
 	rm -r -f tmpclient
 	mkdir tmpcloud
