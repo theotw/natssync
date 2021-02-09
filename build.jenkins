@@ -60,7 +60,10 @@ pipeline {
                             IMAGE_TAG = params.IMAGE_TAG_INPUT
                         }
                         echo 'using image ' + IMAGE_TAG
-                        echo IMAGE_TAG >out/buildinfo.txt
+                        sh """#!/bin/bash
+                            mkdir -p out
+                            echo $IMAGE_TAG >out/buildinfo.txt
+                        """
                     }
                 }
             }
