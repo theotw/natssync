@@ -56,7 +56,7 @@ incontainergenerate:
 	cp tmpcloud/go/*  pkg/bridgemodel/generated/v1
 
 	rm -r -f pkg/bridgeclient/generated/v1
-	mkdir -P pkg/bridgeclient/generated/v1
+	mkdir -p pkg/bridgeclient/generated/v1
 	echo "THIS IS A GENERATED DIR, DONT PUT FILES HERE" >pkg/bridgeclient/generated/readme.txt
 	cp tmpclient/go/model* pkg/bridgeclient/generated/v1
 
