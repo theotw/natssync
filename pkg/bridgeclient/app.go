@@ -14,7 +14,6 @@ import (
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
 	"github.com/theotw/natssync/pkg/msgs"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -72,26 +71,14 @@ func RunClient(test bool) {
 			}
 		} else {
 			url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
-			resp, err := http.DefaultClient.Get(url)
+
+			ac := msgs.NewAuthChallenge()
+			httpclient := bridgemodel.NewHttpClient()
+			var msglist []v1.BridgeMessage
+			err := httpclient.SendAuthorizedRequestWithBodyAndResp("GET", url, ac, &msglist)
 			if err != nil {
 				log.Errorf("Error fetching messages %s", err.Error())
 				time.Sleep(2 * time.Second)
-				continue
-			}
-			if resp.StatusCode >= 300 {
-				log.Errorf("Error code fetching messages %s", resp.Status)
-				time.Sleep(2 * time.Second)
-				continue
-			}
-			bits, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				log.Errorf("Error reading messages %s", err.Error())
-				continue
-			}
-			var msglist []v1.BridgeMessage
-			err = json.Unmarshal(bits, &msglist)
-			if err != nil {
-				log.Errorf("Error unmarshalling messages %s", err.Error())
 				continue
 			}
 			for _, m := range msglist {

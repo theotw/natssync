@@ -95,7 +95,7 @@ func handlePostRegister(c *gin.Context) {
 		return
 	}
 	var regResp serverv1.RegisterOnPremResponse
-	json.Unmarshal(bits, &resp)
+	json.Unmarshal(bits, &regResp)
 	msgs.SaveKeyPair(regResp.PermId, pair)
 	msgs.GetKeyStore().WritePublicKey(msgs.CLOUD_ID, []byte(regResp.CloudPublicKey))
 	//this step must be last, other parts of the code watch for this key
