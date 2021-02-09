@@ -40,6 +40,7 @@ pipeline {
     environment {
         DOCKER_CREDS=credentials('natssync-docker-creds')
         PATH = "$PATH:/usr/local/go/bin/:/root/go/bin"
+        DOCKER_HUB_CREDS=credentials('dockerhub-ro-creds')
 
     }
 
@@ -103,8 +104,12 @@ pipeline {
                             export IMAGE_TAG=${IMAGE_TAG}
                             export IMAGE_REPO=${IMAGE_REPO}
                             pwd
+                            echo 'logging into docker hub'
+                            docker login -u $DOCKER_HUB_CREDS_USR -p $DOCKER_HUB_CREDS_PSW
                             make allimages
+                            echo 'logging into docker repo we use'
                             docker login $IMAGE_REPO -u $DOCKER_CREDS_USR -p $DOCKER_CREDS_PSW
+                            
                             make echoenv
                             make pushall
                         """
