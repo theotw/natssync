@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: natsseed-node
+
+spec:
+  template:
+    metadata:
+      name: natsseed
+      labels:
+        type: nats-server
+        role: nats-seed-server
+
+
+    spec:
+      containers:
+        - name: natsseed
+          image: nats
+          ports:
+            - containerPort: 4222
+              hostPort: 4222
+            - containerPort: 4223
+              hostPort: 4223
+          args: [ "--debug","--trace","-cluster","nats://0.0.0.0:4223" ]
+      restartPolicy: Always
+
+
+
+  replicas: 1
+
+  selector:
+    matchLabels:
+      role: nats-seed-server

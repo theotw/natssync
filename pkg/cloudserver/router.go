@@ -1,5 +1,5 @@
 /*
- * Copyright (c)  The One True Way 2020. Use as described in the license. The authors accept no libility for the use of this software.  It is offered "As IS"  Have fun with it
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package cloudserver
@@ -22,9 +22,7 @@ var quit chan os.Signal
 
 // Run - configures and starts the web server
 func RunBridgeServer(test bool) error {
-	logLevel := pkg.GetEnvWithDefaults("LOG_LEVEL", "debug")
-
-	level, levelerr := log.ParseLevel(logLevel)
+	level, levelerr := log.ParseLevel(pkg.Config.LogLevel)
 	if levelerr != nil {
 		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
 		level = log.DebugLevel
@@ -34,7 +32,7 @@ func RunBridgeServer(test bool) error {
 
 	r := newRouter(test)
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    pkg.Config.ListenString,
 		Handler: r,
 	}
 
@@ -65,14 +63,17 @@ func RunBridgeServer(test bool) error {
 
 func newRouter(test bool) *gin.Engine {
 	router := gin.Default()
-	root := router.Group("/event-bridge/")
+	root := router.Group("/")
+	root.Handle("GET", "/metrics", metricGetHandlers)
+	bidgeRoot := router.Group("/bridge-server/")
 	if test {
-		root.Handle("GET", "/kill", func(c *gin.Context) {
+		bidgeRoot.Handle("GET", "/kill", func(c *gin.Context) {
 			quit <- os.Interrupt
 		})
 	}
-	v1 := router.Group("/event-bridge/1", routeMiddleware)
+	v1 := router.Group("/bridge-server/1", routeMiddleware)
 	v1.Handle("GET", "/about", aboutGetUnversioned)
+	v1.Handle("GET", "/healthcheck", healthCheckGetUnversioned)
 	v1.Handle("POST", "/register", handlePostRegister)
 	v1.Handle("POST", "/message-queue/:premid", handlePostMessage)
 	v1.Handle("GET", "/message-queue/:premid", handleGetMessages)
@@ -82,13 +83,12 @@ func newRouter(test bool) *gin.Engine {
 	return router
 }
 func addUnversionedRoutes(router *gin.Engine) {
-	router.Handle("GET", "/event-bridge/about", aboutGetUnversioned)
-	router.Handle("GET", "/event-bridge/healthcheck", healthCheckGetUnversioned)
+	router.Handle("GET", "/bridge-server/about", aboutGetUnversioned)
+	router.Handle("GET", "/bridge-server/healthcheck", healthCheckGetUnversioned)
 }
 
 //router middle ware
 func routeMiddleware(c *gin.Context) {
-
 	content := c.Request.Header.Get("Content-Type")
 
 	if content == "application/json" && c.Request.ContentLength < 2048 {
@@ -105,14 +105,14 @@ func routeMiddleware(c *gin.Context) {
 	c.Next()
 }
 func addOpenApiDefRoutes(router *gin.Engine) {
-	router.StaticFile("/event-bridge/api/cloud_openapi_v1.yaml", "openapi/cloud_openapi_v1.yaml")
-	router.StaticFile("/event-bridge/api/swagger.yaml", "openapi/cloud_openapi_v1.yaml")
+	router.StaticFile("/bridge-server/api/bridge_server_v1.yaml", "openapi/bridge_server_v1.yaml")
+	router.StaticFile("/bridge-server/api/swagger.yaml", "openapi/bridge_server_v1.yaml")
 }
 func addSwaggerUIRoutes(router *gin.Engine) {
-	router.Handle("GET", "/event-bridge/api/index.html", swaggerUIGetHandler)
-	router.Handle("GET", "/event-bridge/api", swaggerUIGetHandler)
-	router.Handle("GET", "/event-bridge/api/", swaggerUIGetHandler)
+	router.Handle("GET", "/bridge-server/api/index.html", swaggerUIGetHandler)
+	router.Handle("GET", "/bridge-server/api", swaggerUIGetHandler)
+	router.Handle("GET", "/bridge-server/api/", swaggerUIGetHandler)
 	swaggerUI := static.LocalFile("third_party/swaggerui/", false)
-	webHandler := static.Serve("/event-bridge/api", swaggerUI)
+	webHandler := static.Serve("/bridge-server/api", swaggerUI)
 	router.Use(webHandler)
 }

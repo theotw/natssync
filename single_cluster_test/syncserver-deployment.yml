@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: sync-server
+
+spec:
+  template:
+    metadata:
+      name: natssyncserver-pod
+      labels:
+        type: sync-server
+
+    spec:
+      containers:
+        - name: sync-server
+          image: theotw/natssync-server
+          ports:
+            - containerPort: 8080
+              hostPort: 8080
+          env:
+            - name: LOG_LEVEL
+              value: "trace"
+            - name: NATS_SERVER_URL
+              value: "nats://nats:4222"
+            - name: REDIS_URL
+              value: "redis:6379"
+
+  replicas: 1
+
+  selector:
+    matchLabels:
+      type: sync-server

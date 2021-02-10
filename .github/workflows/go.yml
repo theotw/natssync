@@ -32,22 +32,12 @@ jobs:
 
     - name: Build
       run: |
+        sudo rm -r -f tmpcloud
+        sudo rm -r -f tmpclient
+        sudo rm -r -f out
+        make justgenerate
         make buildlinux
-    - name: Upload bridgeclient from the build job
-      uses: actions/upload-artifact@v2
-      with:
-        name: bridgeclient_x64_linux
-        path: out/bridgeclient_x64_linux
-    - name: Upload echo_main from the build job
-      uses: actions/upload-artifact@v2
-      with:
-        name: echo_main_x64_linux
-        path: out/echo_main_x64_linux
-    - name: Upload echo_client from the build job
-      uses: actions/upload-artifact@v2
-      with:
-        name: echo_client_x64_linux
-        path: out/echo_client_x64_linux
+
     - name: Unit / L1 Test
       run: |
         make l1

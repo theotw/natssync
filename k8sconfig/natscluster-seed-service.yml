@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats-seednode-cluster
+spec:
+  type: ClusterIP
+  selector:
+    type: nats-server
+    role: nats-seed-server
+  ports:
+    - protocol: TCP
+      port: 4223
+      targetPort: 4223

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: nats
+
+spec:
+  template:
+    metadata:
+      name: nats
+      labels:
+        role: nats
+
+    spec:
+      containers:
+        - name: nats
+          image: nats
+          ports:
+            - containerPort: 4222
+          args: [ "--debug","--trace" ]
+      restartPolicy: Always
+
+
+  replicas: 1
+
+  selector:
+    matchLabels:
+      role: nats

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: bash
+
+spec:
+  containers:
+    - name: bash
+      image: bash
+  hostNetwork: true
+  dnsPolicy: Default

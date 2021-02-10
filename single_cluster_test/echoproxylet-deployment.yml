@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: echolet
+
+spec:
+  template:
+    metadata:
+      name: echolet
+      labels:
+        type: echolet
+
+    spec:
+      containers:
+        - name: echolet
+          image: theotw/echo-proxylet
+          env:
+            - name: LOG_LEVEL
+              value: "trace"
+            - name: NATS_SERVER_URL
+              value: "nats://nats:4222"
+            - name: PREM_ID
+              value: "client1"
+
+  replicas: 1
+
+  selector:
+    matchLabels:
+      type: echolet

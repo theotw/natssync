@@ -1,5 +1,5 @@
 /*
- * Copyright (c)  The One True Way 2020. Use as described in the license. The authors accept no libility for the use of this software.  It is offered "As IS"  Have fun with it
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package cloudserver
@@ -7,22 +7,26 @@ package cloudserver
 import (
 	"github.com/theotw/natssync/pkg"
 	"sync"
+	"time"
 )
 
 type CachedMsg struct {
-	ClientID string
-	Data     string
+	Timestamp time.Time
+	ClientID  string
+	Data      string
 }
 type MsgCacheManager interface {
 	GetMessages(clientID string) ([]*CachedMsg, error)
 	PutMessage(message *CachedMsg) error
+	//depth of each queue per client/location ID
+	GetQueueDepths() map[string]int
 	Init() error
 }
 
 var cacheMgr MsgCacheManager
 
 func InitCacheMgr() error {
-	mgrToUse := pkg.GetEnvWithDefaults("CACHE_MGR", "redis")
+	mgrToUse := pkg.Config.CacheMgr
 	var err error
 	switch mgrToUse {
 	case "mem":
@@ -35,7 +39,7 @@ func InitCacheMgr() error {
 	case "redis":
 		{
 			m := new(RedisCacheMgr)
-			m.RedisURL = pkg.GetEnvWithDefaults("REDIS_URL", "localhost:6379")
+			m.RedisURL = pkg.Config.RedisUrl
 			err = m.Init()
 			cacheMgr = m
 		}
@@ -58,6 +62,15 @@ func GetCacheMgr() MsgCacheManager {
 type InMemMessageCache struct {
 	messages map[string][]*CachedMsg
 	mapSync  sync.RWMutex
+}
+
+//depth of each queue per client/location ID
+func (t *InMemMessageCache) GetQueueDepths() map[string]int {
+	ret := make(map[string]int)
+	for k, v := range t.messages {
+		ret[k] = len(v)
+	}
+	return ret
 }
 
 func (t *InMemMessageCache) Init() error {
