@@ -53,10 +53,8 @@ pipeline {
                         def gitCommit = "${GIT_COMMIT}"
                         def gitBranch = "${GIT_BRANCH}"
                         def tmpstring = sh(script: 'date +%Y%m%d%H%M', returnStdout: true)
-                        MASTER_IMAGE_TAG = tmpstring.substring(0, tmpstring.length() - 1)
                         sh """#!/bin/bash
                             mkdir -p out
-                            echo $MASTER_IMAGE_TAG >out/buildinfo.txt
                         """
                     }
 
@@ -81,6 +79,7 @@ pipeline {
                                 flatten: true
 
                         )
+                        MASTER_IMAGE_TAG= sh(script: 'cat out/buildinfo.txt', returnStdout: true)
 
                     }
 

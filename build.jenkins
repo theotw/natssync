@@ -7,7 +7,7 @@ def IMAGE_REPO =""
 def BASE_VERSION="dev"
 pipeline {
     parameters {
-        string(name: 'IMAGE_TAG_INPUT', defaultValue: 'dev', description: 'docker image tag to use')
+        boolean (name: 'PRODUCTION_BUILD', defaultValue: false, description: 'if true, a build number other than date is used')
     }
     agent {
         kubernetes {
@@ -55,7 +55,7 @@ pipeline {
                         def gitCommit = "${GIT_COMMIT}"
                         def gitBranch = "${GIT_BRANCH}"
                         BASE_VERSION= sh(script: 'cat version.txt', returnStdout: true)
-                        if (params.IMAGE_TAG_INPUT == 'dev') {
+                        if (params.PRODUCTION_BUILD == false) {
                             def tmpstring
                             tmpstring = sh(script: 'date +%Y%m%d%H%M', returnStdout: true)
                             IMAGE_TAG = BASE_VERSION + "."+ tmpstring.substring(0, tmpstring.length() - 1)
