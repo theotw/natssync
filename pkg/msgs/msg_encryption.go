@@ -165,7 +165,7 @@ func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*Mes
 		return nil, err
 	}
 
-	cipherMsg, err := DoAesEncrypt(msg, msgKey)
+	cipherMsg, err := DoAesCBCEncrypt(msg, msgKey)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*Mes
 	}
 
 	ret.Message = base64.StdEncoding.EncodeToString(cipherMsg)
-	ret.EnvelopeVersion = ENVELOPE_VERSION_1
+	ret.EnvelopeVersion = ENVELOPE_VERSION_2
 	ret.SenderID = senderID
 	ret.RecipientID = recipientID
 	ret.Signature = base64.StdEncoding.EncodeToString(sigBits)
@@ -230,11 +230,20 @@ func PullObjectFromEnvelope(ob interface{}, envelope *MessageEnvelope) error {
 	return err
 }
 func PullMessageFromEnvelope(envelope *MessageEnvelope) ([]byte, error) {
-	if envelope.EnvelopeVersion == ENVELOPE_VERSION_1 {
-		return pullMessageFromEnvelopev1(envelope)
+	switch envelope.EnvelopeVersion {
+	case ENVELOPE_VERSION_1:
+		{
+			return pullMessageFromEnvelopev1(envelope)
+		}
+	case ENVELOPE_VERSION_2:
+		{
+			return pullMessageFromEnvelopev2(envelope)
+		}
 	}
 	return nil, errors.New("invalid envelope")
 }
+
+//ok, Pull From Env 1 and 2 look almost the same, dont try to refactor common, let them live apart.
 func pullMessageFromEnvelopev1(envelope *MessageEnvelope) ([]byte, error) {
 	cipherMsgBits, err := base64.StdEncoding.DecodeString(envelope.Message)
 	if err != nil {
@@ -260,7 +269,35 @@ func pullMessageFromEnvelopev1(envelope *MessageEnvelope) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	plainMsgBits, err := DoAesDecrypt(cipherMsgBits, msgKey)
+	plainMsgBits, err := DoAesECBDecrypt(cipherMsgBits, msgKey)
+	return plainMsgBits, err
+}
+func pullMessageFromEnvelopev2(envelope *MessageEnvelope) ([]byte, error) {
+	cipherMsgBits, err := base64.StdEncoding.DecodeString(envelope.Message)
+	if err != nil {
+		return nil, err
+	}
+
+	sigBits, err := base64.StdEncoding.DecodeString(envelope.Signature)
+	if err != nil {
+		return nil, err
+	}
+	msgKey, err := rsaDecrypt(envelope.MsgKey, envelope.RecipientID)
+	if err != nil {
+		return nil, err
+	}
+
+	publicKey, err := LoadPublicKey(envelope.SenderID)
+	if err != nil {
+		return nil, err
+	}
+	hash := sha256.Sum256(cipherMsgBits)
+
+	err = rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, hash[:], sigBits)
+	if err != nil {
+		return nil, err
+	}
+	plainMsgBits, err := DoAesCBCDecrypt(cipherMsgBits, msgKey)
 	return plainMsgBits, err
 }
 func rsaEncrypt(plain []byte, clientID string) (string, error) {
