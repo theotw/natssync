@@ -15,6 +15,7 @@ spec:
       containers:
         - name: echolet
           image: theotw/echo-proxylet
+          imagePullPolicy: Never
           env:
             - name: LOG_LEVEL
               value: "trace"

@@ -15,6 +15,7 @@ spec:
       containers:
         - name: sync-server
           image: theotw/natssync-server
+          imagePullPolicy: Never
           ports:
             - containerPort: 8080
               hostPort: 8080

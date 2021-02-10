@@ -26,9 +26,9 @@ type Arguments struct {
 
 func getArguments() Arguments {
 	args := Arguments{
-		flag.String("msg", "", "Message to send to the client"),
-		flag.String("id", "", "ID of the receiving client"),
-		flag.String("url", pkg.Config.NatsServerUrl, "URL to connect to NATS"),
+		flag.String("m", "", "Message to send to the client"),
+		flag.String("i", "", "ID of the receiving client"),
+		flag.String("u", pkg.Config.NatsServerUrl, "URL to connect to NATS"),
 	}
 	flag.Parse()
 	return args

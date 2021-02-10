@@ -26,9 +26,8 @@ func loadBuildDate() {
 }
 
 func GetBuildDate() string {
+	if buildDate == "" {
+		loadBuildDate()
+	}
 	return buildDate
-}
-
-func init() {
-	loadBuildDate()
 }

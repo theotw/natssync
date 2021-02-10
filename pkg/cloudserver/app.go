@@ -29,14 +29,14 @@ func RunBridgeServerApp(test bool) {
 	log.SetLevel(level)
 	metrics.InitMetrics()
 	msgs.InitCloudKey()
-	fmt.Println("Init Cache Mgr")
+	log.Info("Init Cache Mgr")
 	err := InitCacheMgr()
 	if err != nil {
 		log.Fatalf("Unable to initialize the cache manager %s", err.Error())
 	}
 	subjectString := fmt.Sprintf("%s.>", msgs.SB_MSG_PREFIX)
 	go RunMsgHandler(subjectString)
-	fmt.Println("Starting Server")
+	log.Info("Starting Server")
 	RunBridgeServer(test)
-	fmt.Println("Server stopped")
+	log.Info("Server stopped")
 }
