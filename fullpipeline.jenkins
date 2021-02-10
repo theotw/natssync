@@ -77,7 +77,7 @@ pipeline {
                                 projectName: fullName,
                                 selector: specific("${l1Job.number}"),
                                 target:"out/",
-                                filter: 'natssync/out/*/**',
+                                filter: 'out/*/**',
                                 flatten: true
 
                         )
