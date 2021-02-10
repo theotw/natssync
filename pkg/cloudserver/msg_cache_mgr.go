@@ -27,7 +27,7 @@ type MsgCacheManager interface {
 var cacheMgr MsgCacheManager
 
 func InitCacheMgr() error {
-	mgrToUse := pkg.GetEnvWithDefaults("CACHE_MGR", "redis")
+	mgrToUse := pkg.Config.CacheMgr
 	var err error
 	switch mgrToUse {
 	case "mem":
@@ -40,7 +40,7 @@ func InitCacheMgr() error {
 	case "redis":
 		{
 			m := new(RedisCacheMgr)
-			m.RedisURL = pkg.GetEnvWithDefaults("REDIS_URL", "localhost:6379")
+			m.RedisURL = pkg.Config.RedisUrl
 			err = m.Init()
 			cacheMgr = m
 		}

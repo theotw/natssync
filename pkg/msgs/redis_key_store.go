@@ -21,10 +21,11 @@ type RedisKeyStore struct {
 
 const PRIVATE_HASH_NAME = "natssync_private_key_store"
 const PUBLIC_HASH_NAME = "natssync_public_key_store"
+const LOCATION_KEY_NAME = "natsync_locationID"
 
 func NewRedisLocationKeyStore() (*RedisKeyStore, error) {
 	ret := new(RedisKeyStore)
-	ret.RedisURL = pkg.GetEnvWithDefaults("REDIS_URL", "localhost:6379")
+	ret.RedisURL = pkg.Config.RedisUrl
 	err := ret.Init()
 	return ret, err
 }
@@ -38,7 +39,18 @@ func (t *RedisKeyStore) Init() error {
 	}
 	return err
 }
-
+func (t *RedisKeyStore) LoadLocationID() string {
+	var ret string
+	err := t.Pool.Do(radix.Cmd(&ret, "GET", LOCATION_KEY_NAME))
+	if err != nil {
+		log.Errorf("Error loading location ID %s", err.Error())
+	}
+	return ret
+}
+func (t *RedisKeyStore) SaveLocationID(locationID string) error {
+	err := t.Pool.Do(radix.Cmd(nil, "SET", LOCATION_KEY_NAME, locationID))
+	return err
+}
 func (t *RedisKeyStore) ReadPrivateKeyData(locationID string) ([]byte, error) {
 	log.Tracef("redis Get private key %s", locationID)
 

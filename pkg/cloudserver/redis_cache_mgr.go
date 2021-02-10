@@ -5,6 +5,7 @@
 package cloudserver
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -81,8 +82,7 @@ func (t *RedisCacheMgr) GetMessages(clientID string) ([]*CachedMsg, error) {
 	ret := make([]*CachedMsg, 0)
 	if err == nil && len(data) > 0 {
 		p := new(CachedMsg)
-		p.ClientID = clientID
-		p.Data = data
+		json.Unmarshal([]byte(data), p)
 		ret = append(ret, p)
 	}
 	log.Tracef("redis Get message client %s got %d messages", clientID, len(ret))
@@ -94,9 +94,17 @@ func (t *RedisCacheMgr) GetMessages(clientID string) ([]*CachedMsg, error) {
 func (t *RedisCacheMgr) PutMessage(message *CachedMsg) error {
 	log.Tracef("redis pushing message %s", message.ClientID)
 	listName := mkListName(message.ClientID)
-	err := t.Pool.Do(radix.Cmd(nil, "RPUSH", listName, message.Data))
-	if err != nil {
-		log.Errorf("Got error putting messages from redis %s", err.Error())
+	var err error
+	msgBits, jsonerr := json.Marshal(message)
+	if jsonerr != nil {
+		err = jsonerr
+		log.Errorf("Error marsheling cached message in redis %s \n", jsonerr.Error())
+	} else {
+		terr := t.Pool.Do(radix.Cmd(nil, "RPUSH", listName, string(msgBits)))
+		if terr != nil {
+			log.Errorf("Got error putting messages from redis %s", err.Error())
+		}
+		err = terr
 	}
 	return err
 }
