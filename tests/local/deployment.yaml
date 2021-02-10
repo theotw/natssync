@@ -25,15 +25,15 @@ spec:
             limits:
               memory: 1024Mi
           # You may need to udpate the port in the image path to hit the local registry
-          image: k3d-nats-registry:55519/theotw/natssync-client:latest
+          image: k3d-nats-registry:57566/theotw/natssync-client:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8081
           env:
             - name: LOG_LEVEL
               value: debug
-            - name: GIN_PORT
-              value: "8081"
+            - name: LISTEN_STRING
+              value: ":8081"
             - name: CACHE_MGR
               value: redis
             - name: KEYSTORE
@@ -82,15 +82,15 @@ spec:
             limits:
               memory: 1024Mi
           # You may need to udpate the port in the image path to hit the local registry
-          image: k3d-nats-registry:55519/theotw/natssync-server:latest
+          image: k3d-nats-registry:57566/theotw/natssync-server:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8082
           env:
             - name: LOG_LEVEL
               value: debug
-            - name: GIN_PORT
-              value: "8082"
+            - name: LISTEN_STRING
+              value: ":8082"
             - name: CACHE_MGR
               value: redis
             - name: KEYSTORE

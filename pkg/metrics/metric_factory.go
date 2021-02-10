@@ -45,7 +45,7 @@ func InitMetrics() {
 		Help: "The total number of times client registration succeeded.",
 	})
 	totalClientRegistrationFailures = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "natssync_client_registration_failurees",
+		Name: "natssync_client_registration_failures",
 		Help: "The total number of times client registration failed.",
 	})
 	timeToPushMessage = promauto.NewHistogram(prometheus.HistogramOpts{

@@ -20,11 +20,11 @@ var quit chan os.Signal
 // Run - configures and starts the web server
 func RunBridgeClientRestAPI(test bool) error {
 
-	ginPort := ":" + pkg.GetEnvWithDefaults("GIN_PORT", "8080")
+	listenString := pkg.GetEnvWithDefaults("LISTEN_STRING", ":8080")
 
 	r := newRouter(test)
 	srv := &http.Server{
-		Addr:    ginPort,
+		Addr:    listenString,
 		Handler: r,
 	}
 
