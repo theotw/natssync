@@ -5,6 +5,7 @@ COPY ./ ./
 
 ENV GOSUMDB=off
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin/
+ARG IMAGE_TAG=latest
 RUN make incontainergenerate
 RUN make buildlinux
 

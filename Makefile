@@ -115,22 +115,22 @@ debugcloudimage:
 
 
 testimage:
-	docker build --no-cache -f NatssyncTestImage.dockerfile  --tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} .
+	docker build --no-cache -f NatssyncTestImage.dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG}  --tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} .
 testimageBuildAndPush: testimage
 	docker push ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
 
 clientimage:
-	docker build --no-cache -f CloudClient.dockerfile --tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} .
+	docker build --no-cache -f CloudClient.dockerfile  --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} .
 clientimageBuildAndPush: clientimage
 	docker push ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
 
 echoproxylet:
-	docker build --no-cache -f EchoProxylet.dockerfile --tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} .
+	docker build --no-cache -f EchoProxylet.dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} .
 echoproxyletBuildAndPush: echoproxylet
 	docker push ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
 
 simpleauth:
-	docker build --no-cache -f SimpleAuthServer.dockerfile --tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} .
+	docker build --no-cache -f SimpleAuthServer.dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} .
 
 simpleauthBuildAndPush: simpleauth
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
