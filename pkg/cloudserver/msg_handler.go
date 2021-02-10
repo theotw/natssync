@@ -76,6 +76,7 @@ func RunMsgHandler(subjectString string) {
 			if len(clientID) != 0 {
 				cm := new(CachedMsg)
 				cm.ClientID = clientID
+				cm.Timestamp = time.Now()
 				plainMsg := new(bridgemodel.NatsMessage)
 				plainMsg.Data = m.Data
 				plainMsg.Reply = m.Reply

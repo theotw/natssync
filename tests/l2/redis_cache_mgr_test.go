@@ -1,5 +1,5 @@
 /*
- * Copyright (c) The One True Way 2020. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
 package l2
@@ -9,18 +9,19 @@ import (
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/cloudserver"
 	"testing"
+	"time"
 )
 
 func TestRedisCacheMgr(t *testing.T) {
-	url := pkg.GetEnvWithDefaults("REDISURL", "localhost:6370")
+	url := pkg.GetEnvWithDefaults("REDISURL", "localhost:6379")
 	mgr := cloudserver.RedisCacheMgr{RedisURL: url}
 	err := mgr.Init()
 	if err != nil {
 		t.Fatalf("Got init error %s", err.Error())
 	}
-	mgr.PutMessage(&cloudserver.CachedMsg{ClientID: "cl1", Data: "hello 1"})
-	mgr.PutMessage(&cloudserver.CachedMsg{ClientID: "cl1", Data: "hello 2"})
-	mgr.PutMessage(&cloudserver.CachedMsg{ClientID: "cl1", Data: "hello 3"})
+	mgr.PutMessage(&cloudserver.CachedMsg{ClientID: "cl1", Data: "hello 1", Timestamp: time.Now()})
+	mgr.PutMessage(&cloudserver.CachedMsg{ClientID: "cl1", Data: "hello 2", Timestamp: time.Now()})
+	mgr.PutMessage(&cloudserver.CachedMsg{ClientID: "cl1", Data: "hello 3", Timestamp: time.Now()})
 
 	messages, err := mgr.GetMessages("cl1")
 	assert.Nil(t, err)
