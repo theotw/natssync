@@ -38,6 +38,7 @@ pipeline {
         }
     }
     parameters {
+        booleanParam(name: 'PRODUCTION_BUILD', defaultValue: false, description: 'if true, a build number other than date is used')
         string(name: 'TEST_BRANCH', defaultValue: 'main', description: 'L2 Test branch to use')
     }
     environment {
@@ -69,7 +70,7 @@ pipeline {
                         fullName='NatsSync-build/' + String.valueOf(env.BRANCH_NAME)
                         l1Job=build job: fullName,
                                 parameters: [
-                                        string(name: 'IMAGE_TAG_INPUT', value: String.valueOf(MASTER_IMAGE_TAG)),
+                                        booleanParam (name: 'PRODUCTION_BUILD', value: PRODUCTION_BUILD),
                                 ]
                         copyArtifacts(
                                 projectName: fullName,
@@ -80,7 +81,7 @@ pipeline {
 
                         )
                         MASTER_IMAGE_TAG= sh(script: 'cat out/buildinfo.txt', returnStdout: true)
-
+                        echo 'Using Master Image ' + MASTER_IMAGE_TAG
                     }
 
                 }
