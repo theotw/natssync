@@ -7,7 +7,7 @@ def IMAGE_REPO =""
 def BASE_VERSION="dev"
 pipeline {
     parameters {
-        boolean (name: 'PRODUCTION_BUILD', defaultValue: false, description: 'if true, a build number other than date is used')
+        booleanParam(name: 'PRODUCTION_BUILD', defaultValue: false, description: 'if true, a build number other than date is used')
     }
     agent {
         kubernetes {
