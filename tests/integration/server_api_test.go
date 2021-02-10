@@ -50,7 +50,7 @@ func TestServerURLs(t *testing.T) {
 		t.Run(test.UrlSuffix, func(t *testing.T) {
 			url := fmt.Sprintf("%s/bridge-server/%s", url, test.UrlSuffix)
 			status := get_test(url, t)
-			assert.Equal(t, test.ExpectedStatus, status)
+			assert.Equal(t, test.ExpectedStatus, status,fmt.Sprintf("Test :%s ",test.UrlSuffix))
 		})
 
 	}

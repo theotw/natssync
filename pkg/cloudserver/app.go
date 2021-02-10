@@ -10,9 +10,15 @@ import (
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/metrics"
 	"github.com/theotw/natssync/pkg/msgs"
+	"os"
 )
 
 func RunBridgeServerApp(test bool) {
+	//hack for when we run as unit tests
+	wd,_:=os.Getwd()
+	if wd=="/build/tests/apps"{
+		os.Chdir("/build")
+	}
 	log.Info("Starting NATSSync Server")
 	log.Infof("Build date: %s", pkg.GetBuildDate())
 	level, levelerr := log.ParseLevel(pkg.Config.LogLevel)

@@ -89,7 +89,6 @@ func addUnversionedRoutes(router *gin.Engine) {
 
 //router middle ware
 func routeMiddleware(c *gin.Context) {
-
 	content := c.Request.Header.Get("Content-Type")
 
 	if content == "application/json" && c.Request.ContentLength < 2048 {

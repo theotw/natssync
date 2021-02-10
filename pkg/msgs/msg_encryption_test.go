@@ -53,6 +53,7 @@ func doTestMessageEnvelope(t *testing.T) {
 
 func doTest_loadMaster(t *testing.T) {
 	InitCloudKey()
+
 	master, err := LoadPrivateKey(CLOUD_ID)
 	assert.Nil(t, err)
 	assert.NotNil(t, master)
