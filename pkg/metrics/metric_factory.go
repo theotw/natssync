@@ -21,15 +21,15 @@ var oldestMessageQueued prometheus.Histogram
 func InitMetrics() {
 	totalQueryForMessages = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "natssync_message_query_total",
-		Help: "The total number of queries for messages",
+		Help: "The total number of queries/REST GETs for messages",
 	})
 	totalMessagesRecieved = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "natssync_message_received_total",
-		Help: "The total number of messages received for sending to clients",
+		Help: "The total number of SB messages received for sending to On Prem clients",
 	})
 	totalValidMessagesPosted = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "natssync_message_posted_total",
-		Help: "The total number of messages posted for sending to clients",
+		Help: "The total number of NB messages posted for sending to Cloud Clients",
 	})
 
 	totalQueuedMessages = promauto.NewGauge(prometheus.GaugeOpts{

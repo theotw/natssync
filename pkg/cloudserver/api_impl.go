@@ -79,6 +79,7 @@ func handleGetMessages(c *gin.Context) {
 		ret[i].MessageData = x.Data
 	}
 	end := time.Now().Unix()
+	//TODO this will show messages that have been queries for, but not ones that are stale no one is querying for.
 	metrics.AddCountToWaitTimes(int(end - start))
 
 	c.JSON(200, ret)
