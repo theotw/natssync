@@ -25,7 +25,7 @@ spec:
             limits:
               memory: 1024Mi
           # You may need to udpate the port in the image path to hit the local registry
-          image: k3d-nats-registry:57566/theotw/natssync-client:latest
+          image: k3d-nats-registry:60839/theotw/natssync-client:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8081
@@ -82,7 +82,7 @@ spec:
             limits:
               memory: 1024Mi
           # You may need to udpate the port in the image path to hit the local registry
-          image: k3d-nats-registry:57566/theotw/natssync-server:latest
+          image: k3d-nats-registry:60839/theotw/natssync-server:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8082

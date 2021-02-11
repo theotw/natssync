@@ -42,6 +42,8 @@ func RunClient(test bool) {
 		os.Exit(1)
 	}
 
+	metrics.InitMetrics()
+
 	serverURL := pkg.Config.CloudBridgeUrl
 	var nc *nats.Conn
 	var lastClientID string
