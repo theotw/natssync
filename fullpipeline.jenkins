@@ -81,6 +81,7 @@ pipeline {
 
                         )
                         MASTER_IMAGE_TAG= sh(script: 'cat out/buildinfo.txt', returnStdout: true)
+                        MASTER_IMAGE_TAG = BASE_VERSION + "."+ MASTER_IMAGE_TAG.substring(0, tmpstring.length() - 1)
                         echo 'Using Master Image ' + MASTER_IMAGE_TAG
                     }
 
