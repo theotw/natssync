@@ -6,7 +6,8 @@ package msgs
 
 import "github.com/theotw/natssync/pkg"
 
-const ENVELOPE_VERSION_1 = 1
+const ENVELOPE_VERSION_1 = 1 //EBC AES
+const ENVELOPE_VERSION_2 = 2 // CBC AES
 const CLOUD_ID = "cloud-master"
 const NB_MSG_PREFIX = "natssync-nb"
 const SB_MSG_PREFIX = "natssync-sb"
