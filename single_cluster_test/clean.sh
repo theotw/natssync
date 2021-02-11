@@ -3,7 +3,7 @@
 set -e
 
 CLOUD_NAMESPACE="cloud"
-ENT_NAMESPACE="ent"
+ONPREM_NAMESPACE="onprem"
 
+kubectl delete namespace "$ONPREM_NAMESPACE" || True
 kubectl delete namespace "$CLOUD_NAMESPACE" || True
-kubectl delete namespace "$ENT_NAMESPACE" || True

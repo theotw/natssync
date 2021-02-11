@@ -19,7 +19,7 @@ deployEnvironment() {
 }
 
 CLOUD_NAMESPACE="cloud"
-ENT_NAMESPACE="ent"
+ONPREM_NAMESPACE="onprem"
 
 cloudYamls=(
   "nats-deployment.yml"
@@ -31,14 +31,15 @@ cloudYamls=(
   "syncserver-service.yml"
 )
 
-entYamls=(
+onpremYamls=(
   "redis-pod.yml"
   "redis-service.yml"
   "nats-deployment.yml"
   "nats-service.yml"
   "echoproxylet-deployment.yml"
   "syncclient-deployment.yml"
+  "syncclient-service.yml"
  )
 
 deployEnvironment "${cloudYamls[*]}" "$CLOUD_NAMESPACE"
-deployEnvironment "${entYamls[*]}" "$ENT_NAMESPACE"
+deployEnvironment "${onpremYamls[*]}" "$ONPREM_NAMESPACE"

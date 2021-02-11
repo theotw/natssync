@@ -3,6 +3,7 @@ WORKDIR /build
 COPY ./ ./
 
 ENV GOSUMDB=off
+ARG IMAGE_TAG=latest
 RUN make buildlinux
 
 #FROM alpine:3.12.0
