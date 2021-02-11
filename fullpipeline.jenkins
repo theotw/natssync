@@ -80,8 +80,8 @@ pipeline {
                                 flatten: true
 
                         )
-                        MASTER_IMAGE_TAG= sh(script: 'cat out/buildinfo.txt', returnStdout: true)
-                        MASTER_IMAGE_TAG = MASTER_IMAGE_TAG.substring(0, tmpstring.length() - 1)
+                        def tmpstring= sh(script: 'cat out/buildinfo.txt', returnStdout: true)
+                        MASTER_IMAGE_TAG = tmpstring.substring(0, tmpstring.length() - 1)
                         echo 'Using Master Image ' + MASTER_IMAGE_TAG
                     }
 
