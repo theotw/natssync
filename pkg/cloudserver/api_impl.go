@@ -79,6 +79,7 @@ func handleGetMessages(c *gin.Context) {
 		ret[i].MessageData = x.Data
 	}
 	end := time.Now().Unix()
+	//TODO this will show messages that have been queries for, but not ones that are stale no one is querying for.
 	metrics.AddCountToWaitTimes(int(end - start))
 
 	c.JSON(200, ret)
@@ -191,12 +192,14 @@ func handlePostRegister(c *gin.Context) {
 		var err error
 		in, err = handleMultipartFormRegistration(c)
 		if err != nil {
+			metrics.IncrementClientRegistrationFailure(1)
 			c.JSON(bridgemodel.HandleError(c, err))
 		}
 	} else {
 		in = new(v1.RegisterOnPremReq)
 		e := c.ShouldBindJSON(in)
 		if e != nil {
+			metrics.IncrementClientRegistrationFailure(1)
 			code, ret := bridgemodel.HandleErrors(c, e)
 			c.JSON(code, &ret)
 			return
@@ -215,15 +218,19 @@ func handlePostRegister(c *gin.Context) {
 		validPubKey = pubKey != nil && perr == nil
 	}
 	if !validPubKey {
+		metrics.IncrementClientRegistrationFailure(1)
 		ierr := errors.NewInernalError(errors.BRIDGE_ERROR, errors.INVALID_PUB_KEY, nil)
 		c.JSON(bridgemodel.HandleError(c, ierr))
 		return
 	}
 	response, e := sendRegRequestToAuthServer(c, in)
 	if e != nil {
+		metrics.IncrementClientRegistrationFailure(1)
 		code, ret := bridgemodel.HandleErrors(c, e)
 		c.JSON(code, &ret)
 		return
+	} else {
+		metrics.IncrementClientRegistrationSuccess(1)
 	}
 
 	if !response.Success {
@@ -297,5 +304,6 @@ func metricGetHandlers(c *gin.Context) {
 		total = total + count
 	}
 	metrics.SetTotalMessagesQueued(total)
+	metrics.RecordAgeOfMessageQueue(int(GetCacheMgr().GetAgeOfOldestTimestamp().Seconds()))
 	promhttp.Handler().ServeHTTP(c.Writer, c.Request)
 }

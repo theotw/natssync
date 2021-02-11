@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
 	v1 "github.com/theotw/natssync/pkg/bridgeclient/generated/v1"
@@ -117,4 +118,8 @@ func healthCheckGetUnversioned(c *gin.Context) {
 }
 func swaggerUIGetHandler(c *gin.Context) {
 	c.Redirect(302, "/bridge-client/api/index_bridge_client_v1.html")
+}
+
+func metricGetHandlers(c *gin.Context) {
+	promhttp.Handler().ServeHTTP(c.Writer, c.Request)
 }

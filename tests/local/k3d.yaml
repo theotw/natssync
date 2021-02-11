@@ -1,0 +1,22 @@
+apiVersion: k3d.io/v1alpha2
+kind: Simple
+name: nats
+servers: 2
+agents: 2
+ports:
+  - port: 9081:8081
+    nodeFilters:
+      - loadbalancer
+  - port: 9082:8082
+    nodeFilters:
+      - loadbalancer
+  - port: 9093:9093
+    nodeFilters:
+      - loadbalancer
+  - port: 9090:9090
+    nodeFilters:
+      - loadbalancer
+  - port: 3000:3000
+    nodeFilters:
+      - loadbalancer
+

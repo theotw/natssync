@@ -13,7 +13,9 @@ import (
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
+	"github.com/theotw/natssync/pkg/metrics"
 	"github.com/theotw/natssync/pkg/msgs"
+	"math"
 	"net/http"
 	"os"
 	"strings"
@@ -39,6 +41,8 @@ func RunClient(test bool) {
 		log.Errorf("Error starting API server %s", err.Error())
 		os.Exit(1)
 	}
+
+	metrics.InitMetrics()
 
 	serverURL := pkg.Config.CloudBridgeUrl
 	var nc *nats.Conn
@@ -101,10 +105,13 @@ func RunClient(test bool) {
 					if strings.HasSuffix(natmsg.Subject, msgs.ECHO_SUBJECT_BASE) {
 						var echomsg nats.Msg
 						echomsg.Subject = fmt.Sprintf("%s.bridge-client", natmsg.Reply)
-						tmpstring := time.Now().Format("20060102-15:04:05.000")
+						startpost := time.Now()
+						tmpstring := startpost.Format("20060102-15:04:05.000")
 						echoMsg := fmt.Sprintf("%s | %s \n", tmpstring, "message-client")
 						echomsg.Data = []byte(echoMsg)
 						go sendMessageToCloud(&echomsg, serverURL, clientID)
+						endpost := time.Now()
+						metrics.RecordTimeToPushMessage(int(math.Round(endpost.Sub(startpost).Seconds())))
 					}
 
 					nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data)

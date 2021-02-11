@@ -64,8 +64,9 @@ func RunMsgHandler(subjectString string) {
 
 	for listenForMsgs {
 		m, err := subscription.NextMsg(10 * time.Second)
-		metrics.IncrementMessageRecieved(1)
+
 		if err == nil {
+			metrics.IncrementMessageRecieved(1)
 			if strings.HasSuffix(m.Subject, msgs.ECHO_SUBJECT_BASE) {
 				echosub := fmt.Sprintf("%s.bridge-msg-handler", m.Reply)
 				tmpstring := time.Now().Format("20060102-15:04:05.000")
