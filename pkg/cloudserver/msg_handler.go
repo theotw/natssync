@@ -6,15 +6,18 @@ package cloudserver
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
+
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	"github.com/theotw/natssync/pkg/metrics"
 	"github.com/theotw/natssync/pkg/msgs"
-	"strings"
-	"time"
 )
 
 var listenForMsgs = true
@@ -24,82 +27,127 @@ func StopMessageListener() {
 }
 
 //Looks for the client ID in the subject string. If not found, return an empty string.
-func FindClientID(subject string) string {
+func FindClientID(subject string) (string, error) {
 	parts := strings.Split(subject, ".")
-	var ret string
-	if len(parts) > 1 {
-		ret = parts[1]
+	if len(parts) > 1 && parts[1] != "" {
+		return parts[1], nil
 	}
-	return ret
+	return "", errors.New(fmt.Sprintf("Unable to parse client ID from '%s'", subject))
 }
 
-func RunMsgHandler(subjectString string) {
+func logNatsConnectionClosed(name string) {
+	log.Infof("Connection %s to NATS has been closed", name)
+}
+
+func logNatsConnectionDisconnected(name string, err error) {
+	msg := fmt.Sprintf("Connection %s disconnected from NATS", name)
+	if err != nil {
+		log.Errorf("%s in error: %s", msg, err)
+		return
+	}
+	log.Infof(msg)
+}
+
+func logNatsConnectionReconnected(name string) {
+	log.Infof("Connection %s reconnected to NATS", name)
+}
+
+func NewNatsConnection(name string, url string) (*nats.Conn, error) {
+	log.Infof("New connection %s to NATS server %s", name, url)
+	return nats.Connect(
+		url,
+		nats.ClosedHandler(func(_ *nats.Conn) {
+			logNatsConnectionClosed(name)
+		}),
+		nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
+			logNatsConnectionDisconnected(name, err)
+		}),
+		nats.ReconnectHandler(func(_ *nats.Conn) {
+			logNatsConnectionReconnected(name)
+		}),
+	)
+}
+
+func handleEchoRequest(msg *nats.Msg) {
+	echoResponseSubject := fmt.Sprintf("%s.bridge-msg-handler", msg.Reply)
+	timeNow := time.Now().Format("20060102-15:04:05.000")
+	echoResponseMsg := fmt.Sprintf("%s | %s \n", timeNow, "message-handler")
+
+	nc, err := NewNatsConnection("echo-handler", pkg.Config.NatsServerUrl)
+	if err != nil {
+		log.Errorf("Error connecting to NATS for echo response: %s", err)
+		return
+	}
+	defer nc.Close()
+
+	if err = nc.Publish(echoResponseSubject, []byte(echoResponseMsg)); err != nil {
+		log.Errorf("Error attempting to publish echo response: %s", err)
+	}
+}
+
+func handleSouthBoundMessage(msg *nats.Msg) {
+	metrics.IncrementMessageRecieved(1)
+
+	if strings.HasSuffix(msg.Subject, msgs.ECHO_SUBJECT_BASE) {
+		go handleEchoRequest(msg)
+	}
+
+	clientID, err := FindClientID(msg.Subject)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	plainMsg := new(bridgemodel.NatsMessage)
+	plainMsg.Data = msg.Data
+	plainMsg.Reply = msg.Reply
+	plainMsg.Subject = msg.Subject
+	envelope, err := msgs.PutObjectInEnvelope(plainMsg, msgs.CLOUD_ID, clientID)
+	log.Tracef("Recieved Message with Client ID %s, Subject %s", clientID, plainMsg.Subject)
+	if err != nil {
+		log.Errorf("Error putting message in Envelope client ID:%s error=%s", clientID, err)
+		return
+	}
+
+	jsonData, err := json.Marshal(&envelope)
+	if err != nil {
+		log.Errorf("Error marshalling envelope with  clientID:%s error=%s", clientID, err)
+		return
+	}
+
+	cm := new(CachedMsg)
+	cm.ClientID = clientID
+	cm.Timestamp = time.Now()
+	cm.Data = string(jsonData)
+	if err = GetCacheMgr().PutMessage(cm); err != nil {
+		log.Errorf("Error error storing message: %s", err)
+		return
+	}
+	metrics.IncrementMessagePosted(1)
+}
+
+func RunMsgHandler(subject string) {
+	var err error
+	var sub *nats.Subscription
 	var nc *nats.Conn
-	var subscription *nats.Subscription
-	for listenForMsgs {
-		natsURL := pkg.Config.NatsServerUrl
-		log.Infof("Connecting to NATS server %s", natsURL)
-		if nc == nil {
-			nctmp, err := nats.Connect(natsURL)
-			if err == nil {
-				log.Infof("Connected to NATS server %s", natsURL)
-				subscription, err = nctmp.SubscribeSync(subjectString)
-				if err == nil {
-					nc = nctmp
-					defer nc.Close()
-				} else {
-					nctmp.Close()
-				}
-			} else {
-				var timeout time.Duration
-				timeout = 10
-				log.Infof("Failed to connect to NATS server %s, pausing  %d", natsURL, timeout)
-				//if not joy, back off and try again in 10 seconds
-				time.Sleep(timeout * time.Second)
-			}
-		} else {
-			break
-		}
-	}
+	defer nc.Close()  // This is safe because the Close method is idempotent, and will handle a nil receiver.
 
 	for listenForMsgs {
-		m, err := subscription.NextMsg(10 * time.Second)
-		metrics.IncrementMessageRecieved(1)
-		if err == nil {
-			if strings.HasSuffix(m.Subject, msgs.ECHO_SUBJECT_BASE) {
-				echosub := fmt.Sprintf("%s.bridge-msg-handler", m.Reply)
-				tmpstring := time.Now().Format("20060102-15:04:05.000")
-				echoMsg := fmt.Sprintf("%s | %s \n", tmpstring, "message-handler")
-				nc.Publish(echosub, []byte(echoMsg))
-			}
-			clientID := FindClientID(m.Subject)
-			if len(clientID) != 0 {
-				cm := new(CachedMsg)
-				cm.ClientID = clientID
-				cm.Timestamp = time.Now()
-				plainMsg := new(bridgemodel.NatsMessage)
-				plainMsg.Data = m.Data
-				plainMsg.Reply = m.Reply
-				plainMsg.Subject = m.Subject
-				envelope, err2 := msgs.PutObjectInEnvelope(plainMsg, msgs.CLOUD_ID, clientID)
-				log.Tracef("Recieved Message with Client ID %s, Subject %s", clientID, plainMsg.Subject)
-				if err2 != nil {
-					log.Errorf("Error putting message in Envelope client ID:%s error=%s", clientID, err2.Error())
-				} else {
-					jsonData, marshelError := json.Marshal(&envelope)
-					if marshelError != nil {
-						log.Errorf("Error marshalling envelope with  clientID:%s error=%s", clientID, marshelError.Error())
-					} else {
-						cm.Data = string(jsonData)
-						GetCacheMgr().PutMessage(cm)
-						metrics.IncrementMessagePosted(1)
-					}
-				}
-			}
-		} else {
-			log.Errorf("Error fetching messages %s \n", err.Error())
+		nc, err = NewNatsConnection("message-handler", pkg.Config.NatsServerUrl)
+		if err != nil {
+			log.Errorf("Error connecting to NATS: %s", err)
+			continue
+		}
+		sub, err = nc.Subscribe(subject, handleSouthBoundMessage)
+		if err != nil {
+			log.Errorf("Error subscribing to %s: %s", subject, err)
+			nc.Close()
+			continue
+		}
+		log.Infof("Subscribed to %s", subject)
+
+		for listenForMsgs && sub.IsValid() {
+			time.Sleep(1)
 		}
 	}
-
-	return
 }
