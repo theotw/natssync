@@ -3,7 +3,8 @@ CLIENT_OPENAPIDEF_FILE=openapi/bridge_client_v1.yaml
 openapicli_jar=third_party/openapi-generator-cli.jar
 
 ifndef IMAGE_TAG
-	IMAGE_TAG=$(shell date '+%Y%m%d%H%M')
+#	IMAGE_TAG=$(shell date '+%Y%m%d%H%M')
+	IMAGE_TAG=latest
 endif
 
 ifndef IMAGE_REPO
@@ -119,7 +120,7 @@ testimage:
 testimageBuildAndPush: testimage
 	docker push ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
 
-clientimage:
+ Nclientimage:
 	docker build --no-cache -f CloudClient.dockerfile  --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} .
 clientimageBuildAndPush: clientimage
 	docker push ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
@@ -135,9 +136,9 @@ simpleauth:
 simpleauthBuildAndPush: simpleauth
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
 
-allimages: cloudimage clientimage echoproxylet simpleauth testimage
+allimages: testimage cloudimage clientimage echoproxylet simpleauth
 
-allimagesBuildAndPush: cloudimageBuildAndPush clientimageBuildAndPush testimageBuildAndPush echoproxyletBuildAndPush simpleauthBuildAndPush
+allimagesBuildAndPush:testimageBuildAndPush cloudimageBuildAndPush clientimageBuildAndPush echoproxyletBuildAndPush simpleauthBuildAndPush
 
 
 pushall:
