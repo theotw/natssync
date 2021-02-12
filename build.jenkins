@@ -133,6 +133,18 @@ pipeline {
             }
 
         }
+        stage ('Tag Code'){
+            when{
+                expression {param.PRODUCTION_BUILD == true}
+            }
+            script{
+                sh """#!/bin/bash
+                    git tag ${$IMAGE_TAG}
+                    git push origin ${$IMAGE_TAG}
+
+                """
+            }
+        }
 
     }
     post {
