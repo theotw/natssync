@@ -72,67 +72,6 @@ pipeline {
             }
         }
 
-        stage('Test') {
-
-            steps {
-                container('pipeline-runner') {
-                    script {
-                        sh """#!/bin/bash
-                        echo 'IMAGE Tag:  ${IMAGE_TAG}'
-                        export IMAGE_TAG=${IMAGE_TAG}
-                        export IMAGE_REPO=${IMAGE_REPO}
-                        pwd
-                        go get github.com/wadey/gocovmerge
-                        go get github.com/jstemmer/go-junit-report
-                        go get github.com/t-yuki/gocover-cobertura
-                        make incontainergenerate
-                        make l1
-                    """
-                    }
-                }
-            }
-        }
-
-
-        stage('Build And Push Images') {
-            steps {
-                container('pipeline-runner') {
-                    script {
-                        sh """#!/bin/bash
-                            echo $IMAGE_TAG
-                            export IMAGE_TAG=${IMAGE_TAG}
-                            export IMAGE_REPO=${IMAGE_REPO}
-                            pwd
-                            echo 'logging into docker hub'
-                            docker login -u $DOCKER_HUB_CREDS_USR -p $DOCKER_HUB_CREDS_PSW
-                            make allimages
-                            echo 'logging into docker repo we use'
-                            docker login $IMAGE_REPO -u $DOCKER_CREDS_USR -p $DOCKER_CREDS_PSW
-                            
-                            make echoenv
-                            make pushall
-                        """
-                    }
-                }
-            }
-        }
-        stage('Gen Reports') {
-            steps {
-                container('pipeline-runner') {
-                    script {
-                        sh """#!/bin/bash
-                            pwd
-                            #gocovmerge out/unit_coverage.out out/l2_client_coverage.out  out/l2_server_coverage.out  > out/coverage.out
-                            gocovmerge out/unit_coverage.out  > out/coverage.out
-                            gocover-cobertura < out/coverage.out > out/coverage.xml
-                        """
-                        cobertura coberturaReportFile: 'out/coverage.xml'
-                        junit allowEmptyResults: true, testResults: 'out/report_*.xml'
-                    }
-                }
-            }
-
-        }
         stage ('Tag Code'){
             when{
                 expression {param.PRODUCTION_BUILD == true}
