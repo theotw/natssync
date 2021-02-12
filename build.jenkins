@@ -4,10 +4,10 @@
 
 def IMAGE_TAG = ""
 def IMAGE_REPO =""
-def BUILD_NUMBER_TO_USE=""
+def BASE_VERSION="dev"
 pipeline {
     parameters {
-        string(name: 'IMAGE_TAG_INPUT', defaultValue: 'dev', description: 'docker image tag to use')
+        booleanParam(name: 'PRODUCTION_BUILD', defaultValue: false, description: 'if true, a build number other than date is used')
     }
     agent {
         kubernetes {
@@ -54,14 +54,13 @@ pipeline {
                         def myRepo = checkout scm
                         def gitCommit = "${GIT_COMMIT}"
                         def gitBranch = "${GIT_BRANCH}"
-                        if (params.IMAGE_TAG_INPUT == 'dev') {
+                        BASE_VERSION= sh(script: 'cat version.txt', returnStdout: true)
+                        if (params.PRODUCTION_BUILD == false) {
                             def tmpstring
                             tmpstring = sh(script: 'date +%Y%m%d%H%M', returnStdout: true)
-                            IMAGE_TAG = tmpstring.substring(0, tmpstring.length() - 1)
-                            BUILD_NUMBER_TO_USE=tmpstring
+                            IMAGE_TAG = BASE_VERSION + "."+ tmpstring.substring(0, tmpstring.length() - 1)
                         } else {
-                            IMAGE_TAG = params.IMAGE_TAG_INPUT
-                            BUILD_NUMBER_TO_USE=env.BUILD_NUMBER
+                            IMAGE_TAG = BASE_VERSION + "." + env.BUILD_NUMBER
                         }
                         echo 'using image ' + IMAGE_TAG
                         sh """#!/bin/bash
@@ -134,6 +133,22 @@ pipeline {
             }
 
         }
+        stage ('Tag Code'){
+            when{
+                expression {params.PRODUCTION_BUILD == true}
+            }
+            steps {
+                script {
+                    sh """#!/bin/bash
+                        git tag $IMAGE_TAG
+                        git remote add x  https://bmason42:762bb623968238920e7a8e508cae58f250a3b20d@github.com/theotw/natssync.git
+                        git push x $IMAGE_TAG 
+
+                """
+                }
+            }
+        }
+
 
     }
     post {

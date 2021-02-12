@@ -2,12 +2,8 @@ CLOUD_OPENAPIDEF_FILE=openapi/bridge_server_v1.yaml
 CLIENT_OPENAPIDEF_FILE=openapi/bridge_client_v1.yaml
 openapicli_jar=third_party/openapi-generator-cli.jar
 
-VERSION=1.0
-
-ifndef BUILD_NUMBER_TO_USE
-	BUILD_NUMBER_TO_USE=$(shell date '+%Y%m%d%H%M')
-endif
 ifndef IMAGE_TAG
+#	IMAGE_TAG=$(shell date '+%Y%m%d%H%M')
 	IMAGE_TAG=latest
 endif
 
@@ -28,10 +24,10 @@ rmtmp:
 	rm -r -f tmpclient
 
 echoenv:
-	echo "Version 1"
 	echo "PATH ${PATH}"
 	echo "REPO ${IMAGE_REPO}"
 	echo "TAG ${IMAGE_TAG}"
+
 justgenerate: generateserver generateclient generateversion
 generateserver:
 	docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate -g go-server --package-name v1 -i /local/${CLOUD_OPENAPIDEF_FILE} -o /local/tmpcloud
@@ -48,7 +44,7 @@ generateclient:
 generateversion:
 	echo "//THIS IS A GENERATED FILE, any changes will be overridden " >pkg/version.go
 	echo "package pkg" >>pkg/version.go
-	echo "const VERSION=\"${VERSION}.${BUILD_NUMBER_TO_USE}\"" >>pkg/version.go
+	echo "const VERSION=\"${IMAGE_TAG}\"" >>pkg/version.go
 
 incontainergenerate:generateversion
 	rm -r -f tmpcloud
@@ -120,29 +116,29 @@ debugcloudimage:
 
 
 testimage:
-	docker build --no-cache -f NatssyncTestImage.dockerfile  --tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} .
+	docker build --no-cache -f NatssyncTestImage.dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG}  --tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} .
 testimageBuildAndPush: testimage
 	docker push ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
 
-clientimage:
-	docker build --no-cache -f CloudClient.dockerfile --tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} .
+ clientimage:
+	docker build --no-cache -f CloudClient.dockerfile  --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} .
 clientimageBuildAndPush: clientimage
 	docker push ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
 
 echoproxylet:
-	docker build --no-cache -f EchoProxylet.dockerfile --tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} .
+	docker build --no-cache -f EchoProxylet.dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} .
 echoproxyletBuildAndPush: echoproxylet
 	docker push ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
 
 simpleauth:
-	docker build --no-cache -f SimpleAuthServer.dockerfile --tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} .
+	docker build --no-cache -f SimpleAuthServer.dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} .
 
 simpleauthBuildAndPush: simpleauth
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
 
-allimages: cloudimage clientimage echoproxylet simpleauth testimage
+allimages: testimage cloudimage clientimage echoproxylet simpleauth
 
-allimagesBuildAndPush: cloudimageBuildAndPush clientimageBuildAndPush testimageBuildAndPush echoproxyletBuildAndPush simpleauthBuildAndPush
+allimagesBuildAndPush:testimageBuildAndPush cloudimageBuildAndPush clientimageBuildAndPush echoproxyletBuildAndPush simpleauthBuildAndPush
 
 
 pushall:

@@ -3,4 +3,7 @@ pkg/bridgeclient/generated
 out
 mods
 go.sum
+dump.rdb
 .idea
+pkg/version.go 
+
