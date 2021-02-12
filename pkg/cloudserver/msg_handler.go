@@ -26,7 +26,7 @@ func StopMessageListener() {
 	listenForMsgs = false
 }
 
-//Looks for the client ID in the subject string. If not found, return an empty string.
+//Looks for the client ID in the subject string. If not found, return an empty string and error.
 func FindClientID(subject string) (string, error) {
 	parts := strings.Split(subject, ".")
 	if len(parts) > 1 && parts[1] != "" {
@@ -128,7 +128,6 @@ func handleSouthBoundMessage(msg *nats.Msg) {
 
 func RunMsgHandler(subject string) {
 	var err error
-	var sub *nats.Subscription
 	var nc *nats.Conn
 	defer nc.Close()  // This is safe because the Close method is idempotent, and will handle a nil receiver.
 
@@ -136,9 +135,11 @@ func RunMsgHandler(subject string) {
 		nc, err = NewNatsConnection("message-handler", pkg.Config.NatsServerUrl)
 		if err != nil {
 			log.Errorf("Error connecting to NATS: %s", err)
+			// Waiting before retry avoids spamming logs and flooding the network
+			time.Sleep(time.Second * 5)
 			continue
 		}
-		sub, err = nc.Subscribe(subject, handleSouthBoundMessage)
+		_, err = nc.Subscribe(subject, handleSouthBoundMessage)
 		if err != nil {
 			log.Errorf("Error subscribing to %s: %s", subject, err)
 			nc.Close()
@@ -146,8 +147,8 @@ func RunMsgHandler(subject string) {
 		}
 		log.Infof("Subscribed to %s", subject)
 
-		for listenForMsgs && sub.IsValid() {
-			time.Sleep(1)
+		for listenForMsgs && !nc.IsClosed() {
+			time.Sleep(time.Second)
 		}
 	}
 }
