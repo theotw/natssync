@@ -79,8 +79,8 @@ pipeline {
             steps {
                 script {
                     sh """#!/bin/bash
-                    git tag ${$IMAGE_TAG}
-                    git push origin ${$IMAGE_TAG}
+                        git tag $IMAGE_TAG
+                        git push origin $IMAGE_TAG
 
                 """
                 }
