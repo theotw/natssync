@@ -76,14 +76,17 @@ pipeline {
             when{
                 expression {param.PRODUCTION_BUILD == true}
             }
-            script{
-                sh """#!/bin/bash
+            steps {
+                script {
+                    sh """#!/bin/bash
                     git tag ${$IMAGE_TAG}
                     git push origin ${$IMAGE_TAG}
 
                 """
+                }
             }
         }
+
 
     }
     post {
