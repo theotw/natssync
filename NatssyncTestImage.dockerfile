@@ -7,4 +7,5 @@ ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local
 RUN make incontainergenerate
 RUN rm -r -f out & mkdir -p out & mkdir -p webout & mkdir -p /certs
 RUN make buildlinux
+RUN date -uIseconds > ./BUILD_DATE
 
