@@ -98,7 +98,8 @@ func RunMsgHandler(subjectString string) {
 				}
 			}
 		} else {
-			log.Errorf("Error fetching messages %s \n", err.Error())
+			//set this to trace, since its not really error
+			log.Tracef("Error fetching messages %s \n", err.Error())
 		}
 	}
 

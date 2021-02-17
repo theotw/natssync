@@ -101,9 +101,15 @@ func handlePostRegister(c *gin.Context) {
 	msgs.GetKeyStore().WritePublicKey(msgs.CLOUD_ID, []byte(regResp.CloudPublicKey))
 	//this step must be last, other parts of the code watch for this key
 	msgs.GetKeyStore().SaveLocationID(regResp.PermId)
+	ret := new(v1.RegistrationResponse)
+	ret.LocationID = regResp.PermId
+	c.JSON(200, ret)
 
-	c.JSON(200, "")
-
+}
+func registrationGetHandler(c *gin.Context) {
+	ret := new(v1.RegistrationResponse)
+	ret.LocationID = msgs.GetKeyStore().LoadLocationID()
+	c.JSON(200, ret)
 }
 func aboutGetUnversioned(c *gin.Context) {
 	var resp v1.AboutResponse

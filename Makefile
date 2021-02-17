@@ -3,7 +3,6 @@ CLIENT_OPENAPIDEF_FILE=openapi/bridge_client_v1.yaml
 openapicli_jar=third_party/openapi-generator-cli.jar
 
 ifndef IMAGE_TAG
-#	IMAGE_TAG=$(shell date '+%Y%m%d%H%M')
 	IMAGE_TAG=latest
 endif
 
@@ -11,6 +10,16 @@ ifndef IMAGE_REPO
 	IMAGE_REPO=theotw
 endif
 
+ifeq (${IMAGE_TAG},latest)
+	BUILD_VERSION=$(shell date '+%Y%m%d%H%M')
+else
+	BUILD_VERSION=${IMAGE_TAG}
+endif
+
+tmp:
+
+	echo ${IMAGE_TAG}
+	echo ${BUILD_VERSION}
 
 generate: maketmp justgenerate rmtmp
 maketmp:
@@ -44,7 +53,7 @@ generateclient:
 generateversion:
 	echo "//THIS IS A GENERATED FILE, any changes will be overridden " >pkg/version.go
 	echo "package pkg" >>pkg/version.go
-	echo "const VERSION=\"${IMAGE_TAG}\"" >>pkg/version.go
+	echo "const VERSION=\"${BUILD_VERSION}\"" >>pkg/version.go
 
 incontainergenerate:generateversion
 	rm -r -f tmpcloud
