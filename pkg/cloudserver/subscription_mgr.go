@@ -26,12 +26,16 @@ func InitSubscriptionMgr() error {
 	if nc == nil {
 		return errors.New("uninitialized nats connection")
 	}
-	nc.Subscribe(bridgemodel.REGISTRATION_LIFECYCLE_ADDED, func(msg *nats.Msg) {
-		handleNewSubscription(msg)
-	})
-	nc.Subscribe(bridgemodel.REGISTRATION_LIFECYCLE_ADDED, func(msg *nats.Msg) {
-		handleRemovedSubscription(msg)
-	})
+	_, suberr1 := nc.Subscribe(bridgemodel.REGISTRATION_LIFECYCLE_ADDED, handleNewSubscription)
+	if suberr1 != nil {
+		log.Errorf("Error registering for lifecycle add events %s \n", suberr1)
+		return suberr1
+	}
+	_, suberr2 := nc.Subscribe(bridgemodel.REGISTRATION_LIFECYCLE_ADDED, handleRemovedSubscription)
+	if suberr2 != nil {
+		log.Errorf("Error registering for lifecycle add events %s \n", suberr2)
+		return suberr2
+	}
 
 	knownClients, err := msgs.GetKeyStore().ListKnownClients()
 	if err != nil {
@@ -55,6 +59,7 @@ func handleNewSubscription(msg *nats.Msg) {
 		return
 	}
 	nc := bridgemodel.GetNatsConnection()
+
 	clientID := string(msg.Data)
 	subject := fmt.Sprintf("%s.%s.>", msgs.SB_MSG_PREFIX, clientID)
 	sub, err := nc.SubscribeSync(subject)

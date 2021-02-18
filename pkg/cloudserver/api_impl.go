@@ -75,7 +75,8 @@ func handleGetMessages(c *gin.Context) {
 			log.Errorf("Error fetching messages from subscription for %s error %s \n", clientID, e.Error())
 		}
 	} else {
-		log.Errorf("Got a request for messages for a client ID that has no subscription %s \n", clientID)
+		//make this trace because its really just a timeout
+		log.Tracef("Got a request for messages for a client ID that has no subscription %s \n", clientID)
 	}
 
 	c.JSON(200, ret)

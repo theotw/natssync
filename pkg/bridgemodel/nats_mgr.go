@@ -25,7 +25,6 @@ func InitNats(natsUrlList string, connectionName string, timeout time.Duration) 
 			log.Debugf("NATS Connection closed  \n")
 		}),
 			nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
-
 				if err != nil {
 					log.Debugf("Connection disconnect %s  \n", err.Error())
 				} else {
