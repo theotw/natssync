@@ -5,6 +5,7 @@
 package msgs
 
 import (
+	"github.com/theotw/natssync/pkg"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -15,21 +16,22 @@ import (
 )
 
 func TestEncryption(t *testing.T) {
-	dirName, err := ioutil.TempDir("", "encryptTest")
-	if !assert.Nil(t, err, "Error setting up test dir") {
-		t.Fail()
-	} else {
-		os.Setenv("CERT_DIR", dirName)
-		t.Run("load master keys", doTest_loadMaster)
-		t.Run("Load public key", doTest_loadMasterPublic)
-		t.Run("Test Encrpt", doTest_encrpt)
-		t.Run("Test Envelope", doTestMessageEnvelope)
-		os.RemoveAll(dirName)
-	}
+	parentDir := os.TempDir()
+	keystoreDir, _ := ioutil.TempDir(parentDir, "keystoretest")
+	pkg.Config.CertDir = keystoreDir
+
+	InitCloudKey()
+
+	t.Run("load master keys", doTest_loadMaster)
+	t.Run("Load public key", doTest_loadMasterPublic)
+	t.Run("Test Encrpt", doTest_encrpt)
+	t.Run("Test Envelope", doTestMessageEnvelope)
+	t.Run("Location ID", doTestLocationID)
+	t.Run("Auth Challenge", doTestAuthChallenge)
 
 }
 func doTestMessageEnvelope(t *testing.T) {
-	InitCloudKey()
+
 	GenerateAndSaveKey("client1")
 	msg := []byte("Hello World")
 	envelope, err := PutMessageInEnvelope(msg, CLOUD_ID, "client1")
@@ -52,20 +54,17 @@ func doTestMessageEnvelope(t *testing.T) {
 }
 
 func doTest_loadMaster(t *testing.T) {
-	InitCloudKey()
 
 	master, err := LoadPrivateKey(CLOUD_ID)
 	assert.Nil(t, err)
 	assert.NotNil(t, master)
 }
 func doTest_loadMasterPublic(t *testing.T) {
-	InitCloudKey()
 	master, err := LoadPublicKey(CLOUD_ID)
 	assert.Nil(t, err)
 	assert.NotNil(t, master)
 }
 func doTest_encrpt(t *testing.T) {
-	InitCloudKey()
 	plainText := "hello async enc"
 	cipher, err := rsaEncrypt([]byte(plainText), CLOUD_ID)
 	if err != nil {
@@ -82,16 +81,14 @@ func doTest_encrpt(t *testing.T) {
 const unitestLocation = "unittestlocationID"
 
 //test may seem out of place, but we need to know this works for challenge tests
-func TestLocationID(t *testing.T) {
+func doTestLocationID(t *testing.T) {
 	store := GetKeyStore()
 	err := store.SaveLocationID(unitestLocation)
 	assert.Nil(t, err, "Not expecting an error for location ID save")
 	id := store.LoadLocationID()
 	assert.Equal(t, unitestLocation, id)
 }
-func TestAuthChallenge(t *testing.T) {
-	InitCloudKey()
-	InitLocationKeyStore()
+func doTestAuthChallenge(t *testing.T) {
 	store := GetKeyStore()
 	err := GenerateAndSaveKey(unitestLocation)
 	if !assert.Nil(t, err) {

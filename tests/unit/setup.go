@@ -9,6 +9,7 @@ Unit test setup side effects
 package unit
 
 import (
+	"io/ioutil"
 	"os"
 
 	"github.com/theotw/natssync/pkg"
@@ -16,9 +17,9 @@ import (
 
 func init() {
 	newConfig := pkg.NewConfiguration()
-	path, _ := os.Getwd()
-
-	newConfig.CertDir = path + "/../../testfiles"
+	parentDir := os.TempDir()
+	keystoreDir, _ := ioutil.TempDir(parentDir, "keystoretest")
+	pkg.Config.CertDir = keystoreDir
 	newConfig.CacheMgr = "mem"
 	newConfig.Keystore = "file"
 

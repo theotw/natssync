@@ -21,7 +21,7 @@ import (
 )
 
 func InitCloudKey() error {
-	err := InitLocationKeyStore()
+	err := InitLocationKeyStore(nil)
 	if err != nil {
 		return err
 	}

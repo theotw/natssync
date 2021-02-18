@@ -4,7 +4,9 @@
 
 package bridgemodel
 
-const REGISTRATION_AUTH_SUBJECT = "natssync.regauth.request"
+const REGISTRATION_AUTH_SUBJECT = "natssync.registration.request"
+const REGISTRATION_LIFECYCLE_ADDED = "natssync.registration.lifecyle.added"
+const REGISTRATION_LIFECYCLE_REMOVED = "natssync.registration.lifecyle.removed"
 
 //this is a generic message that will be encrypted and decrypted on the bridge.
 //Its basicly the NATS data

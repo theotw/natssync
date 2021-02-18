@@ -39,6 +39,14 @@ func (t *RedisKeyStore) Init() error {
 	}
 	return err
 }
+func (t *RedisKeyStore) ListKnownClients() ([]string, error) {
+	var ret []string
+	err := t.Pool.Do(radix.Cmd(&ret, "HKEYS", PUBLIC_HASH_NAME))
+	if err != nil {
+		log.Errorf("Error loading location IDs %s", err.Error())
+	}
+	return ret, err
+}
 func (t *RedisKeyStore) LoadLocationID() string {
 	var ret string
 	err := t.Pool.Do(radix.Cmd(&ret, "GET", LOCATION_KEY_NAME))

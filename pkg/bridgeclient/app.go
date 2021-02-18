@@ -31,7 +31,7 @@ func RunClient(test bool) {
 		level = log.DebugLevel
 	}
 	log.SetLevel(level)
-	msgs.InitLocationKeyStore()
+	msgs.InitLocationKeyStore(nil)
 	store := msgs.GetKeyStore()
 	if store == nil {
 		log.Fatalf("Unable to get keystore \n")
