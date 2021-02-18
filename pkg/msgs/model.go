@@ -4,7 +4,10 @@
 
 package msgs
 
-import "github.com/theotw/natssync/pkg"
+import (
+	"github.com/nats-io/nats.go"
+	"github.com/theotw/natssync/pkg"
+)
 
 const ENVELOPE_VERSION_1 = 1 //EBC AES
 const ENVELOPE_VERSION_2 = 2 // CBC AES
@@ -32,6 +35,7 @@ type LocationKeyStore interface {
 	ReadPublicKeyData(locationID string) ([]byte, error)
 	WritePublicKey(locationID string, buf []byte) error
 	WritePrivateKey(locationID string, buf []byte) error
+	ListKnownClients() ([]string, error)
 }
 
 var keystore LocationKeyStore
@@ -39,11 +43,11 @@ var keystore LocationKeyStore
 func GetKeyStore() LocationKeyStore {
 	return keystore
 }
-func CreateLocationKeyStore(ksType string) (ret LocationKeyStore, err error) {
+func CreateLocationKeyStore(ksType string, conn *nats.Conn) (ret LocationKeyStore, err error) {
 	switch ksType {
 	case "file":
 		{
-			ret, err = NewFileKeyStore()
+			ret, err = NewFileKeyStore(conn)
 			break
 		}
 	case "redis":
@@ -54,9 +58,9 @@ func CreateLocationKeyStore(ksType string) (ret LocationKeyStore, err error) {
 	}
 	return
 }
-func InitLocationKeyStore() error {
+func InitLocationKeyStore(conn *nats.Conn) error {
 	ksType := pkg.Config.Keystore
-	ret, err := CreateLocationKeyStore(ksType)
+	ret, err := CreateLocationKeyStore(ksType, conn)
 	keystore = ret
 	return err
 }
