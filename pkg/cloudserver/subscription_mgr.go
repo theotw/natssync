@@ -7,20 +7,22 @@ package cloudserver
 import (
 	"errors"
 	"fmt"
+	"sync"
+
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
+
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	"github.com/theotw/natssync/pkg/msgs"
-	"sync"
 )
 
 var mapSync sync.RWMutex
-var nats_subscriptions map[string]*nats.Subscription
+var natsSubscriptions map[string]*nats.Subscription
 
 func InitSubscriptionMgr() error {
 	mapSync.Lock()
 	defer mapSync.Unlock()
-	nats_subscriptions = make(map[string]*nats.Subscription)
+	natsSubscriptions = make(map[string]*nats.Subscription)
 
 	nc := bridgemodel.GetNatsConnection()
 	if nc == nil {
@@ -49,7 +51,7 @@ func InitSubscriptionMgr() error {
 		if err != nil {
 			log.Errorf("Unable to subscribe to %s because of %s \n", subject, err.Error())
 		} else {
-			nats_subscriptions[clientID] = sub
+			natsSubscriptions[clientID] = sub
 		}
 	}
 	return nil
@@ -69,7 +71,7 @@ func handleNewSubscription(msg *nats.Msg) {
 		return
 	}
 	mapSync.Lock()
-	nats_subscriptions[clientID] = sub
+	natsSubscriptions[clientID] = sub
 	mapSync.Unlock()
 }
 func handleRemovedSubscription(msg *nats.Msg) {
@@ -80,7 +82,7 @@ func handleRemovedSubscription(msg *nats.Msg) {
 	clientID := string(msg.Data)
 
 	mapSync.Lock()
-	delete(nats_subscriptions, clientID)
+	delete(natsSubscriptions, clientID)
 	mapSync.Unlock()
 
 }
@@ -89,7 +91,7 @@ func handleRemovedSubscription(msg *nats.Msg) {
 func GetSubscriptionForClient(clientID string) *nats.Subscription {
 	var ret *nats.Subscription
 	mapSync.RLock()
-	ret = nats_subscriptions[clientID]
+	ret = natsSubscriptions[clientID]
 	mapSync.RUnlock()
 	return ret
 }

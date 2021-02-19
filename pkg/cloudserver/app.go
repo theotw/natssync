@@ -26,26 +26,23 @@ func RunBridgeServerApp(test bool) {
 	//hack for when we run as unit tests
 	wd, _ := os.Getwd()
 	if wd == "/build/tests/apps" {
-		os.Chdir("/build")
+		if err := os.Chdir("/build"); err != nil {
+			log.Fatalf("Error attempting to change directories: %s", err)
+		}
 	}
 
 	log.Info("Starting NATSSync Server")
 
 	//if we cannot get to NATS, then we are worthless and should stop
-	nats_err := bridgemodel.InitNats(pkg.Config.NatsServerUrl, "NatsSyncServer Master", 1*time.Minute)
-	if nats_err != nil {
-		log.Errorf("Unable to connect to NATS.  Ending app %s \n", nats_err.Error())
-		return
+	natsErr := bridgemodel.InitNats(pkg.Config.NatsServerUrl, "NatsSyncServer Master", 1*time.Minute)
+	if natsErr != nil {
+		log.Fatalf("Unable to connect to NATS. Ending app %s", natsErr.Error())
 	}
-	key_error := msgs.InitCloudKey()
-	if key_error != nil {
-		log.Errorf("Unable to initialize the key manager.  Ending the app %s \n", key_error.Error())
-		return
+	if keyError := msgs.InitCloudKey(); keyError != nil {
+		log.Fatalf("Unable to initialize the key manager. Ending the app %s", keyError.Error())
 	}
-	sub_error := InitSubscriptionMgr()
-	if sub_error != nil {
-		log.Errorf("Unable to initialize the subscription manager.  Ending the app %s \n", sub_error.Error())
-		return
+	if subError := InitSubscriptionMgr(); subError != nil {
+		log.Fatalf("Unable to initialize the subscription manager. Ending the app %s", subError.Error())
 	}
 
 	metrics.InitMetrics()

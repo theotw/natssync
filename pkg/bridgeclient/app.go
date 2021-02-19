@@ -31,13 +31,14 @@ func RunClient(test bool) {
 		level = log.DebugLevel
 	}
 	log.SetLevel(level)
-	msgs.InitLocationKeyStore(nil)
+	if err := msgs.InitLocationKeyStore(nil); err != nil {
+		log.Fatalf("Error initalizing key store: %s", err)
+	}
 	store := msgs.GetKeyStore()
 	if store == nil {
-		log.Fatalf("Unable to get keystore \n")
+		log.Fatalf("Unable to get keystore")
 	}
-	err := RunBridgeClientRestAPI(test)
-	if err != nil {
+	if err := RunBridgeClientRestAPI(test); err != nil {
 		log.Errorf("Error starting API server %s", err.Error())
 		os.Exit(1)
 	}
@@ -61,7 +62,7 @@ func RunClient(test bool) {
 			lastClientID = clientID
 		}
 		if nc == nil {
-			nc, err = nats.Connect(pkg.Config.NatsServerUrl)
+			nc, err := nats.Connect(pkg.Config.NatsServerUrl)
 			if err != nil {
 				log.Errorf("Unable to connect to NATS, retrying... error: %s", err.Error())
 				nc = nil
@@ -69,9 +70,12 @@ func RunClient(test bool) {
 				continue
 			} else {
 				subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
-				nc.Subscribe(subj, func(msg *nats.Msg) {
+				_, err = nc.Subscribe(subj, func(msg *nats.Msg) {
 					sendMessageToCloud(msg, serverURL, clientID)
 				})
+				if err != nil {
+					log.Errorf("Error subscribing to %s: %s", subj, err)
+				}
 			}
 		} else {
 			url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
@@ -100,6 +104,9 @@ func RunClient(test bool) {
 					log.Errorf("Error decoding envelope %s", err.Error())
 					continue
 				}
+
+				log.Infof("Received message: %s", string(natmsg.Data))
+
 				if len(natmsg.Reply) > 0 {
 					if strings.HasSuffix(natmsg.Subject, msgs.ECHO_SUBJECT_BASE) {
 						var echomsg nats.Msg
@@ -113,16 +120,17 @@ func RunClient(test bool) {
 						metrics.RecordTimeToPushMessage(int(math.Round(endpost.Sub(startpost).Seconds())))
 					}
 
-					nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data)
+					if err := nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data); err != nil {
+						log.Errorf("Error publising request: %s", err)
+					}
 				} else {
-					nc.Publish(natmsg.Subject, natmsg.Data)
+					if err := nc.Publish(natmsg.Subject, natmsg.Data); err != nil {
+						log.Errorf("Error publising request: %s", err)
+					}
 				}
-				fmt.Println(natmsg)
 			}
 		}
-
 	}
-
 }
 
 func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string) {

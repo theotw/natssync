@@ -10,15 +10,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg"
-	"github.com/theotw/natssync/pkg/bridgemodel"
-	"github.com/theotw/natssync/pkg/bridgemodel/errors"
-	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
-	"github.com/theotw/natssync/pkg/metrics"
-	"github.com/theotw/natssync/pkg/msgs"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -26,6 +17,17 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/bridgemodel"
+	"github.com/theotw/natssync/pkg/bridgemodel/errors"
+	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
+	"github.com/theotw/natssync/pkg/metrics"
+	"github.com/theotw/natssync/pkg/msgs"
 )
 
 const WAIT_MAX = 30

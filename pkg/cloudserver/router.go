@@ -7,21 +7,23 @@ package cloudserver
 import (
 	"bytes"
 	"context"
-	"github.com/gin-contrib/static"
-	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/gin-contrib/static"
+	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/theotw/natssync/pkg"
 )
 
 var quit chan os.Signal
 
 // Run - configures and starts the web server
-func RunBridgeServer(test bool) error {
+func RunBridgeServer(test bool) {
 	level, levelerr := log.ParseLevel(pkg.Config.LogLevel)
 	if levelerr != nil {
 		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
@@ -58,7 +60,6 @@ func RunBridgeServer(test bool) error {
 		log.Fatal("Server Shutdown:", err)
 	}
 	log.Println("Server exiting")
-	return nil
 }
 
 func newRouter(test bool) *gin.Engine {
