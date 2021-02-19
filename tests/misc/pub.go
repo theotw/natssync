@@ -30,6 +30,7 @@ func main() {
 	defer nc1.Close()
 	i := 0
 	for true {
+
 		err := nc1.Publish("testub", []byte(fmt.Sprintf("hello %d", i)))
 		if err != nil {
 			fmt.Printf("Error on publish %s \n", err.Error())
@@ -37,6 +38,6 @@ func main() {
 			fmt.Printf("Published a message %d \n", i)
 		}
 		i++
-		time.Sleep(4 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }

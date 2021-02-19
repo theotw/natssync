@@ -11,7 +11,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
@@ -50,7 +49,7 @@ func handleGetMessages(c *gin.Context) {
 	metrics.IncrementTotalQueries(1)
 	sub := GetSubscriptionForClient(clientID)
 	if sub != nil {
-		m, e := sub.NextMsg(30 * time.Second)
+		m, e := sub.NextMsg(3 * time.Second)
 		if e == nil {
 			plainMsg := new(bridgemodel.NatsMessage)
 			plainMsg.Data = m.Data
@@ -72,11 +71,11 @@ func handleGetMessages(c *gin.Context) {
 				log.Errorf("Error putting message in envelope %s \n", err2.Error())
 			}
 		} else {
-			log.Errorf("Error fetching messages from subscription for %s error %s \n", clientID, e.Error())
+			log.Tracef("Error fetching messages from subscription for %s error %s \n", clientID, e.Error())
 		}
 	} else {
 		//make this trace because its really just a timeout
-		log.Tracef("Got a request for messages for a client ID that has no subscription %s \n", clientID)
+		log.Errorf("Got a request for messages for a client ID that has no subscription %s \n", clientID)
 	}
 
 	c.JSON(200, ret)
@@ -96,20 +95,11 @@ func handlePostMessage(c *gin.Context) {
 		c.JSON(401, "")
 		return
 	}
-	natsURL := pkg.Config.NatsServerUrl
-	log.Infof("Connecting to NATS server %s", natsURL)
-	nc, err := nats.Connect(natsURL)
-	if err != nil {
-		log.Errorf("Error connecting to NATS %s", err.Error())
-		_, resp := bridgemodel.HandleError(c, err)
-		c.JSON(500, resp)
-		return
-	}
-	defer nc.Close()
+	nc := bridgemodel.GetNatsConnection()
 	errors := make([]*v1.ErrorResponse, 0)
 	for _, msg := range in.Messages {
 		var envl msgs.MessageEnvelope
-		err = json.Unmarshal([]byte(msg.MessageData), &envl)
+		err := json.Unmarshal([]byte(msg.MessageData), &envl)
 		if err != nil {
 			log.Errorf("Error unmarshalling envelope %s", err.Error())
 			_, resp := bridgemodel.HandleError(c, err)

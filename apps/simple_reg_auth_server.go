@@ -12,6 +12,7 @@ import (
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	"os"
 	"runtime"
+	"time"
 )
 
 //the main for an example of a simple auth server.  Authorizes a request if the user ID and secret matches what is set in the env
@@ -21,11 +22,15 @@ import (
 func main() {
 	natsURL := pkg.Config.NatsServerUrl
 	log.Infof("Connecting to NATS server %s", natsURL)
-	nc, err := nats.Connect(natsURL)
+
+	err := bridgemodel.InitNats(natsURL, "echo client", 1*time.Minute)
 	if err != nil {
 		log.Errorf("Unable to connect to NATS, exiting %s", err.Error())
 		os.Exit(2)
+
 	}
+	nc := bridgemodel.GetNatsConnection()
+
 	expectedAuthToken := pkg.GetEnvWithDefaults("AUTH_TOKEN", "42")
 	subj := bridgemodel.REGISTRATION_AUTH_SUBJECT
 	nc.Subscribe(subj, func(msg *nats.Msg) {

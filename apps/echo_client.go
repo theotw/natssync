@@ -46,10 +46,11 @@ func main() {
 	args := getECArguments()
 
 	log.Printf("Connecting to NATS Server %s \n", *args.natsURL)
-	nc, err := nats.Connect(*args.natsURL)
+	err := bridgemodel.InitNats(*args.natsURL, "echo client", 1*time.Minute)
 	if err != nil {
 		log.Fatal(err)
 	}
+	nc := bridgemodel.GetNatsConnection()
 	defer nc.Close()
 
 	subject := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, *args.clientID, msgs.ECHO_SUBJECT_BASE)

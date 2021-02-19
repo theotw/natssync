@@ -28,7 +28,8 @@ func main() {
 		log.Fatalf("Error connecting %s", err.Error())
 	}
 	defer nc1.Close()
-	sub, err := nc1.SubscribeSync("testub")
+	sub, err := nc1.QueueSubscribeSync("testub", "bob")
+	//sub, err := nc1.SubscribeSync("testub")
 	if err != nil {
 		log.Fatalf("Error on subscribe %s \n", err.Error())
 	}

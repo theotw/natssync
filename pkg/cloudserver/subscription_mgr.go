@@ -44,7 +44,8 @@ func InitSubscriptionMgr() error {
 	}
 	for _, clientID := range knownClients {
 		subject := fmt.Sprintf("%s.%s.>", msgs.SB_MSG_PREFIX, clientID)
-		sub, err := nc.SubscribeSync(subject)
+		//sub, err := nc.SubscribeSync(subject)
+		sub, err := nc.QueueSubscribeSync(subject, "natssync-get")
 		if err != nil {
 			log.Errorf("Unable to subscribe to %s because of %s \n", subject, err.Error())
 		} else {

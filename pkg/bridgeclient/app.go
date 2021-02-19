@@ -70,8 +70,6 @@ func RunClient(test bool) {
 			} else {
 				subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
 				nc.Subscribe(subj, func(msg *nats.Msg) {
-					log.Debugf("Sending msg to cloud %s", msg.Subject)
-
 					sendMessageToCloud(msg, serverURL, clientID)
 				})
 			}
@@ -87,6 +85,7 @@ func RunClient(test bool) {
 				time.Sleep(2 * time.Second)
 				continue
 			}
+			log.Infof("Recieved %d messages from server \n", len(msglist))
 			for _, m := range msglist {
 				var env msgs.MessageEnvelope
 				err = json.Unmarshal([]byte(m.MessageData), &env)
@@ -109,7 +108,7 @@ func RunClient(test bool) {
 						tmpstring := startpost.Format("20060102-15:04:05.000")
 						echoMsg := fmt.Sprintf("%s | %s \n", tmpstring, "message-client")
 						echomsg.Data = []byte(echoMsg)
-						go sendMessageToCloud(&echomsg, serverURL, clientID)
+						sendMessageToCloud(&echomsg, serverURL, clientID)
 						endpost := time.Now()
 						metrics.RecordTimeToPushMessage(int(math.Round(endpost.Sub(startpost).Seconds())))
 					}
