@@ -113,7 +113,7 @@ func registrationGetHandler(c *gin.Context) {
 }
 func aboutGetUnversioned(c *gin.Context) {
 	var resp v1.AboutResponse
-	resp.AppVersion = pkg.VERSION
+	resp.AppVersion = pkg.VERSION  // Run `make generate` to create version
 	resp.ApiVersions = make([]string, 0)
 	resp.ApiVersions = append(resp.ApiVersions, "1")
 

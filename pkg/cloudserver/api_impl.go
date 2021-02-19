@@ -266,7 +266,7 @@ func sendRegRequestToAuthServer(c *gin.Context, in *v1.RegisterOnPremReq) (*brid
 }
 func aboutGetUnversioned(c *gin.Context) {
 	var resp v1.AboutResponse
-	resp.AppVersion = pkg.VERSION
+	resp.AppVersion = pkg.VERSION  // Run `make generate` to create version
 	resp.ApiVersions = make([]string, 0)
 	resp.ApiVersions = append(resp.ApiVersions, "1")
 
