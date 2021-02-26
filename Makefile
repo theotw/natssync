@@ -132,6 +132,8 @@ cloudimage:
 	docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f CloudServer.dockerfile --tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} .
 cloudimageBuildAndPush:cloudimage
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
+cloudimagearm:
+	docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=arm -f CloudServerArm.dockerfile --tag ${IMAGE_REPO}/natssync-server:arm .
 
 debugcloudimage:
 	docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f CloudServerDebug.dockerfile --tag ${IMAGE_REPO}/debugnatssync-server:${IMAGE_TAG} .
@@ -146,6 +148,8 @@ clientimage:
 	docker build --no-cache -f CloudClient.dockerfile  --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} .
 clientimageBuildAndPush: clientimage
 	docker push ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
+clientimagearm:
+	docker build --no-cache -f CloudClientArm.dockerfile  --build-arg IMAGE_TAG=arm --tag ${IMAGE_REPO}/natssync-client:arm .
 
 echoproxylet:
 	docker build --no-cache -f EchoProxylet.dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} .
@@ -153,10 +157,12 @@ echoproxyletBuildAndPush: echoproxylet
 	docker push ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
 
 echoproxyletarm:
-	docker build --no-cache -f EchoProxyletArm.dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/echo-proxylet-arm:${IMAGE_TAG} .
+	docker build --no-cache -f EchoProxyletArm.dockerfile --build-arg IMAGE_TAG=arm --tag ${IMAGE_REPO}/echo-proxylet-arm:arm .
 
 simpleauth:
 	docker build --no-cache -f SimpleAuthServer.dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} .
+simpleautharm:
+	docker build --no-cache -f SimpleAuthServerArm.dockerfile --build-arg IMAGE_TAG=arm --tag ${IMAGE_REPO}/simple-reg-auth:arm .
 
 simpleauthBuildAndPush: simpleauth
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
