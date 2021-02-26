@@ -47,11 +47,12 @@ func RunClient(test bool) {
 
 	serverURL := pkg.Config.CloudBridgeUrl
 	var nc *nats.Conn
+	var err error
 	var lastClientID string
 	for true {
 		clientID := store.LoadLocationID()
 		if len(clientID) == 0 {
-			log.Infof("No client ID, sleeping and retrying \n")
+			log.Infof("No client ID, sleeping and retrying")
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -62,20 +63,23 @@ func RunClient(test bool) {
 			lastClientID = clientID
 		}
 		if nc == nil {
-			nc, err := nats.Connect(pkg.Config.NatsServerUrl)
+			log.Infof("Connecting to NATS")
+			nc, err = nats.Connect(pkg.Config.NatsServerUrl)
 			if err != nil {
-				log.Errorf("Unable to connect to NATS, retrying... error: %s", err.Error())
+				log.Errorf("Unable to connect to NATS at %s, retrying... error: %s", pkg.Config.NatsServerUrl, err.Error())
 				nc = nil
 				time.Sleep(10 * time.Second)
 				continue
 			} else {
 				subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
+				log.Infof("Connected to NATS")
 				_, err = nc.Subscribe(subj, func(msg *nats.Msg) {
 					sendMessageToCloud(msg, serverURL, clientID)
 				})
 				if err != nil {
 					log.Errorf("Error subscribing to %s: %s", subj, err)
 				}
+				log.Infof("Subscribed to %s", subj)
 			}
 		} else {
 			url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
@@ -89,7 +93,7 @@ func RunClient(test bool) {
 				time.Sleep(2 * time.Second)
 				continue
 			}
-			log.Infof("Recieved %d messages from server \n", len(msglist))
+			log.Infof("Received %d messages from server", len(msglist))
 			for _, m := range msglist {
 				var env msgs.MessageEnvelope
 				err = json.Unmarshal([]byte(m.MessageData), &env)
@@ -113,7 +117,7 @@ func RunClient(test bool) {
 						echomsg.Subject = fmt.Sprintf("%s.bridge-client", natmsg.Reply)
 						startpost := time.Now()
 						tmpstring := startpost.Format("20060102-15:04:05.000")
-						echoMsg := fmt.Sprintf("%s | %s \n", tmpstring, "message-client")
+						echoMsg := fmt.Sprintf("%s | %s", tmpstring, "message-client")
 						echomsg.Data = []byte(echoMsg)
 						sendMessageToCloud(&echomsg, serverURL, clientID)
 						endpost := time.Now()
@@ -134,7 +138,7 @@ func RunClient(test bool) {
 }
 
 func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string) {
-	log.Debugf("Sending Msg NB %s \n", msg.Subject)
+	log.Debugf("Sending Msg NB %s", msg.Subject)
 	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
 	natmsg := bridgemodel.NatsMessage{Reply: msg.Reply, Subject: msg.Subject, Data: msg.Data}
 	envelope, enverr := msgs.PutObjectInEnvelope(natmsg, clientID, msgs.CLOUD_ID)

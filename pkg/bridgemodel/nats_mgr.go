@@ -20,32 +20,32 @@ func InitNats(natsUrlList string, connectionName string, timeout time.Duration) 
 	var i time.Duration
 	for !done {
 		i = i + 1
-		log.Infof("Connecting to NATS on %s \n", natsUrlList)
+		log.Infof("Connecting to NATS on %s", natsUrlList)
 		nc, err := nats.Connect(natsUrlList, nats.ClosedHandler(func(_ *nats.Conn) {
-				log.Debugf("NATS Connection closed  \n")
+				log.Debugf("NATS Connection closed")
 			}),
 			nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
 				if err != nil {
-					log.Debugf("Connection disconnect %s  \n", err.Error())
+					log.Debugf("Connection disconnect %s", err.Error())
 				} else {
-					log.Debugf("Connection disconnect no error  \n")
+					log.Debugf("Connection disconnect no error")
 				}
 			}),
 			nats.ReconnectHandler(func(_ *nats.Conn) {
-				log.Debugf("Connection Reconnect  \n")
+				log.Debugf("Connection Reconnect")
 			}),
 			nats.Name(connectionName),
 		)
 
 		if err != nil {
-			log.Errorf("Error connecting to nats on URL %s  / Error %s \n", natsUrlList, err.Error())
+			log.Errorf("Error connecting to nats on URL %s  / Error %s", natsUrlList, err.Error())
 			//increasing sleep longer
 			time.Sleep(i * time.Second)
 			now := time.Now()
 			done = now.Sub(start) >= timeout
 			errToReturn = err
 		} else {
-			log.Infof("Connected to NATS on %s \n", natsUrlList)
+			log.Infof("Connected to NATS on %s", natsUrlList)
 			natsConnection = nc
 			done = true
 		}
