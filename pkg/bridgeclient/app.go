@@ -52,7 +52,7 @@ func RunClient(test bool) {
 	for true {
 		clientID := store.LoadLocationID()
 		if len(clientID) == 0 {
-			log.Infof("No client ID, sleeping and retrying \n")
+			log.Infof("No client ID, sleeping and retrying")
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -93,7 +93,7 @@ func RunClient(test bool) {
 				time.Sleep(2 * time.Second)
 				continue
 			}
-			log.Infof("Recieved %d messages from server \n", len(msglist))
+			log.Infof("Received %d messages from server", len(msglist))
 			for _, m := range msglist {
 				var env msgs.MessageEnvelope
 				err = json.Unmarshal([]byte(m.MessageData), &env)
@@ -117,7 +117,7 @@ func RunClient(test bool) {
 						echomsg.Subject = fmt.Sprintf("%s.bridge-client", natmsg.Reply)
 						startpost := time.Now()
 						tmpstring := startpost.Format("20060102-15:04:05.000")
-						echoMsg := fmt.Sprintf("%s | %s \n", tmpstring, "message-client")
+						echoMsg := fmt.Sprintf("%s | %s", tmpstring, "message-client")
 						echomsg.Data = []byte(echoMsg)
 						sendMessageToCloud(&echomsg, serverURL, clientID)
 						endpost := time.Now()
@@ -138,7 +138,7 @@ func RunClient(test bool) {
 }
 
 func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string) {
-	log.Debugf("Sending Msg NB %s \n", msg.Subject)
+	log.Debugf("Sending Msg NB %s", msg.Subject)
 	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
 	natmsg := bridgemodel.NatsMessage{Reply: msg.Reply, Subject: msg.Subject, Data: msg.Data}
 	envelope, enverr := msgs.PutObjectInEnvelope(natmsg, clientID, msgs.CLOUD_ID)
