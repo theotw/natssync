@@ -47,6 +47,7 @@ func RunClient(test bool) {
 
 	serverURL := pkg.Config.CloudBridgeUrl
 	var nc *nats.Conn
+	var err error
 	var lastClientID string
 	for true {
 		clientID := store.LoadLocationID()
@@ -62,20 +63,23 @@ func RunClient(test bool) {
 			lastClientID = clientID
 		}
 		if nc == nil {
-			nc, err := nats.Connect(pkg.Config.NatsServerUrl)
+			log.Infof("Connecting to NATS")
+			nc, err = nats.Connect(pkg.Config.NatsServerUrl)
 			if err != nil {
-				log.Errorf("Unable to connect to NATS, retrying... error: %s", err.Error())
+				log.Errorf("Unable to connect to NATS at %s, retrying... error: %s", pkg.Config.NatsServerUrl, err.Error())
 				nc = nil
 				time.Sleep(10 * time.Second)
 				continue
 			} else {
 				subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
+				log.Infof("Connected to NATS")
 				_, err = nc.Subscribe(subj, func(msg *nats.Msg) {
 					sendMessageToCloud(msg, serverURL, clientID)
 				})
 				if err != nil {
 					log.Errorf("Error subscribing to %s: %s", subj, err)
 				}
+				log.Infof("Subscribed to %s", subj)
 			}
 		} else {
 			url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)

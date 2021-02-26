@@ -20,7 +20,7 @@ func InitNats(natsUrlList string, connectionName string, timeout time.Duration) 
 	var i time.Duration
 	for !done {
 		i = i + 1
-		log.Infof("Connecting to NATS on %s \n", natsUrlList)
+		log.Infof("Connecting to NATS on %s\n", natsUrlList)
 		nc, err := nats.Connect(natsUrlList, nats.ClosedHandler(func(_ *nats.Conn) {
 				log.Debugf("NATS Connection closed  \n")
 			}),
