@@ -1,0 +1,18 @@
+version: '3.4'
+services:
+  natssync-server-arm:
+    build:
+      context: .
+      target: natssync-server-arm
+  natssync-client-arm:
+    build:
+      context: .
+      target: natssync-client-arm
+  echo-proxylet-arm:
+    build:
+      context: .
+      target: echo-proxylet-arm
+  simple-reg-auth-arm:
+    build:
+      context: .
+      target: simple-reg-auth-arm

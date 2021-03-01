@@ -1,0 +1,45 @@
+FROM raghu4026/fullstackdev:arm as build
+LABEL stage=build
+WORKDIR /build
+RUN mkdir -p web
+RUN mkdir -p webout
+COPY ./ ./
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin
+ENV GOSUMDB=off
+ARG IMAGE_REPO=raghu4026
+ARG IMAGE_TAG=latest
+RUN make incontainergenerate
+RUN make buildarm
+RUN date -uIseconds > ./BUILD_DATE
+
+# Cloud server
+FROM scratch as natssync-server-arm
+WORKDIR /build
+COPY --from=build /build/web /build/web
+COPY --from=build /build/BUILD_DATE /build/BUILD_DATE
+COPY --from=build /build/out/bridgeserver_x86_linux_arm ./bridgeserver_x86_linux_arm
+COPY --from=build /build/third_party/swaggerui/ ./third_party/swaggerui/
+COPY --from=build /build/openapi/bridge_server_v1.yaml ./openapi/
+ENV GIN_MODE=release
+ENTRYPOINT ["./bridgeserver_x86_linux_arm"]
+
+# Cloud Client
+FROM scratch as natssync-client-arm
+WORKDIR /build
+COPY --from=build /build/web /build/web
+COPY --from=build /build/BUILD_DATE /build/BUILD_DATE
+COPY --from=build /build/out/bridgeclient_x86_linux_arm ./bridgeclient_x86_linux_arm
+COPY --from=build /build/third_party/swaggerui/ ./third_party/swaggerui/
+COPY --from=build /build/openapi/bridge_client_v1.yaml ./openapi/
+ENV GIN_MODE=release
+ENTRYPOINT ["./bridgeclient_x86_linux_arm"]
+
+# Echo proxylet
+FROM scratch as echo-proxylet-arm
+COPY --from=build /build/out/echo_main_x86_linux_arm ./echo_main_x86_linux_arm
+ENTRYPOINT ["./echo_main_x86_linux_arm"]
+
+# Simple auth
+FROM scratch as simple-reg-auth-arm
+COPY --from=build /build/out/simple_auth_x86_linux_arm ./simple_auth_x86_linux_arm
+ENTRYPOINT ["./simple_auth_x86_linux_arm"]
