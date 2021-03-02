@@ -5,7 +5,12 @@
 package msgs
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/nats-io/nats.go"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/theotw/natssync/pkg"
 )
 
@@ -40,27 +45,49 @@ type LocationKeyStore interface {
 
 var keystore LocationKeyStore
 
+func parseKeystoreUrl(keystoreUrl string) (string, string, error) {
+	log.Debugf("Parsing keystore URL: %s", keystoreUrl)
+	ksTypeUrl := strings.SplitAfterN(keystoreUrl, "://", 2)
+	if len(ksTypeUrl) != 2 {
+		return "", "", fmt.Errorf("unable to parse url '%s'", keystoreUrl)
+	}
+	ksType := ksTypeUrl[0]
+	ksUrl := ksTypeUrl[1]
+	return ksType, ksUrl, nil
+}
+
 func GetKeyStore() LocationKeyStore {
 	return keystore
 }
-func CreateLocationKeyStore(ksType string, conn *nats.Conn) (ret LocationKeyStore, err error) {
-	switch ksType {
-	case "file":
+
+func CreateLocationKeyStore(keystoreUrl string, conn *nats.Conn) (ret LocationKeyStore, err error) {
+	keystoreType, keystoreUri, err := parseKeystoreUrl(keystoreUrl)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	switch keystoreType {
+	case "file://":
 		{
-			ret, err = NewFileKeyStore(conn)
+			ret, err = NewFileKeyStore(keystoreUri, conn)
 			break
 		}
-	case "redis":
+	case "redis://":
 		{
-			ret, err = NewRedisLocationKeyStore()
+			ret, err = NewRedisLocationKeyStore(keystoreUri)
+			break
+		}
+	case "mongodb://":
+		{
+			ret, err = NewMongoKeyStore(keystoreUri)
 			break
 		}
 	}
 	return
 }
+
 func InitLocationKeyStore(conn *nats.Conn) error {
-	ksType := pkg.Config.Keystore
-	ret, err := CreateLocationKeyStore(ksType, conn)
-	keystore = ret
+	var err error
+	keystore, err = CreateLocationKeyStore(pkg.Config.KeystoreUrl, conn)
 	return err
 }

@@ -26,6 +26,8 @@ spec:
               value: "nats://nats:4222"
             - name: REDIS_URL
               value: "redis:6379"
+            - name: KEYSTORE_URL
+              value: "mongodb://mongo"
 
   replicas: 1
 

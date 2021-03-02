@@ -18,7 +18,7 @@ import (
 func TestEncryption(t *testing.T) {
 	parentDir := os.TempDir()
 	keystoreDir, _ := ioutil.TempDir(parentDir, "keystoretest")
-	pkg.Config.CertDir = keystoreDir
+	pkg.Config.KeystoreUrl = "file://"+keystoreDir
 
 	InitCloudKey()
 

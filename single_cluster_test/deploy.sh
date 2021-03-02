@@ -29,6 +29,8 @@ cloudYamls=(
   "simple-reg-deployment.yml"
   "syncserver-deployment.yml"
   "syncserver-service.yml"
+  "mongo-pod.yml"
+  "mongo-service.yml"
 )
 
 onpremYamls=(
