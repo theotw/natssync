@@ -1,6 +1,14 @@
 # Base image
 FROM natssync-base:latest as base
 
+# Test image
+FROM natssync-base:latest as natssync-tests
+ARG IMAGE_TAG=latest
+ENV GOSUMDB=off
+COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
+RUN rm -r -f out & mkdir -p out & mkdir -p webout & mkdir -p /certs
+COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
+
 # Bridge server
 FROM scratch as natssync-server
 WORKDIR /build
@@ -41,14 +49,6 @@ ENV GOSUMDB=off
 COPY --from=base /build/out/echo_main_x64_linux ./echo_main_x64_linux
 COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
 ENTRYPOINT ["./echo_main_x64_linux"]
-
-# Test image
-FROM natssync-base:latest as natssync-tests
-ARG IMAGE_TAG=latest
-ENV GOSUMDB=off
-COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
-RUN rm -r -f out & mkdir -p out & mkdir -p webout & mkdir -p /certs
-COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
 
 # Simple auth
 FROM scratch as simple-reg-auth

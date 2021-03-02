@@ -128,9 +128,9 @@ clean:
 	rm go.sum
 
 baseimage:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_TAG=${IMAGE_TAG} --tag natssync-base:${IMAGE_TAG} -f Dockerfilebase .
+	docker build --tag natssync-base:latest -f Dockerfilebase .
 baseimagearm:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_TAG=${IMAGE_TAG} --tag natssync-base:arm-${IMAGE_TAG} -f DockerfilebaseArm .
+	docker build --tag natssync-base:arm-latest -f DockerfilebaseArm .
 
 cloudimage:
 	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} --target natssync-server .
@@ -144,7 +144,7 @@ debugcloudimage:
 
 
 testimage:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} --target natssync-tests .
+	docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} --target natssync-tests .
 testimageBuildAndPush: testimage
 	docker push ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
 
