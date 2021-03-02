@@ -1,0 +1,14 @@
+#FROM openjdk:8-jre-alpine as openapigenerate
+FROM bmason42/fullstackdev:latest as build
+LABEL stage=build
+WORKDIR /build
+RUN mkdir -p web
+RUN mkdir -p webout
+COPY ./ ./
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin/
+ENV GOSUMDB=off
+ARG IMAGE_REPO=theotw
+ARG IMAGE_TAG=latest
+RUN make incontainergenerate
+RUN make buildlinux
+RUN date -uIseconds > ./BUILD_DATE
