@@ -1,4 +1,3 @@
-#FROM openjdk:8-jre-alpine as openapigenerate
 FROM bmason42/fullstackdev:latest as build
 LABEL stage=build
 WORKDIR /build

@@ -1,5 +1,5 @@
 # Base image
-FROM theotw/natssync-base:arm-latest as base
+FROM natssync-base:arm-latest as base
 
 # Cloud server
 FROM scratch as natssync-server-arm

@@ -1,5 +1,5 @@
 # Base image
-FROM theotw/natssync-base:latest as base
+FROM natssync-base:latest as base
 
 # Bridge server
 FROM scratch as natssync-server
@@ -26,7 +26,7 @@ ENV GIN_MODE=release
 ENTRYPOINT ["./bridgeclient_x64_linux"]
 
 # Cloudserver debug
-FROM theotw/natssync-base:latest as debugnatssync-server
+FROM natssync-base:latest as debugnatssync-server
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
@@ -43,7 +43,7 @@ COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
 ENTRYPOINT ["./echo_main_x64_linux"]
 
 # Test image
-FROM theotw/natssync-base:latest as natssync-tests
+FROM natssync-base:latest as natssync-tests
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
