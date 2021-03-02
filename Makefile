@@ -170,7 +170,7 @@ simpleauthBuildAndPush: simpleauth
 allimages:
 	docker-compose -f docker-compose.yml build
 allarmimages:
-	docker-compose -f docker-compose-arm.yml -f DockerfileArm build
+	docker-compose -f docker-compose-arm.yml build
 
 allimagesBuildAndPush:testimageBuildAndPush cloudimageBuildAndPush clientimageBuildAndPush echoproxyletBuildAndPush simpleauthBuildAndPush
 
