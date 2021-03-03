@@ -33,7 +33,7 @@ func InitSubscriptionMgr() error {
 		log.Errorf("Error registering for lifecycle add events %s \n", suberr1)
 		return suberr1
 	}
-	_, suberr2 := nc.Subscribe(bridgemodel.REGISTRATION_LIFECYCLE_ADDED, handleRemovedSubscription)
+	_, suberr2 := nc.Subscribe(bridgemodel.REGISTRATION_LIFECYCLE_REMOVED, handleRemovedSubscription)
 	if suberr2 != nil {
 		log.Errorf("Error registering for lifecycle add events %s \n", suberr2)
 		return suberr2
@@ -58,7 +58,7 @@ func InitSubscriptionMgr() error {
 }
 func handleNewSubscription(msg *nats.Msg) {
 	if msg.Data == nil || len(msg.Data) == 0 {
-		log.Debugf("Got a new subscription message with no data \n")
+		log.Debugf("Got a new subscription message with no data")
 		return
 	}
 	nc := bridgemodel.GetNatsConnection()
@@ -76,15 +76,23 @@ func handleNewSubscription(msg *nats.Msg) {
 }
 func handleRemovedSubscription(msg *nats.Msg) {
 	if msg.Data == nil || len(msg.Data) == 0 {
-		log.Debugf("Got a new subscription message with no data \n")
+		log.Debugf("Got a remove subscription message with no data")
 		return
 	}
 	clientID := string(msg.Data)
 
 	mapSync.Lock()
-	delete(natsSubscriptions, clientID)
-	mapSync.Unlock()
+	defer mapSync.Unlock()
 
+	sub := natsSubscriptions[clientID]
+	if sub == nil {
+		log.Warnf("No subscription found for %s", clientID)
+		return
+	}
+	if err := sub.Unsubscribe(); err != nil {
+		log.Errorf("Error unsubscribing from %s: %s", clientID, err)
+	}
+	delete(natsSubscriptions, clientID)
 }
 
 //gets the subscription for the client ID or returns nil
