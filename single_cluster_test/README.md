@@ -51,7 +51,11 @@ go run natstool.go -u nats://localhost:32222 -s natssync.registration.request -m
 ```
 
 On the client side, you will need provide the same credentials.
-```url
+```shell
+curl -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"client1"}' http://localhost:30081/bridge-client/1/register
+```
+or with the SwaggerUI:
+```shell
 # URL
 http://localhost:30081/bridge-client/api/index_bridge_client_v1.html#/default/post_register
 

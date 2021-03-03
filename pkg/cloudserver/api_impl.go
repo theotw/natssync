@@ -280,12 +280,5 @@ func swaggerUIGetHandler(c *gin.Context) {
 }
 
 func metricGetHandlers(c *gin.Context) {
-	depths := GetCacheMgr().GetQueueDepths()
-	var total int
-	for _, count := range depths {
-		total = total + count
-	}
-	metrics.SetTotalMessagesQueued(total)
-	metrics.RecordAgeOfMessageQueue(int(GetCacheMgr().GetAgeOfOldestTimestamp().Seconds()))
 	promhttp.Handler().ServeHTTP(c.Writer, c.Request)
 }

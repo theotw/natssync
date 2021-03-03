@@ -57,6 +57,7 @@ func GenerateAndSaveKey(locationID string) error {
 }
 
 func SaveKeyPair(locationID string, pair *rsa.PrivateKey) error {
+	log.Infof("Saving key pair for %s", locationID)
 	err := StorePrivateKey(locationID, pair)
 	if err != nil {
 		return err
@@ -130,6 +131,7 @@ func StorePublicKey(locationID string, key *rsa.PublicKey) error {
 	return err
 }
 func GenerateNewKeyPair() (*rsa.PrivateKey, error) {
+	log.Info("Generating new key pair")
 	// Private Key generation
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

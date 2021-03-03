@@ -42,8 +42,7 @@ func TestNewConfiguration(t *testing.T) {
 		{config.LogLevel, "debug"},
 		{config.RedisUrl, "localhost:6379"},
 		{config.CacheMgr, "redis"},
-		{config.Keystore, "redis"},
-		{config.CertDir, "/certs"},
+		{config.KeystoreUrl, "redis://localhost:6379"},
 	}
 
 	for _, envVar := range envVarDefaults {

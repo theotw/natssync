@@ -6,14 +6,15 @@ package msgs
 
 import (
 	"fmt"
-	"github.com/nats-io/nats.go"
-	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg"
-	"github.com/theotw/natssync/pkg/bridgemodel"
 	"io/ioutil"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/nats-io/nats.go"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/theotw/natssync/pkg/bridgemodel"
 )
 
 const publicKeySuffix = "_public.pem"
@@ -22,9 +23,9 @@ type FileKeyStore struct {
 	basePath string
 }
 
-func NewFileKeyStore(conn *nats.Conn) (*FileKeyStore, error) {
+func NewFileKeyStore(basePath string, conn *nats.Conn) (*FileKeyStore, error) {
 	ret := new(FileKeyStore)
-	ret.basePath = pkg.Config.CertDir
+	ret.basePath = basePath
 	if conn != nil {
 		ret.registerForLifecycleEvents(conn)
 	}

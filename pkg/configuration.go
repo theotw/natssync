@@ -18,26 +18,26 @@ type Configuration struct {
 	LogLevel       string
 	RedisUrl       string
 	CacheMgr       string
-	Keystore       string
-	CertDir        string
+	KeystoreUrl    string
 	ListenString   string
+	CertDir		   string
+	Keystore       string
+}
+
+type configOption struct {
+	value        *string
+	name         string
+	defaultValue string
 }
 
 func (c *Configuration) LoadValues() {
-	type configOption struct {
-		value        *string
-		name         string
-		defaultValue string
-	}
-
 	var configOptions = []configOption{
 		{&c.NatsServerUrl, "NATS_SERVER_URL", "nats://127.0.0.1:4222"},
 		{&c.CloudBridgeUrl, "CLOUD_BRIDGE_URL", "http://localhost:8081"},
 		{&c.LogLevel, "LOG_LEVEL", "debug"},
-		{&c.RedisUrl, "REDIS_URL", "localhost:6379"},
-		{&c.CacheMgr, "CACHE_MGR", "redis"},
-		{&c.Keystore, "KEYSTORE", "redis"},
-		{&c.CertDir, "CERT_DIR", "/certs"},
+		{&c.RedisUrl, "REDIS_URL", "localhost:6379"}, // TODO: Remove in favor of CacheMgrUrl
+		{&c.CacheMgr, "CACHE_MGR", "redis"}, // TODO: Convert to CacheMgrUrl
+		{&c.KeystoreUrl, "KEYSTORE_URL", "redis://localhost:6379"},
 		{&c.ListenString, "LISTEN_STRING", ":8080"},
 	}
 

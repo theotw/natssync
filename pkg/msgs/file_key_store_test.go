@@ -5,13 +5,14 @@
 package msgs
 
 import (
-	log "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"github.com/theotw/natssync/pkg"
-	_ "github.com/theotw/natssync/tests/unit"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+
+	_ "github.com/theotw/natssync/tests/unit"
 )
 
 func TestKeyStore(t *testing.T) {
@@ -20,10 +21,9 @@ func TestKeyStore(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	pkg.Config.CertDir = keystoreDir
 	defer os.RemoveAll(keystoreDir) // clean up
 
-	store, err := NewFileKeyStore(nil)
+	store, err := NewFileKeyStore(keystoreDir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

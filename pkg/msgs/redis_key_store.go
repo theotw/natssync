@@ -6,9 +6,9 @@ package msgs
 
 import (
 	"errors"
+
 	"github.com/mediocregopher/radix/v3"
 	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg"
 )
 
 //stores keys in a redis storage.
@@ -23,16 +23,14 @@ const PRIVATE_HASH_NAME = "natssync_private_key_store"
 const PUBLIC_HASH_NAME = "natssync_public_key_store"
 const LOCATION_KEY_NAME = "natsync_locationID"
 
-func NewRedisLocationKeyStore() (*RedisKeyStore, error) {
+func NewRedisLocationKeyStore(redisUrl string) (*RedisKeyStore, error) {
 	ret := new(RedisKeyStore)
-	ret.RedisURL = pkg.Config.RedisUrl
+	ret.RedisURL = redisUrl
 	err := ret.Init()
 	return ret, err
 }
 func (t *RedisKeyStore) Init() error {
 	var err error
-	addrs := make([]string, 1)
-	addrs[0] = t.RedisURL
 	t.Pool, err = radix.NewPool("tcp", t.RedisURL, 10)
 	if err != nil {
 		log.Errorf("Unable to connect to redis")
