@@ -20,6 +20,8 @@ type Configuration struct {
 	CacheMgr       string
 	KeystoreUrl    string
 	ListenString   string
+	CertDir		   string
+	Keystore       string
 }
 
 type configOption struct {
