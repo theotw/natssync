@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/metrics"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -103,6 +104,9 @@ func routeMiddleware(c *gin.Context) {
 	}
 
 	c.Next()
+	if c.Writer != nil {
+		metrics.IncrementHttpResp(c.Writer.Status())
+	}
 }
 func addOpenApiDefRoutes(router *gin.Engine) {
 	router.StaticFile("/bridge-server/api/bridge_server_v1.yaml", "openapi/bridge_server_v1.yaml")

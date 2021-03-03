@@ -78,9 +78,6 @@ func handleGetMessages(c *gin.Context) {
 		ret[i].FormatVersion = "1"
 		ret[i].MessageData = x.Data
 	}
-	end := time.Now().Unix()
-	//TODO this will show messages that have been queries for, but not ones that are stale no one is querying for.
-	metrics.AddCountToWaitTimes(int(end - start))
 
 	c.JSON(200, ret)
 }
@@ -298,12 +295,5 @@ func swaggerUIGetHandler(c *gin.Context) {
 }
 
 func metricGetHandlers(c *gin.Context) {
-	depths := GetCacheMgr().GetQueueDepths()
-	var total int
-	for _, count := range depths {
-		total = total + count
-	}
-	metrics.SetTotalMessagesQueued(total)
-	metrics.RecordAgeOfMessageQueue(int(GetCacheMgr().GetAgeOfOldestTimestamp().Seconds()))
 	promhttp.Handler().ServeHTTP(c.Writer, c.Request)
 }
