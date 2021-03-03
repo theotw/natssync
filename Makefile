@@ -3,13 +3,23 @@ CLIENT_OPENAPIDEF_FILE=openapi/bridge_client_v1.yaml
 openapicli_jar=third_party/openapi-generator-cli.jar
 
 ifndef IMAGE_TAG
-	IMAGE_TAG=$(shell date '+%Y%m%d%H%M')
+	IMAGE_TAG=latest
 endif
 
 ifndef IMAGE_REPO
 	IMAGE_REPO=theotw
 endif
 
+ifeq (${IMAGE_TAG},latest)
+	BUILD_VERSION=$(shell date '+%Y%m%d%H%M')
+else
+	BUILD_VERSION=${IMAGE_TAG}
+endif
+
+tmp:
+
+	echo ${IMAGE_TAG}
+	echo ${BUILD_VERSION}
 
 generate: maketmp justgenerate rmtmp
 maketmp:
@@ -43,7 +53,7 @@ generateclient:
 generateversion:
 	echo "//THIS IS A GENERATED FILE, any changes will be overridden " >pkg/version.go
 	echo "package pkg" >>pkg/version.go
-	echo "const VERSION=\"${IMAGE_TAG}\"" >>pkg/version.go
+	echo "const VERSION=\"${BUILD_VERSION}\"" >>pkg/version.go
 
 incontainergenerate:generateversion
 	rm -r -f tmpcloud
@@ -98,6 +108,19 @@ buildlinux:
 	go build -v -o out/echo_client_x64_linux apps/echo_client.go
 	go build -v -o out/simple_auth_x64_linux apps/simple_reg_auth_server.go
 
+buildarm: export GOOS=linux
+buildarm: export GOARCH=arm
+buildarm: export CGO_ENABLED=0
+buildarm: export GO111MODULE=on
+buildarm:
+	mkdir -p out
+	rm -f  out/bridgeserver_x64_linuxarm64
+	go build -v -o out/bridgeserver_x86_linux_arm apps/bridge_server.go
+	go build -v -o out/bridgeclient_x86_linux_arm apps/bridge_client.go
+	go build -v -o out/echo_main_x86_linux_arm apps/echo_main.go
+	go build -v -o out/echo_client_x86_linux_arm apps/echo_client.go
+	go build -v -o out/simple_auth_x86_linux_arm apps/simple_reg_auth_server.go
+
 clean:
 	rm -r -f tmp
 	rm -r -f pkg/bridgemodel/generated/v1
@@ -109,6 +132,8 @@ cloudimage:
 	docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f CloudServer.dockerfile --tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} .
 cloudimageBuildAndPush:cloudimage
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
+cloudimagearm:
+	docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=arm -f CloudServerArm.dockerfile --tag ${IMAGE_REPO}/natssync-server:arm .
 
 debugcloudimage:
 	docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f CloudServerDebug.dockerfile --tag ${IMAGE_REPO}/debugnatssync-server:${IMAGE_TAG} .
@@ -123,21 +148,28 @@ clientimage:
 	docker build --no-cache -f CloudClient.dockerfile  --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} .
 clientimageBuildAndPush: clientimage
 	docker push ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
+clientimagearm:
+	docker build --no-cache -f CloudClientArm.dockerfile  --build-arg IMAGE_TAG=arm --tag ${IMAGE_REPO}/natssync-client:arm .
 
 echoproxylet:
 	docker build --no-cache -f EchoProxylet.dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} .
 echoproxyletBuildAndPush: echoproxylet
 	docker push ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
 
+echoproxyletarm:
+	docker build --no-cache -f EchoProxyletArm.dockerfile --build-arg IMAGE_TAG=arm --tag ${IMAGE_REPO}/echo-proxylet-arm:arm .
+
 simpleauth:
 	docker build --no-cache -f SimpleAuthServer.dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} .
+simpleautharm:
+	docker build --no-cache -f SimpleAuthServerArm.dockerfile --build-arg IMAGE_TAG=arm --tag ${IMAGE_REPO}/simple-reg-auth:arm .
 
 simpleauthBuildAndPush: simpleauth
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
 
-allimages: cloudimage clientimage echoproxylet simpleauth testimage
+allimages: testimage cloudimage clientimage echoproxylet simpleauth
 
-allimagesBuildAndPush: cloudimageBuildAndPush clientimageBuildAndPush testimageBuildAndPush echoproxyletBuildAndPush simpleauthBuildAndPush
+allimagesBuildAndPush:testimageBuildAndPush cloudimageBuildAndPush clientimageBuildAndPush echoproxyletBuildAndPush simpleauthBuildAndPush
 
 
 pushall:

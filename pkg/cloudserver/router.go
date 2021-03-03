@@ -17,12 +17,13 @@ import (
 	"os"
 	"os/signal"
 	"time"
+
 )
 
 var quit chan os.Signal
 
 // Run - configures and starts the web server
-func RunBridgeServer(test bool) error {
+func RunBridgeServer(test bool) {
 	level, levelerr := log.ParseLevel(pkg.Config.LogLevel)
 	if levelerr != nil {
 		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
@@ -59,7 +60,6 @@ func RunBridgeServer(test bool) error {
 		log.Fatal("Server Shutdown:", err)
 	}
 	log.Println("Server exiting")
-	return nil
 }
 
 func newRouter(test bool) *gin.Engine {
@@ -105,7 +105,7 @@ func routeMiddleware(c *gin.Context) {
 
 	c.Next()
 	if c.Writer != nil {
-		metrics.IncrementHttpResp(c.Writer.Status())
+ 		metrics.IncrementHttpResp(c.Writer.Status())
 	}
 }
 func addOpenApiDefRoutes(router *gin.Engine) {

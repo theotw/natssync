@@ -15,13 +15,15 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
-	log "github.com/sirupsen/logrus"
-	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+
+	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
 )
 
 func InitCloudKey() error {
-	err := InitLocationKeyStore()
+	err := InitLocationKeyStore(nil)
 	if err != nil {
 		return err
 	}
@@ -55,6 +57,7 @@ func GenerateAndSaveKey(locationID string) error {
 }
 
 func SaveKeyPair(locationID string, pair *rsa.PrivateKey) error {
+	log.Infof("Saving key pair for %s", locationID)
 	err := StorePrivateKey(locationID, pair)
 	if err != nil {
 		return err
@@ -128,6 +131,7 @@ func StorePublicKey(locationID string, key *rsa.PublicKey) error {
 	return err
 }
 func GenerateNewKeyPair() (*rsa.PrivateKey, error) {
+	log.Info("Generating new key pair")
 	// Private Key generation
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -159,7 +163,9 @@ func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*Mes
 
 	ret := new(MessageEnvelope)
 	msgKey := make([]byte, 16)
-	rand.Read(msgKey)
+	if _, err = rand.Read(msgKey); err != nil {
+		return nil, err
+	}
 	ret.MsgKey, err = rsaEncrypt(msgKey, recipientID)
 	if err != nil {
 		return nil, err

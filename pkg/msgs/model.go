@@ -4,7 +4,15 @@
 
 package msgs
 
-import "github.com/theotw/natssync/pkg"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/nats-io/nats.go"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/theotw/natssync/pkg"
+)
 
 const ENVELOPE_VERSION_1 = 1 //EBC AES
 const ENVELOPE_VERSION_2 = 2 // CBC AES
@@ -32,31 +40,54 @@ type LocationKeyStore interface {
 	ReadPublicKeyData(locationID string) ([]byte, error)
 	WritePublicKey(locationID string, buf []byte) error
 	WritePrivateKey(locationID string, buf []byte) error
+	ListKnownClients() ([]string, error)
 }
 
 var keystore LocationKeyStore
 
+func parseKeystoreUrl(keystoreUrl string) (string, string, error) {
+	log.Debugf("Parsing keystore URL: %s", keystoreUrl)
+	ksTypeUrl := strings.SplitAfterN(keystoreUrl, "://", 2)
+	if len(ksTypeUrl) != 2 {
+		return "", "", fmt.Errorf("unable to parse url '%s'", keystoreUrl)
+	}
+	ksType := ksTypeUrl[0]
+	ksUrl := ksTypeUrl[1]
+	return ksType, ksUrl, nil
+}
+
 func GetKeyStore() LocationKeyStore {
 	return keystore
 }
-func CreateLocationKeyStore(ksType string) (ret LocationKeyStore, err error) {
-	switch ksType {
-	case "file":
+
+func CreateLocationKeyStore(keystoreUrl string, conn *nats.Conn) (ret LocationKeyStore, err error) {
+	keystoreType, keystoreUri, err := parseKeystoreUrl(keystoreUrl)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	switch keystoreType {
+	case "file://":
 		{
-			ret, err = NewFileKeyStore()
+			ret, err = NewFileKeyStore(keystoreUri, conn)
 			break
 		}
-	case "redis":
+	case "redis://":
 		{
-			ret, err = NewRedisLocationKeyStore()
+			ret, err = NewRedisLocationKeyStore(keystoreUri)
+			break
+		}
+	case "mongodb://":
+		{
+			ret, err = NewMongoKeyStore(keystoreUri)
 			break
 		}
 	}
 	return
 }
-func InitLocationKeyStore() error {
-	ksType := pkg.Config.Keystore
-	ret, err := CreateLocationKeyStore(ksType)
-	keystore = ret
+
+func InitLocationKeyStore(conn *nats.Conn) error {
+	var err error
+	keystore, err = CreateLocationKeyStore(pkg.Config.KeystoreUrl, conn)
 	return err
 }

@@ -6,21 +6,45 @@ package msgs
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg"
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
+
+	"github.com/nats-io/nats.go"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/theotw/natssync/pkg/bridgemodel"
 )
+
+const publicKeySuffix = "_public.pem"
 
 type FileKeyStore struct {
 	basePath string
 }
 
-func NewFileKeyStore() (*FileKeyStore, error) {
+func NewFileKeyStore(basePath string, conn *nats.Conn) (*FileKeyStore, error) {
 	ret := new(FileKeyStore)
-	ret.basePath = pkg.Config.CertDir
+	ret.basePath = basePath
+	if conn != nil {
+		ret.registerForLifecycleEvents(conn)
+	}
 	return ret, nil
+}
+func (t *FileKeyStore) registerForLifecycleEvents(conn *nats.Conn) {
+	conn.Subscribe(bridgemodel.REGISTRATION_LIFECYCLE_REMOVED, func(msg *nats.Msg) {
+		if msg.Data != nil {
+			locationID := string(msg.Data)
+			log.Infof("Recieved Lifecycle removed event %s", locationID)
+			name := t.makePublicKeyFileName(locationID)
+			err := os.Remove(name)
+			if err != nil {
+				log.Errorf("Recieved lifecycle removed but not an error %s", err.Error())
+			}
+		} else {
+			log.Errorf("Recieved lifecycle removed with no data")
+		}
+	})
 }
 func (t *FileKeyStore) LoadLocationID() string {
 	var ret string
@@ -49,6 +73,22 @@ func (t *FileKeyStore) SaveLocationID(locationID string) error {
 func (t *FileKeyStore) WritePublicKey(locationID string, buf []byte) error {
 	fileName := t.makePublicKeyFileName(locationID)
 	return t.writeKeyFile(fileName, buf)
+}
+func (t *FileKeyStore) ListKnownClients() ([]string, error) {
+	ret := make([]string, 0)
+	dir, err := ioutil.ReadDir(t.basePath)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range dir {
+
+		if strings.HasSuffix(f.Name(), publicKeySuffix) {
+			limit := len(f.Name()) - len(publicKeySuffix)
+			id := f.Name()[:limit]
+			ret = append(ret, id)
+		}
+	}
+	return ret, nil
 }
 func (t *FileKeyStore) WritePrivateKey(locationID string, buf []byte) error {
 	fileName := t.makePrivateFileName(locationID)
@@ -89,7 +129,7 @@ func (t *FileKeyStore) ReadPublicKeyData(locationID string) ([]byte, error) {
 
 func (t *FileKeyStore) makePublicKeyFileName(locationID string) string {
 	var keyFile string
-	keyFile = fmt.Sprintf("%s_public.pem", locationID)
+	keyFile = fmt.Sprintf("%s%s", locationID, publicKeySuffix)
 
 	masterPemPath := path.Join(t.basePath, keyFile)
 	return masterPemPath

@@ -133,6 +133,22 @@ pipeline {
             }
 
         }
+        stage ('Tag Code'){
+            when{
+                expression {params.PRODUCTION_BUILD == true}
+            }
+            steps {
+                script {
+                    sh """#!/bin/bash
+                        git tag $IMAGE_TAG
+                        git remote add x  https://bmason42:762bb623968238920e7a8e508cae58f250a3b20d@github.com/theotw/natssync.git
+                        git push x $IMAGE_TAG 
+
+                """
+                }
+            }
+        }
+
 
     }
     post {

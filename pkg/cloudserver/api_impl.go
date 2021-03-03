@@ -10,24 +10,24 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"mime"
+	"mime/multipart"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/gin-gonic/gin"
-	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
+
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	"github.com/theotw/natssync/pkg/bridgemodel/errors"
 	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
 	"github.com/theotw/natssync/pkg/metrics"
 	"github.com/theotw/natssync/pkg/msgs"
-	"io"
-	"io/ioutil"
-	"math"
-	"mime"
-	"mime/multipart"
-	"net/http"
-	"strings"
-	"time"
 )
 
 const WAIT_MAX = 30
@@ -47,36 +47,37 @@ func handleGetMessages(c *gin.Context) {
 		return
 	}
 
-	mgr := GetCacheMgr()
+	ret := make([]v1.BridgeMessage, 0)
 	metrics.IncrementTotalQueries(1)
-	now := time.Now().Unix()
-	start := now
-	var messages []*CachedMsg
-	for now < (start + WAIT_MAX) {
-		//loop looking for messages for some amount of seconds.
-		//If a message shows up.. Send it, if not, try again ever couple seconds until timeout or a message shows up.
-		//KISS
-		var err error
-		messages, err = mgr.GetMessages(clientID)
-		if err != nil {
-			code, resp := bridgemodel.HandleError(c, err)
-			c.JSON(code, resp)
-			return
-		} else {
-			if len(messages) == 0 {
-				time.Sleep(2 * time.Second)
-				now = time.Now().Unix()
+	sub := GetSubscriptionForClient(clientID)
+	if sub != nil {
+		m, e := sub.NextMsg(3 * time.Second)
+		if e == nil {
+			plainMsg := new(bridgemodel.NatsMessage)
+			plainMsg.Data = m.Data
+			plainMsg.Reply = m.Reply
+			plainMsg.Subject = m.Subject
+			envelope, err2 := msgs.PutObjectInEnvelope(plainMsg, msgs.CLOUD_ID, clientID)
+			if err2 == nil {
+				jsonData, marshelError := json.Marshal(&envelope)
+				if marshelError == nil {
+					var bridgeMsg v1.BridgeMessage
+					bridgeMsg.MessageData = string(jsonData)
+					bridgeMsg.FormatVersion = "1"
+					bridgeMsg.ClientID = clientID
+					ret = append(ret, bridgeMsg)
+				} else {
+					log.Errorf("Error marshelling message in envelope %s \n", marshelError.Error())
+				}
 			} else {
-				now = math.MaxInt64
+				log.Errorf("Error putting message in envelope %s \n", err2.Error())
 			}
-
+		} else {
+			log.Tracef("Error fetching messages from subscription for %s error %s \n", clientID, e.Error())
 		}
-	}
-	ret := make([]v1.BridgeMessage, len(messages))
-	for i, x := range messages {
-		ret[i].ClientID = clientID
-		ret[i].FormatVersion = "1"
-		ret[i].MessageData = x.Data
+	} else {
+		//make this trace because its really just a timeout
+		log.Errorf("Got a request for messages for a client ID that has no subscription %s \n", clientID)
 	}
 
 	c.JSON(200, ret)
@@ -96,20 +97,11 @@ func handlePostMessage(c *gin.Context) {
 		c.JSON(401, "")
 		return
 	}
-	natsURL := pkg.Config.NatsServerUrl
-	log.Infof("Connecting to NATS server %s", natsURL)
-	nc, err := nats.Connect(natsURL)
-	if err != nil {
-		log.Errorf("Error connecting to NATS %s", err.Error())
-		_, resp := bridgemodel.HandleError(c, err)
-		c.JSON(500, resp)
-		return
-	}
-	defer nc.Close()
+	nc := bridgemodel.GetNatsConnection()
 	errors := make([]*v1.ErrorResponse, 0)
 	for _, msg := range in.Messages {
 		var envl msgs.MessageEnvelope
-		err = json.Unmarshal([]byte(msg.MessageData), &envl)
+		err := json.Unmarshal([]byte(msg.MessageData), &envl)
 		if err != nil {
 			log.Errorf("Error unmarshalling envelope %s", err.Error())
 			_, resp := bridgemodel.HandleError(c, err)
@@ -248,40 +240,33 @@ func handlePostRegister(c *gin.Context) {
 	store.WritePublicKey(locationID, pubKeyBits)
 	resp.CloudPublicKey = string(pkBits)
 	resp.PermId = locationID
+	nc := bridgemodel.GetNatsConnection()
+	nc.Publish(bridgemodel.REGISTRATION_LIFECYCLE_ADDED, []byte(locationID))
 	c.JSON(201, &resp)
 }
 
 func sendRegRequestToAuthServer(c *gin.Context, in *v1.RegisterOnPremReq) (*bridgemodel.RegistrationResponse, error) {
 	timeout := time.Second * 30
-
-	natsURL := pkg.Config.NatsServerUrl
-	log.Infof("Connecting to NATS server for regustration %s", natsURL)
-	nc, err := nats.Connect(natsURL)
+	nc := bridgemodel.GetNatsConnection()
 	ret := new(bridgemodel.RegistrationResponse)
+	log.Tracef("Posting message to nats ")
+	regReq := bridgemodel.RegistrationRequest{AuthToken: in.AuthToken}
+	reqBits, _ := json.Marshal(&regReq)
+	respMsg, err := nc.Request(bridgemodel.REGISTRATION_AUTH_SUBJECT, reqBits, timeout)
 	if err != nil {
-		log.Errorf("Error connecting to NATS %s", err.Error())
+		log.Errorf("Error sending to NATS %s", err.Error())
 		return nil, err
-	} else {
-		log.Tracef("Posting message to nats ")
-		regReq := bridgemodel.RegistrationRequest{AuthToken: in.AuthToken}
-		reqBits, _ := json.Marshal(&regReq)
-		respMsg, err := nc.Request(bridgemodel.REGISTRATION_AUTH_SUBJECT, reqBits, timeout)
-		nc.Close()
-		if err != nil {
-			log.Errorf("Error sending to NATS %s", err.Error())
-			return nil, err
-		}
-		err = json.Unmarshal(respMsg.Data, ret)
-		if err != nil {
-			log.Errorf("Error decoding nats response %s", err.Error())
-			return nil, err
-		}
+	}
+	err = json.Unmarshal(respMsg.Data, ret)
+	if err != nil {
+		log.Errorf("Error decoding nats response %s", err.Error())
+		return nil, err
 	}
 	return ret, nil
 }
 func aboutGetUnversioned(c *gin.Context) {
 	var resp v1.AboutResponse
-	resp.AppVersion = pkg.VERSION
+	resp.AppVersion = pkg.VERSION  // Run `make generate` to create version
 	resp.ApiVersions = make([]string, 0)
 	resp.ApiVersions = append(resp.ApiVersions, "1")
 

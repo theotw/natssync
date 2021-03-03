@@ -19,7 +19,7 @@ From the `single_cluster_test` directory, run the `deploy.sh` script
 ```
 
 ## Namespaces
-The deploy script will setup two different namespaces.
+The deploy script will set up two different namespaces.
 - `cloud`
   The environment running in the cloud
 - `onprem`
@@ -47,11 +47,15 @@ However, the client side must be registered with the cloud side before they
 can communicate.
 Use the `natstool.go` tool under apps to send a registration request.
 ```shell
-go run natstool.go -u nats://localhost:32222 -s natssync.regauth.request -m '{"authToken":"42","locationID":"client1"}' -r response-subject
+go run natstool.go -u nats://localhost:32222 -s natssync.registration.request -m '{"authToken":"42","locationID":"client1"}' -r response-subject
 ```
 
 On the client side, you will need provide the same credentials.
-```url
+```shell
+curl -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"client1"}' http://localhost:30081/bridge-client/1/register
+```
+or with the SwaggerUI:
+```shell
 # URL
 http://localhost:30081/bridge-client/api/index_bridge_client_v1.html#/default/post_register
 

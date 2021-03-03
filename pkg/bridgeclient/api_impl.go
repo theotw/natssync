@@ -37,6 +37,7 @@ func handleGetRegister(c *gin.Context) {
 	}
 }
 func handlePostRegister(c *gin.Context) {
+	log.Debug("Handling registration post request")
 	var in v1.RegisterReq
 	e := c.ShouldBindJSON(&in)
 	if e != nil {
@@ -77,6 +78,8 @@ func handlePostRegister(c *gin.Context) {
 	req.MetaData = in.MetaData
 	jsonBits, _ := json.Marshal(&req)
 	url := fmt.Sprintf("%s/bridge-server/1/register/", pkg.Config.CloudBridgeUrl)
+
+	log.Infof("Registering with cloud server %s", url)
 	resp, err := http.DefaultClient.Post(url, "application/json", bytes.NewReader(jsonBits))
 
 	if err != nil {
@@ -84,11 +87,14 @@ func handlePostRegister(c *gin.Context) {
 		c.JSON(code, response)
 		return
 	}
+
+	log.Debugf("Registration response status code %d", resp.StatusCode)
 	if resp.StatusCode >= 300 {
 		code, response := bridgemodel.HandleError(c, errors.New("invalid status "+resp.Status))
 		c.JSON(code, response)
 		return
 	}
+	log.Debugf("Registration response body %s", resp.Body)
 	bits, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
@@ -96,18 +102,44 @@ func handlePostRegister(c *gin.Context) {
 		return
 	}
 	var regResp serverv1.RegisterOnPremResponse
-	json.Unmarshal(bits, &regResp)
-	msgs.SaveKeyPair(regResp.PermId, pair)
-	msgs.GetKeyStore().WritePublicKey(msgs.CLOUD_ID, []byte(regResp.CloudPublicKey))
+	err = json.Unmarshal(bits, &regResp)
+	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+	err = msgs.SaveKeyPair(regResp.PermId, pair)
+	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+	err = msgs.GetKeyStore().WritePublicKey(msgs.CLOUD_ID, []byte(regResp.CloudPublicKey))
+	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
 	//this step must be last, other parts of the code watch for this key
-	msgs.GetKeyStore().SaveLocationID(regResp.PermId)
+	err = msgs.GetKeyStore().SaveLocationID(regResp.PermId)
+	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+	ret := new(v1.RegistrationResponse)
+	ret.LocationID = regResp.PermId
+	c.JSON(200, ret)
+}
 
-	c.JSON(200, "")
-
+func registrationGetHandler(c *gin.Context) {
+	ret := new(v1.RegistrationResponse)
+	ret.LocationID = msgs.GetKeyStore().LoadLocationID()
+	c.JSON(200, ret)
 }
 func aboutGetUnversioned(c *gin.Context) {
 	var resp v1.AboutResponse
-	resp.AppVersion = pkg.VERSION
+	resp.AppVersion = pkg.VERSION  // Run `make generate` to create version
 	resp.ApiVersions = make([]string, 0)
 	resp.ApiVersions = append(resp.ApiVersions, "1")
 
