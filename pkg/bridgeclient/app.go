@@ -31,7 +31,7 @@ func RunClient(test bool) {
 		level = log.DebugLevel
 	}
 	log.SetLevel(level)
-	if err := msgs.InitLocationKeyStore(nil); err != nil {
+	if err := msgs.InitLocationKeyStore(); err != nil {
 		log.Fatalf("Error initalizing key store: %s", err)
 	}
 	store := msgs.GetKeyStore()

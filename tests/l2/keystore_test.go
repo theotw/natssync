@@ -33,7 +33,7 @@ func TestRedisKeyStore(t *testing.T) {
 	doKeyStore(t, "redis")
 }
 func doKeyStore(t *testing.T, ksType string) {
-	store, err := msgs.CreateLocationKeyStore(ksType, nil)
+	store, err := msgs.CreateLocationKeyStore(ksType)
 	if !assert.Nil(t, err, "error should be nil") {
 		t.Fatalf("Unable to initialize key store %s", err.Error())
 	}

@@ -3,6 +3,7 @@ package msgs
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
@@ -66,6 +67,7 @@ func (m *MongoKeyStore) LoadLocationID() string {
 }
 
 func (m *MongoKeyStore) ReadPrivateKeyData(locationID string) ([]byte, error) {
+	log.Tracef("Mongo get private key for '%s'", locationID)
 	var key EncryptionKey
 	collection := m.getPrivKeyCollection()
 	cur := collection.FindOne(context.TODO(), bson.D{{"locationID", locationID}})
@@ -126,6 +128,24 @@ func (m *MongoKeyStore) ListKnownClients() ([]string, error) {
 	}
 
 	return instanceIDs, nil
+}
+
+func (m *MongoKeyStore) RemoveLocation(locationID string) error {
+	log.Tracef("Mongo remove location for '%s'", locationID)
+	var errs []string
+	_, err := m.getPubKeyCollection().DeleteOne(context.TODO(), bson.D{{"locationID", locationID}})
+	if err != nil {
+		errs = append(errs, err.Error())
+	}
+	_, err = m.getPrivKeyCollection().DeleteOne(context.TODO(), bson.D{{"locationID", locationID}})
+	if err != nil {
+		errs = append(errs, err.Error())
+	}
+	if len(errs) > 0 {
+		errStr := strings.Join(errs, ", ")
+		return fmt.Errorf(errStr)
+	}
+	return nil
 }
 
 func NewMongoKeyStore(mongoUri string) (*MongoKeyStore, error) {
