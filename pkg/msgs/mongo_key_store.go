@@ -1,7 +1,12 @@
+/*
+ * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
+ */
+
 package msgs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -130,7 +135,19 @@ func (m *MongoKeyStore) ListKnownClients() ([]string, error) {
 	return instanceIDs, nil
 }
 
+func (m *MongoKeyStore) RemoveCloudMasterData() error {
+	return m.removeLocationData(CLOUD_ID, true)
+}
 func (m *MongoKeyStore) RemoveLocation(locationID string) error {
+	return m.removeLocationData(locationID, false)
+}
+func (m *MongoKeyStore) removeLocationData(locationID string, allowCloudMatser bool) error {
+	//a suggestion for John
+	if allowCloudMatser && locationID == CLOUD_ID {
+		log.Errorf("Removing default cloud location ID")
+		err := errors.New("unable to remove cloud master location")
+		return err
+	}
 	log.Tracef("Mongo remove location for '%s'", locationID)
 	var errs []string
 	_, err := m.getPubKeyCollection().DeleteOne(context.TODO(), bson.D{{"locationID", locationID}})
