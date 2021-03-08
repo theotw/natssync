@@ -138,11 +138,12 @@ func (m *MongoKeyStore) ListKnownClients() ([]string, error) {
 func (m *MongoKeyStore) RemoveCloudMasterData() error {
 	return m.removeLocationData(CLOUD_ID, true)
 }
+
 func (m *MongoKeyStore) RemoveLocation(locationID string) error {
 	return m.removeLocationData(locationID, false)
 }
+
 func (m *MongoKeyStore) removeLocationData(locationID string, allowCloudMatser bool) error {
-	//a suggestion for John
 	if allowCloudMatser && locationID == CLOUD_ID {
 		log.Errorf("Removing default cloud location ID")
 		err := errors.New("unable to remove cloud master location")
