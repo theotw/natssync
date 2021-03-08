@@ -2,7 +2,7 @@
 set -e
 
 makeNamespace() {
-  kubectl create namespace "$1" || echo "Namespace $namespace already exists"
+  kubectl create namespace "$1" || echo "Namespace $1 already exists"
 }
 
 deployEnvironment() {

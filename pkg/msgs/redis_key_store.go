@@ -6,6 +6,8 @@ package msgs
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/mediocregopher/radix/v3"
 	log "github.com/sirupsen/logrus"
@@ -100,4 +102,20 @@ func (t *RedisKeyStore) WritePublicKey(locationID string, buf []byte) error {
 	data := string(buf)
 	err := t.Pool.Do(radix.Cmd(nil, "HSET", PUBLIC_HASH_NAME, locationID, data))
 	return err
+}
+
+func (t *RedisKeyStore) RemoveLocation(locationID string) error {
+	var errs []string
+	log.Tracef("redis remove location key %s", locationID)
+	if err := t.Pool.Do(radix.Cmd(nil, "HDEL", PUBLIC_HASH_NAME, locationID)); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if err := t.Pool.Do(radix.Cmd(nil, "HDEL", PRIVATE_HASH_NAME, locationID)); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if len(errs) > 0 {
+		errStr := strings.Join(errs, ", ")
+		return fmt.Errorf(errStr)
+	}
+	return nil
 }

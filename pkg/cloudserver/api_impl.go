@@ -30,11 +30,9 @@ import (
 	"github.com/theotw/natssync/pkg/msgs"
 )
 
-const WAIT_MAX = 30
-
 func handleGetMessages(c *gin.Context) {
 	clientID := c.Param("premid")
-	fmt.Println(clientID)
+	log.Tracef("Handling get message request for clientID %s", clientID)
 	var in v1.AuthChallenge
 	e := c.ShouldBindJSON(&in)
 	if e != nil {
@@ -73,7 +71,7 @@ func handleGetMessages(c *gin.Context) {
 				log.Errorf("Error putting message in envelope %s \n", err2.Error())
 			}
 		} else {
-			log.Tracef("Error fetching messages from subscription for %s error %s \n", clientID, e.Error())
+			log.Tracef("Error fetching messages from subscription for %s error %s", clientID, e.Error())
 		}
 	} else {
 		//make this trace because its really just a timeout

@@ -23,7 +23,7 @@ func TestKeyStore(t *testing.T) {
 	}
 	defer os.RemoveAll(keystoreDir) // clean up
 
-	store, err := NewFileKeyStore(keystoreDir, nil)
+	store, err := NewFileKeyStore(keystoreDir)
 	if err != nil {
 		log.Fatal(err)
 	}

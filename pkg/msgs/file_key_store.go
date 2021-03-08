@@ -11,10 +11,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/theotw/natssync/pkg/bridgemodel"
 )
 
 const publicKeySuffix = "_public.pem"
@@ -23,29 +20,31 @@ type FileKeyStore struct {
 	basePath string
 }
 
-func NewFileKeyStore(basePath string, conn *nats.Conn) (*FileKeyStore, error) {
+func NewFileKeyStore(basePath string) (*FileKeyStore, error) {
 	ret := new(FileKeyStore)
 	ret.basePath = basePath
-	if conn != nil {
-		ret.registerForLifecycleEvents(conn)
-	}
 	return ret, nil
 }
-func (t *FileKeyStore) registerForLifecycleEvents(conn *nats.Conn) {
-	conn.Subscribe(bridgemodel.REGISTRATION_LIFECYCLE_REMOVED, func(msg *nats.Msg) {
-		if msg.Data != nil {
-			locationID := string(msg.Data)
-			log.Infof("Recieved Lifecycle removed event %s", locationID)
-			name := t.makePublicKeyFileName(locationID)
-			err := os.Remove(name)
-			if err != nil {
-				log.Errorf("Recieved lifecycle removed but not an error %s", err.Error())
-			}
-		} else {
-			log.Errorf("Recieved lifecycle removed with no data")
-		}
-	})
+
+func (t *FileKeyStore) RemoveLocation(locationID string) error {
+	var errs []string
+	pubKeyFile := t.makePublicKeyFileName(locationID)
+	privKeyFile := t.makePrivateFileName(locationID)
+	log.Debugf("public key location: %s", pubKeyFile)
+	log.Debugf("private key location: %s", privKeyFile)
+	if err := os.Remove(pubKeyFile); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if err := os.Remove(privKeyFile); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if len(errs) > 0 {
+		errStr := strings.Join(errs, ", ")
+		return fmt.Errorf(errStr)
+	}
+	return nil
 }
+
 func (t *FileKeyStore) LoadLocationID() string {
 	var ret string
 	fileName := path.Join(t.basePath, "locationkey.txt")

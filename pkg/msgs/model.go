@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/theotw/natssync/pkg"
@@ -41,6 +40,7 @@ type LocationKeyStore interface {
 	WritePublicKey(locationID string, buf []byte) error
 	WritePrivateKey(locationID string, buf []byte) error
 	ListKnownClients() ([]string, error)
+	RemoveLocation(locationID string) error
 }
 
 var keystore LocationKeyStore
@@ -60,7 +60,7 @@ func GetKeyStore() LocationKeyStore {
 	return keystore
 }
 
-func CreateLocationKeyStore(keystoreUrl string, conn *nats.Conn) (ret LocationKeyStore, err error) {
+func CreateLocationKeyStore(keystoreUrl string) (ret LocationKeyStore, err error) {
 	keystoreType, keystoreUri, err := parseKeystoreUrl(keystoreUrl)
 	if err != nil {
 		log.Fatal(err)
@@ -69,7 +69,7 @@ func CreateLocationKeyStore(keystoreUrl string, conn *nats.Conn) (ret LocationKe
 	switch keystoreType {
 	case "file://":
 		{
-			ret, err = NewFileKeyStore(keystoreUri, conn)
+			ret, err = NewFileKeyStore(keystoreUri)
 			break
 		}
 	case "redis://":
@@ -86,8 +86,8 @@ func CreateLocationKeyStore(keystoreUrl string, conn *nats.Conn) (ret LocationKe
 	return
 }
 
-func InitLocationKeyStore(conn *nats.Conn) error {
+func InitLocationKeyStore() error {
 	var err error
-	keystore, err = CreateLocationKeyStore(pkg.Config.KeystoreUrl, conn)
+	keystore, err = CreateLocationKeyStore(pkg.Config.KeystoreUrl)
 	return err
 }

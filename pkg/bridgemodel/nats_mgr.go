@@ -12,7 +12,7 @@ import (
 
 var natsConnection *nats.Conn
 
-//takes a comma seperated list of NATS urls form of host:port,host:port
+//takes a comma separated list of NATS urls form of host:port,host:port
 func InitNats(natsUrlList string, connectionName string, timeout time.Duration) error {
 	start := time.Now()
 	done := false
