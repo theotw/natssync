@@ -36,6 +36,19 @@ func handleGetRegister(c *gin.Context) {
 		c.JSON(400, "")
 	}
 }
+
+func handlePostUnRegister(c *gin.Context) {
+	log.Debug("Handling unregistration post request")
+	var in v1.UnRegisterReq
+	e := c.ShouldBindJSON(&in)
+	if e != nil {
+		code, ret := bridgemodel.HandleErrors(c, e)
+		c.JSON(code, &ret)
+		return
+	}
+
+}
+
 func handlePostRegister(c *gin.Context) {
 	log.Debug("Handling registration post request")
 	var in v1.RegisterReq
