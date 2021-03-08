@@ -47,6 +47,21 @@ func handlePostUnRegister(c *gin.Context) {
 		return
 	}
 
+	locationID := msgs.GetKeyStore().LoadLocationID()
+	if locationID == "" {
+		err := errors.New("Failed to load locationID")
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+
+	err := msgs.GetKeyStore().RemoveLocation(locationID)
+	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+	c.JSON(201, nil)
 }
 
 func handlePostRegister(c *gin.Context) {

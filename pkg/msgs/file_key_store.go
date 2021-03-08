@@ -30,12 +30,17 @@ func (t *FileKeyStore) RemoveLocation(locationID string) error {
 	var errs []string
 	pubKeyFile := t.makePublicKeyFileName(locationID)
 	privKeyFile := t.makePrivateFileName(locationID)
+	locationFile := path.Join(t.basePath, "locationkey.txt")
 	log.Debugf("public key location: %s", pubKeyFile)
 	log.Debugf("private key location: %s", privKeyFile)
+	log.Debugf("location ID: %s", locationFile)
 	if err := os.Remove(pubKeyFile); err != nil {
 		errs = append(errs, err.Error())
 	}
 	if err := os.Remove(privKeyFile); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if err := os.Remove(locationFile); err != nil {
 		errs = append(errs, err.Error())
 	}
 	if len(errs) > 0 {
