@@ -77,6 +77,7 @@ func handlePostUnRegister(c *gin.Context) {
 		return
 	}
 
+	// Clean up local data
 	err = keyStore.RemoveLocation(locationID)
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
