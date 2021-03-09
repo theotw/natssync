@@ -74,6 +74,17 @@ func (t *FileKeyStore) SaveLocationID(locationID string) error {
 	return err
 }
 
+func (t *FileKeyStore) ClearLocationID() error {
+	fileName := path.Join(t.basePath, "locationkey.txt")
+	f, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.Write([]byte(""))
+	return err
+}
+
 func (t *FileKeyStore) WritePublicKey(locationID string, buf []byte) error {
 	fileName := t.makePublicKeyFileName(locationID)
 	return t.writeKeyFile(fileName, buf)

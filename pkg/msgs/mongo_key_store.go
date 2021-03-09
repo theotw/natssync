@@ -60,6 +60,13 @@ func (m *MongoKeyStore) SaveLocationID(locationID string) error {
 	return err
 }
 
+func (m *MongoKeyStore) ClearLocationID() error {
+	collection := m.getLocIdCollection()
+	newLocation := location{1, ""}
+	_, err := collection.InsertOne(context.TODO(), newLocation)
+	return err
+}
+
 func (m *MongoKeyStore) LoadLocationID() string {
 	var locID location
 	collection := m.getLocIdCollection()
