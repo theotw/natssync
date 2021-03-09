@@ -262,6 +262,25 @@ func sendRegRequestToAuthServer(c *gin.Context, in *v1.RegisterOnPremReq) (*brid
 	}
 	return ret, nil
 }
+func sendNatsPostMessageAuthReq(c *gin.Context, in *v1.RegisterOnPremReq) (*bridgemodel.GenericAuthResponse, error) {
+	timeout := time.Second * 30
+	nc := bridgemodel.GetNatsConnection()
+	ret := new(bridgemodel.GenericAuthResponse)
+	log.Tracef("Posting message to nats ")
+	regReq := bridgemodel.GenericAuthRequest{AuthToken: in.AuthToken}
+	reqBits, _ := json.Marshal(&regReq)
+	respMsg, err := nc.Request(bridgemodel.NATSPOST_AUTH_SUBJECT, reqBits, timeout)
+	if err != nil {
+		log.Errorf("Error sending to NATS %s", err.Error())
+		return nil, err
+	}
+	err = json.Unmarshal(respMsg.Data, ret)
+	if err != nil {
+		log.Errorf("Error decoding nats response %s", err.Error())
+		return nil, err
+	}
+	return ret, nil
+}
 func aboutGetUnversioned(c *gin.Context) {
 	var resp v1.AboutResponse
 	resp.AppVersion = pkg.VERSION  // Run `make generate` to create version
@@ -279,4 +298,27 @@ func swaggerUIGetHandler(c *gin.Context) {
 
 func metricGetHandlers(c *gin.Context) {
 	promhttp.Handler().ServeHTTP(c.Writer, c.Request)
+}
+
+func natsMsgPostHandler(c *gin.Context){
+	var msg v1.NatsMessageReq
+	e := c.ShouldBindJSON(&msg)
+	if e != nil{
+		code, ret := bridgemodel.HandleErrors(c, e)
+		c.JSON(code, &ret)
+		return
+	}
+	response, e := sendRegRequestToAuthServer(c, in)
+	if e != nil {
+		metrics.IncrementClientRegistrationFailure(1)
+		code, ret := bridgemodel.HandleErrors(c, e)
+		c.JSON(code, &ret)
+		return
+	} else {
+		metrics.IncrementClientRegistrationSuccess(1)
+	}
+
+	connection := bridgemodel.GetNatsConnection()
+	connection.Publish(msg.Subject,[]byte(msg.Data))
+
 }

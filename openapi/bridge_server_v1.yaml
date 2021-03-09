@@ -65,6 +65,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /messages:
+    post:
+      summary: Posts a message to the NATS queue system as if it had come from services in the cloud.  Handy for mobile apps
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NatsMessageReq'
+      responses:
+        '202':
+          description: Messages accepted
+        '400':
+          description: Bad juju happened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseList'
+        '401':
+          description: Unauthorized, Invalid Auth Challenge
+
+        '500':
+          description: Bad juju happened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /message-queue/{premid}:
     post:
       summary: Pushes pending messages to the bridge.
@@ -145,6 +172,22 @@ components:
           type: string
         authChellengeB:
           type: string
+
+    NatsMessageReq:
+      type: object
+      properties:
+        autoToken:
+          type: string
+          description: An authorization token for a user that has permissions to post a message to NATS
+        subject:
+          type: string
+          description: subject for the NATS messages
+        reply:
+          type: string
+          description: optional reply message for nats
+        data:
+          type: string
+          description: data for the message
 
     BridgeMessagePostReq:
       type: object
