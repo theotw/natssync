@@ -44,16 +44,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/RegisterReq'
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                authToken:
-                  type: string
-                  description: String to be sent for auth to the server
-                userMetaData:
-                  type: string
-                  description: meta data used to identify this instance/user
       responses:
         '201':
           description: registration accepted no data
@@ -83,13 +73,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UnRegisterReq'
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                authToken:
-                  type: string
-                  description: String to be sent for auth to the server
       responses:
         '201':
           description: Unregistration accepted no data
