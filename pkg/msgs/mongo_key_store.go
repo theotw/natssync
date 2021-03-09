@@ -61,9 +61,14 @@ func (m *MongoKeyStore) SaveLocationID(locationID string) error {
 }
 
 func (m *MongoKeyStore) ClearLocationID() error {
+	var locID location
 	collection := m.getLocIdCollection()
-	newLocation := location{1, ""}
-	_, err := collection.InsertOne(context.TODO(), newLocation)
+	cur := collection.FindOne(context.TODO(), bson.D{{"id", 1}})
+	if err := cur.Decode(&locID); err != nil {
+		log.Debugf("Unable to get locationID from mongo: %s", err)
+		return err
+	}
+	_, err := collection.UpdateOne(context.TODO(), cur, locID.LocationID)
 	return err
 }
 
