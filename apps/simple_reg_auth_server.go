@@ -34,9 +34,9 @@ func main() {
 	expectedAuthToken := pkg.GetEnvWithDefaults("AUTH_TOKEN", "42")
 	subj := bridgemodel.REGISTRATION_AUTH_WILDCARD
 	nc.Subscribe(subj, func(msg *nats.Msg) {
-		log.Infof("Got message %s : %s", subj, msg.Reply)
+		log.Infof("Got message %s : %s", msg.Subject, msg.Reply)
 		var respBits []byte
-		if subj == bridgemodel.REGISTRATION_AUTH_SUBJECT {
+		if msg.Subject == bridgemodel.REGISTRATION_AUTH_SUBJECT {
 			var regReq bridgemodel.RegistrationRequest
 			var regResp bridgemodel.RegistrationResponse
 			err := json.Unmarshal(msg.Data, &regReq)
@@ -47,7 +47,7 @@ func main() {
 			}
 			respBits, _ = json.Marshal(&regResp)
 			log.Infof("Reg Request %s from %s success=%t", regReq.AuthToken, regReq.LocationID, regResp.Success)
-		} else if subj == bridgemodel.UNREGISTRATION_AUTH_SUBJECT {
+		} else if msg.Subject == bridgemodel.UNREGISTRATION_AUTH_SUBJECT {
 			var unregReq bridgemodel.UnRegistrationRequest
 			var unregResp bridgemodel.UnRegistrationResponse
 			err := json.Unmarshal(msg.Data, &unregReq)

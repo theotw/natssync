@@ -62,7 +62,7 @@ func handlePostUnRegister(c *gin.Context) {
 	jsonBits, _ := json.Marshal(&req)
 	url := fmt.Sprintf("%s/bridge-server/1/unregister/", pkg.Config.CloudBridgeUrl)
 
-	log.Infof("Calling Unregister with cloud server %s", url)
+	log.Infof("Calling Unregister with cloud server %s for location %s", url, locationID)
 	resp, err := http.DefaultClient.Post(url, "application/json", bytes.NewReader(jsonBits))
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
@@ -77,6 +77,12 @@ func handlePostUnRegister(c *gin.Context) {
 	}
 
 	err = msgs.GetKeyStore().RemoveLocation(locationID)
+	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+	err = msgs.GetKeyStore().SaveLocationID("")
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)

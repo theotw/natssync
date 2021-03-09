@@ -125,10 +125,51 @@ func handlePostMessage(c *gin.Context) {
 	}
 
 }
+
+func handleMultipartFormUnRegistration(c *gin.Context) (ret *v1.UnRegisterOnPremReq, retErr error) {
+	_, params, parseErr := mime.ParseMediaType(c.Request.Header.Get("Content-Type"))
+	if parseErr != nil {
+		fmt.Println(parseErr.Error())
+	}
+	multipartReader := multipart.NewReader(c.Request.Body, params["boundary"])
+	defer c.Request.Body.Close()
+	ret = new(v1.UnRegisterOnPremReq)
+	for {
+		part, parseErr := multipartReader.NextPart()
+		if parseErr != nil {
+			if parseErr == io.EOF {
+				break
+			} else {
+				retErr = parseErr
+				return
+			}
+		}
+
+		bits, err := ioutil.ReadAll(part)
+		if err != nil {
+			retErr = err
+			return
+		}
+		fieldName := part.FormName()
+		switch fieldName {
+		case "authToken":
+			{
+				ret.AuthToken = string(bits)
+				break
+			}
+		case "metaData":
+			{
+				ret.MetaData = string(bits)
+				break
+			}
+		}
+	}
+
+	return
+}
+
 func handleMultipartFormRegistration(c *gin.Context) (ret *v1.RegisterOnPremReq, reterr error) {
-	contentType, params, parseErr := mime.ParseMediaType(c.Request.Header.Get("Content-Type"))
-	fmt.Println(contentType)
-	fmt.Println(params)
+	_, params, parseErr := mime.ParseMediaType(c.Request.Header.Get("Content-Type"))
 	if parseErr != nil {
 		fmt.Println(parseErr.Error())
 	}
@@ -176,6 +217,24 @@ func handleMultipartFormRegistration(c *gin.Context) (ret *v1.RegisterOnPremReq,
 
 func handlePostUnRegister(c *gin.Context) {
 	var in *v1.UnRegisterOnPremReq
+	if strings.HasPrefix(c.Request.Header.Get("Content-Type"), "multipart/form-data") {
+		var err error
+		in, err = handleMultipartFormUnRegistration(c)
+		if err != nil {
+			metrics.IncrementClientUnRegistrationFailure(1)
+			c.JSON(bridgemodel.HandleError(c, err))
+		}
+	} else {
+		in = new(v1.UnRegisterOnPremReq)
+		e := c.ShouldBindJSON(in)
+		if e != nil {
+			metrics.IncrementClientUnRegistrationFailure(1)
+			code, ret := bridgemodel.HandleErrors(c, e)
+			c.JSON(code, &ret)
+			return
+		}
+	}
+
 	response, e := sendUnRegRequestToAuthServer(c, in)
 	if e != nil {
 		metrics.IncrementClientUnRegistrationFailure(1)
@@ -190,15 +249,8 @@ func handlePostUnRegister(c *gin.Context) {
 		c.JSON(bridgemodel.HandleError(c, ierr))
 		return
 	}
-	locationID := msgs.GetKeyStore().LoadLocationID()
-	if locationID == "" {
-		err := errors.NewInternalError(errors.BRIDGE_ERROR, errors.INVALID_LOCATION_ID, nil)
-		code, response := bridgemodel.HandleError(c, err)
-		c.JSON(code, response)
-		return
-	}
 
-	err := msgs.GetKeyStore().RemoveLocation(locationID)
+	err := msgs.GetKeyStore().RemoveLocation(in.MetaData)
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)
@@ -281,7 +333,7 @@ func sendRegRequestToAuthServer(c *gin.Context, in *v1.RegisterOnPremReq) (*brid
 	timeout := time.Second * 30
 	nc := bridgemodel.GetNatsConnection()
 	ret := new(bridgemodel.RegistrationResponse)
-	log.Tracef("Posting registratin message to nats ")
+	log.Tracef("Posting registration message to nats ")
 	regReq := bridgemodel.RegistrationRequest{AuthToken: in.AuthToken}
 	reqBits, _ := json.Marshal(&regReq)
 	respMsg, err := nc.Request(bridgemodel.REGISTRATION_AUTH_SUBJECT, reqBits, timeout)
@@ -301,7 +353,7 @@ func sendUnRegRequestToAuthServer(c *gin.Context, in *v1.UnRegisterOnPremReq) (*
 	timeout := time.Second * 30
 	nc := bridgemodel.GetNatsConnection()
 	ret := new(bridgemodel.UnRegistrationResponse)
-	log.Tracef("Posting Unregistration message to nats ")
+	log.Infof("Posting Unregistration message to nats with %s", in.AuthToken)
 	unregReq := bridgemodel.UnRegistrationRequest{AuthToken: in.AuthToken}
 	reqBits, _ := json.Marshal(&unregReq)
 	respMsg, err := nc.Request(bridgemodel.UNREGISTRATION_AUTH_SUBJECT, reqBits, timeout)
