@@ -59,6 +59,12 @@ func (t *RedisKeyStore) SaveLocationID(locationID string) error {
 	err := t.Pool.Do(radix.Cmd(nil, "SET", LOCATION_KEY_NAME, locationID))
 	return err
 }
+
+func (t *RedisKeyStore) ClearLocationID() error {
+	err := t.Pool.Do(radix.Cmd(nil, "SET", LOCATION_KEY_NAME, ""))
+	return err
+}
+
 func (t *RedisKeyStore) ReadPrivateKeyData(locationID string) ([]byte, error) {
 	log.Tracef("redis Get private key %s", locationID)
 

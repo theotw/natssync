@@ -51,6 +51,7 @@ func newRouter(test bool) *gin.Engine {
 	}
 	v1 := router.Group("/bridge-client/1", routeMiddleware)
 	v1.Handle("GET", "/about", aboutGetUnversioned)
+	v1.Handle("POST", "/unregister", handlePostUnRegister)
 	v1.Handle("POST", "/register", handlePostRegister)
 	v1.Handle("GET", "/register", registrationGetHandler)
 	v1.Handle("GET", "/healthcheck", healthCheckGetUnversioned)

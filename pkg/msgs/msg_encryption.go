@@ -30,11 +30,11 @@ func InitCloudKey() error {
 	//first checkout the keys
 	_, keyErr := LoadPrivateKey(CLOUD_ID)
 	if keyErr != nil {
-		log.Debugf("Unable to find cloud master private key %s \n", keyErr.Error())
+		log.Debugf("Unable to find cloud master private key %s", keyErr.Error())
 	}
 	_, pubKeyErr := LoadPublicKey(CLOUD_ID)
 	if pubKeyErr != nil {
-		log.Debugf("Unable to find cloud master public key %s \n", pubKeyErr.Error())
+		log.Debugf("Unable to find cloud master public key %s", pubKeyErr.Error())
 	}
 
 	if keyErr != nil || pubKeyErr != nil {
@@ -45,7 +45,7 @@ func InitCloudKey() error {
 func GenerateAndSaveKey(locationID string) error {
 	pair, err := GenerateNewKeyPair()
 	if err != nil {
-		log.Errorf("Unable to generate new key pair %s \n", err.Error())
+		log.Errorf("Unable to generate new key pair %s", err.Error())
 		return err
 	}
 	err2 := SaveKeyPair(locationID, pair)
@@ -199,7 +199,7 @@ func NewAuthChallenge() *v1.AuthChallenge {
 	timeStr := time.Now().String()
 	sig, err := SignData([]byte(timeStr), key)
 	if err != nil {
-		log.Errorf("Error signing data %s \n", err.Error())
+		log.Errorf("Error signing data %s", err.Error())
 		return nil
 	}
 	ret := new(v1.AuthChallenge)
@@ -210,7 +210,7 @@ func NewAuthChallenge() *v1.AuthChallenge {
 func ValidateAuthChallenge(locationID string, challenge *v1.AuthChallenge) bool {
 	pubKey, err := LoadPublicKey(locationID)
 	if err != nil {
-		log.Errorf("Error loading public key for location %s error: %s \n", locationID, err.Error())
+		log.Errorf("Error loading public key for location %s error: %s", locationID, err.Error())
 		return false
 	}
 	sigBits, _ := base64.StdEncoding.DecodeString(challenge.AuthChellengeB)
@@ -218,7 +218,7 @@ func ValidateAuthChallenge(locationID string, challenge *v1.AuthChallenge) bool 
 
 	err = rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, hash[:], sigBits)
 	if err != nil {
-		log.Errorf("Signature Verification Failed %s %s \n", locationID, err.Error())
+		log.Errorf("Signature Verification Failed %s %s", locationID, err.Error())
 		return false
 	}
 	return true
