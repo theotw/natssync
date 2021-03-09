@@ -55,7 +55,28 @@ func handlePostUnRegister(c *gin.Context) {
 		return
 	}
 
-	err := msgs.GetKeyStore().RemoveLocation(locationID)
+	// Call Unregister in the server
+	var req serverv1.UnRegisterOnPremReq
+	req.AuthToken = in.AuthToken
+	req.MetaData = msgs.GetKeyStore().LoadLocationID()
+	jsonBits, _ := json.Marshal(&req)
+	url := fmt.Sprintf("%s/bridge-server/1/unregister/", pkg.Config.CloudBridgeUrl)
+
+	log.Infof("Calling Unregister with cloud server %s", url)
+	resp, err := http.DefaultClient.Post(url, "application/json", bytes.NewReader(jsonBits))
+	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+	log.Debugf("Unregistration response status code %d", resp.StatusCode)
+	if resp.StatusCode >= 300 {
+		code, response := bridgemodel.HandleError(c, errors.New("invalid status "+resp.Status))
+		c.JSON(code, response)
+		return
+	}
+
+	err = msgs.GetKeyStore().RemoveLocation(locationID)
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)

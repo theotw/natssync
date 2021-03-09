@@ -173,6 +173,40 @@ func handleMultipartFormRegistration(c *gin.Context) (ret *v1.RegisterOnPremReq,
 
 	return
 }
+
+func handlePostUnRegister(c *gin.Context) {
+	var in *v1.UnRegisterOnPremReq
+	response, e := sendUnRegRequestToAuthServer(c, in)
+	if e != nil {
+		metrics.IncrementClientUnRegistrationFailure(1)
+		code, ret := bridgemodel.HandleErrors(c, e)
+		c.JSON(code, &ret)
+		return
+	} else {
+		metrics.IncrementClientUnRegistrationSuccess(1)
+	}
+	if !response.Success {
+		ierr := errors.NewInternalError(errors.BRIDGE_ERROR, errors.INVALID_REGISTRATION_REQ, nil)
+		c.JSON(bridgemodel.HandleError(c, ierr))
+		return
+	}
+	locationID := msgs.GetKeyStore().LoadLocationID()
+	if locationID == "" {
+		err := errors.NewInternalError(errors.BRIDGE_ERROR, errors.INVALID_LOCATION_ID, nil)
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+
+	err := msgs.GetKeyStore().RemoveLocation(locationID)
+	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+	c.JSON(201, nil)
+}
+
 func handlePostRegister(c *gin.Context) {
 	var in *v1.RegisterOnPremReq
 	if strings.HasPrefix(c.Request.Header.Get("Content-Type"), "multipart/form-data") {
@@ -194,7 +228,7 @@ func handlePostRegister(c *gin.Context) {
 	}
 	pubKeyBits, decoderr := base64.StdEncoding.DecodeString(in.PublicKey)
 	if decoderr != nil {
-		ierr := errors.NewInernalError(errors.BRIDGE_ERROR, errors.INVALID_PUB_KEY, nil)
+		ierr := errors.NewInternalError(errors.BRIDGE_ERROR, errors.INVALID_PUB_KEY, nil)
 		c.JSON(bridgemodel.HandleError(c, ierr))
 		return
 	}
@@ -206,7 +240,7 @@ func handlePostRegister(c *gin.Context) {
 	}
 	if !validPubKey {
 		metrics.IncrementClientRegistrationFailure(1)
-		ierr := errors.NewInernalError(errors.BRIDGE_ERROR, errors.INVALID_PUB_KEY, nil)
+		ierr := errors.NewInternalError(errors.BRIDGE_ERROR, errors.INVALID_PUB_KEY, nil)
 		c.JSON(bridgemodel.HandleError(c, ierr))
 		return
 	}
@@ -221,7 +255,7 @@ func handlePostRegister(c *gin.Context) {
 	}
 
 	if !response.Success {
-		ierr := errors.NewInernalError(errors.BRIDGE_ERROR, errors.INVALID_REGISTRATION_REQ, nil)
+		ierr := errors.NewInternalError(errors.BRIDGE_ERROR, errors.INVALID_REGISTRATION_REQ, nil)
 		c.JSON(bridgemodel.HandleError(c, ierr))
 		return
 	}
@@ -247,7 +281,7 @@ func sendRegRequestToAuthServer(c *gin.Context, in *v1.RegisterOnPremReq) (*brid
 	timeout := time.Second * 30
 	nc := bridgemodel.GetNatsConnection()
 	ret := new(bridgemodel.RegistrationResponse)
-	log.Tracef("Posting message to nats ")
+	log.Tracef("Posting registratin message to nats ")
 	regReq := bridgemodel.RegistrationRequest{AuthToken: in.AuthToken}
 	reqBits, _ := json.Marshal(&regReq)
 	respMsg, err := nc.Request(bridgemodel.REGISTRATION_AUTH_SUBJECT, reqBits, timeout)
@@ -262,6 +296,27 @@ func sendRegRequestToAuthServer(c *gin.Context, in *v1.RegisterOnPremReq) (*brid
 	}
 	return ret, nil
 }
+
+func sendUnRegRequestToAuthServer(c *gin.Context, in *v1.UnRegisterOnPremReq) (*bridgemodel.UnRegistrationResponse, error) {
+	timeout := time.Second * 30
+	nc := bridgemodel.GetNatsConnection()
+	ret := new(bridgemodel.UnRegistrationResponse)
+	log.Tracef("Posting Unregistration message to nats ")
+	unregReq := bridgemodel.UnRegistrationRequest{AuthToken: in.AuthToken}
+	reqBits, _ := json.Marshal(&unregReq)
+	respMsg, err := nc.Request(bridgemodel.UNREGISTRATION_AUTH_SUBJECT, reqBits, timeout)
+	if err != nil {
+		log.Errorf("Error sending unregister message to NATS %s", err.Error())
+		return nil, err
+	}
+	err = json.Unmarshal(respMsg.Data, ret)
+	if err != nil {
+		log.Errorf("Error decoding unregister nats response %s", err.Error())
+		return nil, err
+	}
+	return ret, nil
+}
+
 func aboutGetUnversioned(c *gin.Context) {
 	var resp v1.AboutResponse
 	resp.AppVersion = pkg.VERSION  // Run `make generate` to create version

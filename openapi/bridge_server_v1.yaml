@@ -64,6 +64,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /unregister:
+    post:
+      summary: Unregisters an On Prem region
+      description: Unregisters an On Prem region
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnRegisterOnPremReq'
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                authToken:
+                  type: string
+                metaData:
+                  type: string
+      responses:
+        '204':
+          description: Unregistration OK
+        '400':
+          description: Client input error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /message-queue/{premid}:
     post:
@@ -159,6 +191,15 @@ components:
       items:
         $ref: '#/components/schemas/BridgeMessage'
 
+    UnRegisterOnPremReq:
+      type: object
+      properties:
+        authToken:
+          type: string
+          description: the format of the auth token can be what ever is needed for authentication.  The auth service used on the back end will determine that.  In its simpliest form it is userID:Password
+        metaData:
+          type: string
+          description: the meta data used to visually identify the user/on prem instance.  this string must be unique to the server but can be anything and be changed
 
     RegisterOnPremReq:
       type: object
