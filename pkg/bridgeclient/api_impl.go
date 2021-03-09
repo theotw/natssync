@@ -47,7 +47,8 @@ func handlePostUnRegister(c *gin.Context) {
 		return
 	}
 
-	locationID := msgs.GetKeyStore().LoadLocationID()
+	keyStore := msgs.GetKeyStore()
+	locationID := keyStore.LoadLocationID()
 	if locationID == "" {
 		err := errors.New("Failed to load locationID")
 		code, response := bridgemodel.HandleError(c, err)
@@ -58,7 +59,7 @@ func handlePostUnRegister(c *gin.Context) {
 	// Call Unregister in the server
 	var req serverv1.UnRegisterOnPremReq
 	req.AuthToken = in.AuthToken
-	req.MetaData = msgs.GetKeyStore().LoadLocationID()
+	req.MetaData = locationID
 	jsonBits, _ := json.Marshal(&req)
 	url := fmt.Sprintf("%s/bridge-server/1/unregister/", pkg.Config.CloudBridgeUrl)
 
@@ -76,13 +77,13 @@ func handlePostUnRegister(c *gin.Context) {
 		return
 	}
 
-	err = msgs.GetKeyStore().RemoveLocation(locationID)
+	err = keyStore.RemoveLocation(locationID)
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)
 		return
 	}
-	err = msgs.GetKeyStore().SaveLocationID("")
+	err = keyStore.SaveLocationID("")
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)
