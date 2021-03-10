@@ -32,6 +32,18 @@ register() {
   return $?
 }
 
+createOnpremInstance() {
+  instanceNum=$1
+  namespace="onprem-$instanceNum"
+  deployEnvironment "${onpremYamls[*]}" "$namespace"
+  port=$(getClientPort "$namespace")
+
+  if ! register "$port";
+  then
+    echo "Error registering client in namespace $namespace"
+  fi
+}
+
 onpremYamls=(
   "redis-pod.yml"
   "redis-service.yml"
@@ -53,15 +65,9 @@ i=0
 
 while [ $i -lt $count ]
 do
-  namespace="onprem-$i"
-  deployEnvironment "${onpremYamls[*]}" "$namespace"
-  port=$(getClientPort "$namespace")
-
-  if ! register "$port";
-  then
-    echo "Error registering client in namespace $namespace"
-  fi
-
+  createOnpremInstance $i &
   ((i++))
 done
+
+echo "Instances are deploying in the background"
 
