@@ -71,7 +71,7 @@ func handleGetMessages(c *gin.Context) {
 				log.Errorf("Error putting message in envelope %s \n", err2.Error())
 			}
 		} else {
-			log.Tracef("Error fetching messages from subscription for %s error %s", clientID, e.Error())
+			//ignore this log.Tracef("Error fetching messages from subscription for %s error %s", clientID, e.Error())
 		}
 	} else {
 		//make this trace because its really just a timeout
@@ -371,7 +371,7 @@ func sendUnRegRequestToAuthServer(c *gin.Context, in *v1.UnRegisterOnPremReq) (*
 
 func aboutGetUnversioned(c *gin.Context) {
 	var resp v1.AboutResponse
-	resp.AppVersion = pkg.VERSION  // Run `make generate` to create version
+	resp.AppVersion = pkg.VERSION // Run `make generate` to create version
 	resp.ApiVersions = make([]string, 0)
 	resp.ApiVersions = append(resp.ApiVersions, "1")
 

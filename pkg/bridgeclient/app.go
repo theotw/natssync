@@ -78,8 +78,6 @@ func RunClient(test bool) {
 		}
 		//in case we re-register and the client ID changes, change what we listen for
 		if (clientID != lastClientID) && nc != nil {
-			nc.Close()
-			nc = nil
 			lastClientID = clientID
 		}
 		subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
