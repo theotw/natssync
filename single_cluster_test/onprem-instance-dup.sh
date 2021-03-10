@@ -50,7 +50,7 @@ onpremYamls=(
   "nats-deployment.yml"
   "nats-service.yml"
   "echoproxylet-deployment.yml"
-  "syncclient-deployment.yml"
+  "syncclient-scaletest-deployment.yml"
   "syncclient-service-dynport.yml"
 )
 
