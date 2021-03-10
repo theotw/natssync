@@ -262,14 +262,14 @@ func sendRegRequestToAuthServer(c *gin.Context, in *v1.RegisterOnPremReq) (*brid
 	}
 	return ret, nil
 }
-func sendNatsPostMessageAuthReq(c *gin.Context, in *v1.RegisterOnPremReq) (*bridgemodel.GenericAuthResponse, error) {
+func sendGenericAuthRequest(c *gin.Context,subject string, authToken string) (*bridgemodel.GenericAuthResponse, error) {
 	timeout := time.Second * 30
 	nc := bridgemodel.GetNatsConnection()
 	ret := new(bridgemodel.GenericAuthResponse)
 	log.Tracef("Posting message to nats ")
-	regReq := bridgemodel.GenericAuthRequest{AuthToken: in.AuthToken}
+	regReq := bridgemodel.GenericAuthRequest{AuthToken: authToken}
 	reqBits, _ := json.Marshal(&regReq)
-	respMsg, err := nc.Request(bridgemodel.NATSPOST_AUTH_SUBJECT, reqBits, timeout)
+	respMsg, err := nc.Request(subject, reqBits, timeout)
 	if err != nil {
 		log.Errorf("Error sending to NATS %s", err.Error())
 		return nil, err
@@ -308,17 +308,18 @@ func natsMsgPostHandler(c *gin.Context){
 		c.JSON(code, &ret)
 		return
 	}
-	response, e := sendRegRequestToAuthServer(c, in)
+	response, e := sendGenericAuthRequest(c,bridgemodel.NATSPOST_AUTH_SUBJECT ,msg.AutoToken)
 	if e != nil {
-		metrics.IncrementClientRegistrationFailure(1)
 		code, ret := bridgemodel.HandleErrors(c, e)
 		c.JSON(code, &ret)
 		return
-	} else {
-		metrics.IncrementClientRegistrationSuccess(1)
+	}
+	if !response.Success {
+		c.JSON(401,"")
+		return
 	}
 
 	connection := bridgemodel.GetNatsConnection()
 	connection.Publish(msg.Subject,[]byte(msg.Data))
-
+	c.JSON(202,"")
 }
