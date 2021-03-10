@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 makeNamespace() {
   kubectl create namespace "$1" || echo "Namespace $1 already exists"
@@ -88,4 +87,3 @@ do
 done
 
 echo "Instances are deploying in the background"
-
