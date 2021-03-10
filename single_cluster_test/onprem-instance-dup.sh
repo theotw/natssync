@@ -22,13 +22,13 @@ deployEnvironment() {
 
 getClientPort() {
   namespace=$1
-  kubectl -n $namespace get service sync-client -o json | jq .spec.ports[0].nodePort
+  kubectl -n "$namespace" get service sync-client -o json | jq .spec.ports[0].nodePort
 }
 
 register() {
   port=$1
   echo "Registering client on port $port"
-  curl -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"client1"}' "http://localhost:$port/bridge-client/1/register" | jq .
+  curl -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"client1"}' "http://localhost:$port/bridge-client/1/register"
   return $?
 }
 
@@ -38,10 +38,28 @@ createOnpremInstance() {
   deployEnvironment "${onpremYamls[*]}" "$namespace"
   port=$(getClientPort "$namespace")
 
-  if ! register "$port";
-  then
-    echo "Error registering client in namespace $namespace"
-  fi
+  while true
+  do
+    register "$port"
+    code=$?
+
+    case $code in
+
+    0)
+      return 0
+      ;;
+
+    52)
+      echo "Retry in 5 seconds"
+      sleep 5
+      ;;
+
+    *)
+      echo "Error registering client in namespace $namespace"
+      return 1
+      ;;
+    esac
+  done
 }
 
 onpremYamls=(
