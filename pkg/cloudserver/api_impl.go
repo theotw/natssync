@@ -160,7 +160,12 @@ func handleMultipartFormRegistration(c *gin.Context) (ret *v1.RegisterOnPremReq,
 			}
 		case "metaData":
 			{
-				ret.MetaData = string(bits)
+				ret.MetaData=make(map[string]string)
+				err:=json.Unmarshal(bits,&ret.MetaData)
+				if err != nil {
+					log.Errorf("Error reading meta data %s", err.Error())
+					reterr = err
+				}
 				break
 			}
 		case "publicKey":
@@ -237,7 +242,7 @@ func handlePostRegister(c *gin.Context) {
 	}
 	store.WritePublicKey(locationID, pubKeyBits)
 	resp.CloudPublicKey = string(pkBits)
-	resp.PermId = locationID
+	resp.PremID = locationID
 	nc := bridgemodel.GetNatsConnection()
 	nc.Publish(bridgemodel.REGISTRATION_LIFECYCLE_ADDED, []byte(locationID))
 	c.JSON(201, &resp)

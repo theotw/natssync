@@ -52,7 +52,9 @@ paths:
                   type: string
                   description: String to be sent for auth to the server
                 userMetaData:
-                  type: string
+                  type: object
+                  additionalProperties:
+                    type: string
                   description: meta data used to identify this instance/user
       responses:
         '201':
@@ -82,7 +84,10 @@ components:
       type: object
       properties:
         metaData:
-          type: string
+          type: object
+          additionalProperties:
+            type: string
+
           description: Metadata to identify this client
         authToken:
           type: string

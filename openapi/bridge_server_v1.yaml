@@ -26,6 +26,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/AboutResponse'
   /register:
+    get:
+      summary: Gets a list of the registered clients/locations
+      description: Gets a list of the registered clients/locations
+      responses:
+        '200':
+          description: List of known clients
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterOnPremResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
     post:
       summary: Registers an On Prem region
       description: Registers an On Prem region
@@ -41,7 +59,10 @@ paths:
                 authToken:
                   type: string
                 metaData:
-                  type: string
+                  type: object
+                  additionalProperties:
+                    type: string
+
                 publicKey:
                   type: string
                   format: binary
@@ -175,6 +196,7 @@ components:
 
     NatsMessageReq:
       type: object
+      description: This object represents a message to be added to the NATs queue as if the caller was inside the cluster
       properties:
         autoToken:
           type: string
@@ -210,7 +232,9 @@ components:
           type: string
           description: the format of the auth token can be what ever is needed for authentication.  The auth service used on the back end will determine that.  In its simpliest form it is userID:Password
         metaData:
-          type: string
+          type: object
+          additionalProperties:
+            type: string
           description: the meta data used to visually identify the user/on prem instance.  this string must be unique to the server but can be anything and be changed
         publicKey:
           type: string
@@ -220,9 +244,27 @@ components:
       properties:
         cloudPublicKey:
           type: string
-        permId:
+        premID:
           type: string
           description: An ID to use for all other calls of post and get messages
+
+    RegisteredClientLocations:
+      type: array
+      items:
+        $ref: '#/components/schemas/RegisteredClientLocation'
+
+    RegisteredClientLocation:
+      type: object
+      properties:
+        premID:
+          type: string
+          description: An ID to use for all other calls of post and get messages
+        metaData:
+          type: object
+          additionalProperties:
+            type: string
+
+
 
     BridgeMessage:
       type: object

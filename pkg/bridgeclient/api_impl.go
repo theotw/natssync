@@ -108,7 +108,7 @@ func handlePostRegister(c *gin.Context) {
 		c.JSON(code, response)
 		return
 	}
-	err = msgs.SaveKeyPair(regResp.PermId, pair)
+	err = msgs.SaveKeyPair(regResp.PremID, pair)
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)
@@ -121,14 +121,14 @@ func handlePostRegister(c *gin.Context) {
 		return
 	}
 	//this step must be last, other parts of the code watch for this key
-	err = msgs.GetKeyStore().SaveLocationID(regResp.PermId)
+	err = msgs.GetKeyStore().SaveLocationID(regResp.PremID)
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)
 		return
 	}
 	ret := new(v1.RegistrationResponse)
-	ret.LocationID = regResp.PermId
+	ret.LocationID = regResp.PremID
 	c.JSON(200, ret)
 }
 
