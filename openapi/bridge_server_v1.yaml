@@ -198,18 +198,23 @@ components:
       type: object
       description: This object represents a message to be added to the NATs queue as if the caller was inside the cluster
       properties:
-        autoToken:
+        authToken:
           type: string
           description: An authorization token for a user that has permissions to post a message to NATS
+        timeout:
+          type: integer
+          description: if a reply subject is provided, it will wait for this number of seconds for the reply, defaults to 30
+          default: 30
         subject:
           type: string
           description: subject for the NATS messages
         reply:
           type: string
-          description: optional reply message for nats
+          description: optional reply message for nats.  If a reply is provided, the call will block for up to timeout seconds waiting for the reply
         data:
           type: string
           description: data for the message
+
 
     BridgeMessagePostReq:
       type: object

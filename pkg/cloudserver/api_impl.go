@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"github.com/nats-io/nats.go"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -313,7 +314,8 @@ func natsMsgPostHandler(c *gin.Context){
 		c.JSON(code, &ret)
 		return
 	}
-	response, e := sendGenericAuthRequest(c,bridgemodel.NATSPOST_AUTH_SUBJECT ,msg.AutoToken)
+
+	response, e := sendGenericAuthRequest(c,bridgemodel.NATSPOST_AUTH_SUBJECT ,msg.AuthToken)
 	if e != nil {
 		code, ret := bridgemodel.HandleErrors(c, e)
 		c.JSON(code, &ret)
@@ -325,6 +327,26 @@ func natsMsgPostHandler(c *gin.Context){
 	}
 
 	connection := bridgemodel.GetNatsConnection()
-	connection.Publish(msg.Subject,[]byte(msg.Data))
-	c.JSON(202,"")
+	if msg.Reply=="generate"{
+		msg.Reply=msgs.MakeNBReplySubject()
+	}
+	var sub *nats.Subscription
+	if len(msg.Reply)>0 {
+		sub,_=connection.SubscribeSync(msg.Reply)
+	}
+	nMsg:=new(nats.Msg)
+	nMsg.Reply=msg.Reply
+	nMsg.Subject=msg.Subject
+	nMsg.Data=[]byte(msg.Data)
+	connection.PublishMsg(nMsg)
+	retData:=""
+	if sub != nil{
+		replyMsg, e := sub.NextMsg(time.Duration(msg.Timeout) * time.Second)
+		if e != nil{
+			log.Errorf("Error waiting for reply message from nats post %s",e)
+		}else{
+			retData=string(replyMsg.Data)
+		}
+	}
+	c.JSON(202,retData)
 }

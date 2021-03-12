@@ -6,6 +6,7 @@ package msgs
 
 import (
 	"fmt"
+	"github.com/theotw/natssync/pkg/bridgemodel"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -29,6 +30,7 @@ type MessageEnvelope struct {
 	Signature       string
 	MsgKey          string
 }
+
 
 type LocationKeyStore interface {
 	//loads the location ID for this client.  If not initialized, a blank string is returned
@@ -90,4 +92,14 @@ func InitLocationKeyStore() error {
 	var err error
 	keystore, err = CreateLocationKeyStore(pkg.Config.KeystoreUrl)
 	return err
+}
+
+func MakeNBReplySubject() string{
+	replySubject := fmt.Sprintf("%s.%s.%s", NB_MSG_PREFIX, CLOUD_ID, bridgemodel.GenerateUUID())
+	return replySubject
+}
+
+func MakeEchoSubject(clientID string) string{
+	subject := fmt.Sprintf("%s.%s.%s", SB_MSG_PREFIX,clientID, ECHO_SUBJECT_BASE)
+	return subject
 }
