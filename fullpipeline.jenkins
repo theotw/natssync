@@ -43,6 +43,7 @@ pipeline {
     }
     environment {
         PATH = "$PATH:/usr/local/go/bin/:/root/go/bin"
+        DOCKER_HUB_CREDS=credentials('dockerhub-ro-creds')
     }
 
     stages {
