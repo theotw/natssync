@@ -115,16 +115,16 @@ func RunClient(test bool) {
 				log.Errorf("Error decoding envelope %s", err.Error())
 				continue
 			}
-			//status, err := bridgemodel.ValidateCloudEventsMsgFormat(natmsg.Data)
-			//if err != nil {
-			//	log.Errorf("Error validating the cloud event message: %s", err.Error())
-			//	return
-			//}
-			//if !status {
-			//	log.Errorf("Cloud event message validation failed, ignoring the message...")
-			//	return
-			//}
-			//log.Info("Successfully validated the cloud events message format")
+			status, err := bridgemodel.ValidateCloudEventsMsgFormat(natmsg.Data)
+			if err != nil {
+				log.Errorf("Error validating the cloud event message: %s", err.Error())
+				return
+			}
+			if !status {
+				log.Errorf("Cloud event message validation failed, ignoring the message...")
+				return
+			}
+			log.Info("Successfully validated the cloud events message format")
 			log.Infof("Received message: %s", string(natmsg.Data))
 
 			if len(natmsg.Reply) > 0 {
@@ -135,25 +135,25 @@ func RunClient(test bool) {
 					tmpstring := startpost.Format("20060102-15:04:05.000")
 					echoMsg := fmt.Sprintf("%s | %s", tmpstring, "message-client")
 					echomsg.Data = []byte(echoMsg)
-					//mType := "netapp.astra.echo"
-					//mSource := "urn:netapp:astra:bridge-client"
-					//cvMessage, err := bridgemodel.GenerateCloudEventsPayload(echoMsg, mType, mSource)
-					//if err != nil {
-					//	log.Errorf("Failed to generate cloudevents payload: %s", err.Error())
-					//	return
-					//}
-					//echomsg.Data = cvMessage
+					mType := echomsg.Subject
+					mSource := "urn:netapp:astra:bridge-client"
+					cvMessage, err := bridgemodel.GenerateCloudEventsPayload(echoMsg, mType, mSource)
+					if err != nil {
+						log.Errorf("Failed to generate cloud events payload: %s", err.Error())
+						return
+					}
+					echomsg.Data = cvMessage
 					sendMessageToCloud(&echomsg, serverURL, clientID)
 					endpost := time.Now()
 					metrics.RecordTimeToPushMessage(int(math.Round(endpost.Sub(startpost).Seconds())))
 				}
 
 				if err := nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data); err != nil {
-					log.Errorf("Error publising request: %s", err)
+					log.Errorf("Error publishing request: %s", err)
 				}
 			} else {
 				if err := nc.Publish(natmsg.Subject, natmsg.Data); err != nil {
-					log.Errorf("Error publising request: %s", err)
+					log.Errorf("Error publishing request: %s", err)
 				}
 			}
 		}
@@ -162,10 +162,10 @@ func RunClient(test bool) {
 
 func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string) {
 	log.Debugf("Sending Msg NB %s", msg.Subject)
-	//log.Debugf("msg.Data %s", msg.Data)
+	log.Debugf("msg.Data %s", msg.Data)
 	//status, err := bridgemodel.ValidateCloudEventsMsgFormat(msg.Data)
 	//if err != nil {
-	//	log.Errorf("Error validating the cloud event message: %s", err.Error())
+	//	log.Errorf("Error validating the cloudevent message: %s", err.Error())
 	//	return
 	//}
 	//if !status {

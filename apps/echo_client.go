@@ -76,20 +76,20 @@ func doping(nc *nats.Conn, subject string, message string) {
 
 	//if err = nc.PublishRequest(subject, replySubject, []byte(message)); err != nil {
 	// Add cloud events
-	//mType := "netapp.astra.echo"
-	//mSource := "urn:netapp:astra:echolet"
-	//cvMessage, err := bridgemodel.GenerateCloudEventsPayload(message, mType, mSource)
-	//if err != nil {
-	//	log.Errorf("Failed to generate cloudevents payload: %s", err.Error())
-	//	return
-	//}
+	mType := subject
+	mSource := "urn:netapp:astra:echolet"
+	cvMessage, err := bridgemodel.GenerateCloudEventsPayload(message, mType, mSource)
+	if err != nil {
+		log.Errorf("Failed to generate cloudevents payload: %s", err.Error())
+		return
+	}
 
-	if err = nc.PublishRequest(subject, replySubject, []byte(message)); err != nil {
-		//if err = nc.PublishRequest(subject, replySubject, []byte(cvMessage)); err != nil {
+	//if err = nc.PublishRequest(subject, replySubject, []byte(message)); err != nil {
+	if err = nc.PublishRequest(subject, replySubject, []byte(cvMessage)); err != nil {
 		log.Fatalf("Error publishing message: %e", err)
 	}
-	//log.Printf("Published message: %s", cvMessage)
-	log.Printf("Published message: %s", message)
+	log.Printf("Published message: %s", cvMessage)
+	//log.Printf("Published message: %s", message)
 
 	if err = nc.Flush(); err != nil {
 		log.Fatalf("Error flushing NATS connection: %e", err)
@@ -101,7 +101,7 @@ func doping(nc *nats.Conn, subject string, message string) {
 			log.Printf("Got Error %s \n", err.Error())
 			break
 		} else {
-			fmt.Printf("Message received [%s]: %s \n", msg.Subject, string(msg.Data))
+			fmt.Printf("Message received [%s]: %s", msg.Subject, string(msg.Data))
 			if strings.HasSuffix(msg.Subject, msgs.ECHOLET_SUFFIX) {
 				break
 			}
@@ -109,5 +109,5 @@ func doping(nc *nats.Conn, subject string, message string) {
 	}
 	end := time.Now()
 	delta := end.Sub(start)
-	fmt.Printf("Total time %d ms \n", delta.Milliseconds())
+	fmt.Printf("Total time %d ms", delta.Milliseconds())
 }

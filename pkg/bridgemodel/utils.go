@@ -108,6 +108,7 @@ func ValidateCloudEventsMsgFormat(msg []byte) (bool, error){
 	var err error
 	err = json.Unmarshal(msg, &cvMsg)
 	if err != nil {
+		log.Errorf("Failed to unmarshal json: %s", err.Error())
 		return false, err
 	}
 	if cvMsg.SpecVersion != "1.0" {
