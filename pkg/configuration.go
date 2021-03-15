@@ -6,6 +6,8 @@ package pkg
 
 import (
 	"os"
+	"reflect"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -22,12 +24,13 @@ type Configuration struct {
 	ListenString   string
 	CertDir		   string
 	Keystore       string
+	CloudEvents    bool
 }
 
 type configOption struct {
-	value        *string
+	value        interface{}
 	name         string
-	defaultValue string
+	defaultValue interface{}
 }
 
 func (c *Configuration) LoadValues() {
@@ -39,10 +42,15 @@ func (c *Configuration) LoadValues() {
 		{&c.CacheMgr, "CACHE_MGR", "redis"}, // TODO: Convert to CacheMgrUrl
 		{&c.KeystoreUrl, "KEYSTORE_URL", "redis://localhost:6379"},
 		{&c.ListenString, "LISTEN_STRING", ":8080"},
+		{&c.CloudEvents, "CLOUDEVENTS_ENABLED", false},
 	}
 
 	for _, option := range configOptions {
-		*option.value = GetEnvWithDefaults(option.name, option.defaultValue)
+		if reflect.TypeOf(option.defaultValue).Kind() == reflect.Bool {
+			*option.value.(*bool) = GetEnvWithDefaultsBool(option.name, option.defaultValue.(bool))
+		} else {
+			*option.value.(*string) = GetEnvWithDefaults(option.name, option.defaultValue.(string))
+		}
 	}
 }
 
@@ -52,6 +60,16 @@ func GetEnvWithDefaults(envKey string, defaultVal string) string {
 		val = defaultVal
 	} else {
 		log.Debugf("Environment variable %s is set to '%s'", envKey, val)
+	}
+	return val
+}
+
+func GetEnvWithDefaultsBool(envKey string, defaultVal bool) bool {
+	val, _ := strconv.ParseBool(os.Getenv(envKey))
+	if !val {
+		val = defaultVal
+	} else {
+		log.Debugf("Environment variable %s is set to '%v'", envKey, val)
 	}
 	return val
 }

@@ -26,12 +26,14 @@ import (
 type Arguments struct {
 	natsURL        *string
 	cloudServerURL *string
+	cloudEvents	   *bool
 }
 
 func getClientArguments() Arguments {
 	args := Arguments{
 		flag.String("u", pkg.Config.NatsServerUrl, "URL to connect to NATS"),
 		flag.String("c", pkg.Config.CloudBridgeUrl, "URL to connect to Cloud Server"),
+		flag.Bool("ce", pkg.Config.CloudEvents, "Enable CloudEvents messaging format"),
 	}
 	flag.Parse()
 	return args
@@ -82,7 +84,7 @@ func RunClient(test bool) {
 		}
 		subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
 		_, err = nc.Subscribe(subj, func(msg *nats.Msg) {
-			sendMessageToCloud(msg, serverURL, clientID)
+			sendMessageToCloud(msg, serverURL, clientID, pkg.Config.CloudEvents)
 		})
 		if err != nil {
 			log.Fatalf("Error subscribing to %s: %s", subj, err)
@@ -115,7 +117,16 @@ func RunClient(test bool) {
 				log.Errorf("Error decoding envelope %s", err.Error())
 				continue
 			}
-
+			status, err := bridgemodel.ValidateCloudEventsMsgFormat(natmsg.Data, pkg.Config.CloudEvents)
+			if err != nil {
+				log.Errorf("Error validating the cloud event message: %s", err.Error())
+				return
+			}
+			if !status {
+				log.Errorf("Cloud event message validation failed, ignoring the message...")
+				return
+			}
+			log.Info("Successfully validated the cloud events message format")
 			log.Infof("Received message: %s", string(natmsg.Data))
 
 			if len(natmsg.Reply) > 0 {
@@ -126,25 +137,44 @@ func RunClient(test bool) {
 					tmpstring := startpost.Format("20060102-15:04:05.000")
 					echoMsg := fmt.Sprintf("%s | %s", tmpstring, "message-client")
 					echomsg.Data = []byte(echoMsg)
-					sendMessageToCloud(&echomsg, serverURL, clientID)
+					mType := echomsg.Subject
+					mSource := "urn:netapp:astra:bridge-client"
+					cvMessage, err := bridgemodel.GenerateCloudEventsPayload(echoMsg, mType, mSource)
+					if err != nil {
+						log.Errorf("Failed to generate cloud events payload: %s", err.Error())
+						return
+					}
+					echomsg.Data = cvMessage
+					sendMessageToCloud(&echomsg, serverURL, clientID, pkg.Config.CloudEvents)
 					endpost := time.Now()
 					metrics.RecordTimeToPushMessage(int(math.Round(endpost.Sub(startpost).Seconds())))
 				}
 
 				if err := nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data); err != nil {
-					log.Errorf("Error publising request: %s", err)
+					log.Errorf("Error publishing request: %s", err)
 				}
 			} else {
 				if err := nc.Publish(natmsg.Subject, natmsg.Data); err != nil {
-					log.Errorf("Error publising request: %s", err)
+					log.Errorf("Error publishing request: %s", err)
 				}
 			}
 		}
 	}
 }
 
-func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string) {
+func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string, ceEnabled bool) {
 	log.Debugf("Sending Msg NB %s", msg.Subject)
+	log.Debugf("msg.Data %s", msg.Data)
+	status, err := bridgemodel.ValidateCloudEventsMsgFormat(msg.Data, ceEnabled)
+	if err != nil {
+		log.Errorf("Error validating the cloudevent message: %s", err.Error())
+		return
+	}
+	if !status {
+		log.Errorf("Cloud event message validation failed, ignoring the message...")
+		return
+	}
+	log.Info("Successfully validated the cloud events message format")
 	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
 	natmsg := bridgemodel.NatsMessage{Reply: msg.Reply, Subject: msg.Subject, Data: msg.Data}
 	envelope, enverr := msgs.PutObjectInEnvelope(natmsg, clientID, msgs.CLOUD_ID)
