@@ -122,12 +122,12 @@ func ValidateCloudEventsMsgFormat(msg []byte) (bool, error){
 		return false, err
 	}
 	if cvMsg.Type == "" {
-		errMsg := fmt.Sprintf("Source not set for cloud event")
+		errMsg := fmt.Sprintf("Type not set for cloud event")
 		err = errors.New(errMsg)
 		return false, err
 	}
 	if cvMsg.ID == "" {
-		errMsg := fmt.Sprintf("Source not set for cloud event")
+		errMsg := fmt.Sprintf("ID not set for cloud event")
 		err = errors.New(errMsg)
 		return false, err
 	}
