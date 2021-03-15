@@ -68,7 +68,7 @@ func GetEnvWithDefaultsBool(envKey string, defaultVal bool) bool {
 	if !val {
 		val = defaultVal
 	} else {
-		log.Debugf("Environment variable %s is set to '%s'", envKey, val)
+		log.Debugf("Environment variable %s is set to '%v'", envKey, val)
 	}
 	return val
 }
