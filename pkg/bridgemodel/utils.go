@@ -82,8 +82,8 @@ type CloudEventsPayload struct {
 	Source 		string		`json:"source"`
 	Type		string		`json:"type"`
 	SpecVersion	string		`json:"specversion"`
-	ID          string		`json:"id"`
-	Data		interface{} `json:"data"`
+	ID			string		`json:"id"`
+	Data		interface{}	`json:"data"`
 }
 
 func GenerateCloudEventsPayload(message string, mType string, source string) ([]byte, error) {
