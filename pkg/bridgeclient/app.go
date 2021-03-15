@@ -26,14 +26,14 @@ import (
 type Arguments struct {
 	natsURL        *string
 	cloudServerURL *string
-	cloudEvents	   *string
+	cloudEvents	   *bool
 }
 
 func getClientArguments() Arguments {
 	args := Arguments{
 		flag.String("u", pkg.Config.NatsServerUrl, "URL to connect to NATS"),
 		flag.String("c", pkg.Config.CloudBridgeUrl, "URL to connect to Cloud Server"),
-		flag.String("ce", pkg.Config.CloudEvents, "Enable CloudEvents messaging format"),
+		flag.Bool("ce", pkg.Config.CloudEvents, "Enable CloudEvents messaging format"),
 	}
 	flag.Parse()
 	return args
@@ -162,7 +162,7 @@ func RunClient(test bool) {
 	}
 }
 
-func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string, ceEnabled string) {
+func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string, ceEnabled bool) {
 	log.Debugf("Sending Msg NB %s", msg.Subject)
 	log.Debugf("msg.Data %s", msg.Data)
 	status, err := bridgemodel.ValidateCloudEventsMsgFormat(msg.Data, ceEnabled)
