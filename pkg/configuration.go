@@ -6,6 +6,7 @@ package pkg
 
 import (
 	"os"
+	"reflect"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
@@ -45,7 +46,7 @@ func (c *Configuration) LoadValues() {
 	}
 
 	for _, option := range configOptions {
-		if option.name == "CLOUDEVENTS_ENABLED" {
+		if reflect.TypeOf(option.defaultValue).Kind() == reflect.Bool {
 			*option.value.(*bool) = GetEnvWithDefaultsBool(option.name, option.defaultValue.(bool))
 		} else {
 			*option.value.(*string) = GetEnvWithDefaults(option.name, option.defaultValue.(string))
