@@ -163,16 +163,16 @@ func RunClient(test bool) {
 func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string) {
 	log.Debugf("Sending Msg NB %s", msg.Subject)
 	log.Debugf("msg.Data %s", msg.Data)
-	//status, err := bridgemodel.ValidateCloudEventsMsgFormat(msg.Data)
-	//if err != nil {
-	//	log.Errorf("Error validating the cloudevent message: %s", err.Error())
-	//	return
-	//}
-	//if !status {
-	//	log.Errorf("Cloud event message validation failed, ignoring the message...")
-	//	return
-	//}
-	//log.Info("Successfully validated the cloud events message format")
+	status, err := bridgemodel.ValidateCloudEventsMsgFormat(msg.Data)
+	if err != nil {
+		log.Errorf("Error validating the cloudevent message: %s", err.Error())
+		return
+	}
+	if !status {
+		log.Errorf("Cloud event message validation failed, ignoring the message...")
+		return
+	}
+	log.Info("Successfully validated the cloud events message format")
 	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
 	natmsg := bridgemodel.NatsMessage{Reply: msg.Reply, Subject: msg.Subject, Data: msg.Data}
 	envelope, enverr := msgs.PutObjectInEnvelope(natmsg, clientID, msgs.CLOUD_ID)

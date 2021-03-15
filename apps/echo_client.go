@@ -74,7 +74,6 @@ func doping(nc *nats.Conn, subject string, message string) {
 		log.Fatalf("Error subscribing: %e", err)
 	}
 
-	//if err = nc.PublishRequest(subject, replySubject, []byte(message)); err != nil {
 	// Add cloud events
 	mType := subject
 	mSource := "urn:netapp:astra:echolet"
@@ -84,12 +83,10 @@ func doping(nc *nats.Conn, subject string, message string) {
 		return
 	}
 
-	//if err = nc.PublishRequest(subject, replySubject, []byte(message)); err != nil {
 	if err = nc.PublishRequest(subject, replySubject, []byte(cvMessage)); err != nil {
 		log.Fatalf("Error publishing message: %e", err)
 	}
-	log.Printf("Published message: %s", cvMessage)
-	//log.Printf("Published message: %s", message)
+	log.Infof("Published message: %s", cvMessage)
 
 	if err = nc.Flush(); err != nil {
 		log.Fatalf("Error flushing NATS connection: %e", err)

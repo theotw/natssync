@@ -43,7 +43,14 @@ func main() {
 		tmpstring := time.Now().Format("20060102-15:04:05.000")
 		echoMsg := fmt.Sprintf("%s | %s %s %s \n", tmpstring, "echoproxylet", clientID, string(msg.Data))
 		replysub := fmt.Sprintf("%s.%s", msg.Reply, msgs.ECHOLET_SUFFIX)
-		nc.Publish(replysub, []byte(echoMsg))
+		mType := subj
+		mSource := "urn:netapp:astra:echolet"
+		cvMessage, err := bridgemodel.GenerateCloudEventsPayload(echoMsg, mType, mSource)
+		if err != nil {
+			log.Errorf("Failed to generate cloudevents payload: %s", err.Error())
+			return
+		}
+		nc.Publish(replysub, []byte(cvMessage))
 		nc.Flush()
 	})
 	runtime.Goexit()
