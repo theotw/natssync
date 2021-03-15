@@ -103,7 +103,11 @@ func GenerateCloudEventsPayload(message string, mType string, source string) ([]
 	return reqBytes.Bytes(), nil
 }
 
-func ValidateCloudEventsMsgFormat(msg []byte) (bool, error){
+func ValidateCloudEventsMsgFormat(msg []byte, ceEnabled string) (bool, error){
+	if ceEnabled == "false" {
+		log.Info("Cloud Events disabled, skipping message validation")
+		return true, nil
+	}
 	var cvMsg CloudEventsPayload
 	var err error
 	err = json.Unmarshal(msg, &cvMsg)

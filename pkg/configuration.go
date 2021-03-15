@@ -22,6 +22,7 @@ type Configuration struct {
 	ListenString   string
 	CertDir		   string
 	Keystore       string
+	CloudEvents    string
 }
 
 type configOption struct {
@@ -39,6 +40,7 @@ func (c *Configuration) LoadValues() {
 		{&c.CacheMgr, "CACHE_MGR", "redis"}, // TODO: Convert to CacheMgrUrl
 		{&c.KeystoreUrl, "KEYSTORE_URL", "redis://localhost:6379"},
 		{&c.ListenString, "LISTEN_STRING", ":8080"},
+		{&c.CloudEvents, "CLOUDEVENTS_ENABLED", "false"},
 	}
 
 	for _, option := range configOptions {

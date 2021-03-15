@@ -26,12 +26,14 @@ import (
 type Arguments struct {
 	natsURL        *string
 	cloudServerURL *string
+	cloudEvents	   *string
 }
 
 func getClientArguments() Arguments {
 	args := Arguments{
 		flag.String("u", pkg.Config.NatsServerUrl, "URL to connect to NATS"),
 		flag.String("c", pkg.Config.CloudBridgeUrl, "URL to connect to Cloud Server"),
+		flag.String("ce", pkg.Config.CloudEvents, "Enable CloudEvents messaging format"),
 	}
 	flag.Parse()
 	return args
@@ -82,7 +84,7 @@ func RunClient(test bool) {
 		}
 		subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
 		_, err = nc.Subscribe(subj, func(msg *nats.Msg) {
-			sendMessageToCloud(msg, serverURL, clientID)
+			sendMessageToCloud(msg, serverURL, clientID, *args.cloudEvents)
 		})
 		if err != nil {
 			log.Fatalf("Error subscribing to %s: %s", subj, err)
@@ -115,7 +117,7 @@ func RunClient(test bool) {
 				log.Errorf("Error decoding envelope %s", err.Error())
 				continue
 			}
-			status, err := bridgemodel.ValidateCloudEventsMsgFormat(natmsg.Data)
+			status, err := bridgemodel.ValidateCloudEventsMsgFormat(natmsg.Data, *args.cloudEvents)
 			if err != nil {
 				log.Errorf("Error validating the cloud event message: %s", err.Error())
 				return
@@ -143,7 +145,7 @@ func RunClient(test bool) {
 						return
 					}
 					echomsg.Data = cvMessage
-					sendMessageToCloud(&echomsg, serverURL, clientID)
+					sendMessageToCloud(&echomsg, serverURL, clientID, *args.cloudEvents)
 					endpost := time.Now()
 					metrics.RecordTimeToPushMessage(int(math.Round(endpost.Sub(startpost).Seconds())))
 				}
@@ -160,10 +162,10 @@ func RunClient(test bool) {
 	}
 }
 
-func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string) {
+func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string, ceEnabled string) {
 	log.Debugf("Sending Msg NB %s", msg.Subject)
 	log.Debugf("msg.Data %s", msg.Data)
-	status, err := bridgemodel.ValidateCloudEventsMsgFormat(msg.Data)
+	status, err := bridgemodel.ValidateCloudEventsMsgFormat(msg.Data, ceEnabled)
 	if err != nil {
 		log.Errorf("Error validating the cloudevent message: %s", err.Error())
 		return
