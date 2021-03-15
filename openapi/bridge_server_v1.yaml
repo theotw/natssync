@@ -29,13 +29,23 @@ paths:
     get:
       summary: Gets a list of the registered clients/locations
       description: Gets a list of the registered clients/locations
+      parameters:
+        - in: header
+          name: Authorization
+          description: Auth token used to authorized request
+          schema:
+            type: string
+
       responses:
         '200':
           description: List of known clients
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RegisterOnPremResponse'
+                $ref: '#/components/schemas/GetRegisterOnPremResponse'
+        '401':
+          description: Unauthorized
+
         '500':
           description: Server error
           content:
@@ -249,11 +259,15 @@ components:
       properties:
         cloudPublicKey:
           type: string
+        metaData:
+          type: object
+          additionalProperties:
+            type: string
         premID:
           type: string
           description: An ID to use for all other calls of post and get messages
 
-    RegisteredClientLocations:
+    GetRegisterOnPremResponse:
       type: array
       items:
         $ref: '#/components/schemas/RegisteredClientLocation'

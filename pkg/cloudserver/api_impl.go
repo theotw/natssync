@@ -179,6 +179,35 @@ func handleMultipartFormRegistration(c *gin.Context) (ret *v1.RegisterOnPremReq,
 
 	return
 }
+func handleGetRegisteredLocations(c *gin.Context){
+	authHeader:=c.Request.Header.Get("Authorization")
+	response, e := sendGenericAuthRequest(c,bridgemodel.REGISTRATION_QUERY_AUTH_SUBJECT ,authHeader)
+	if e != nil {
+		code, ret := bridgemodel.HandleErrors(c, e)
+		c.JSON(code, &ret)
+		return
+	}
+	if !response.Success {
+		c.JSON(401,"")
+		return
+	}
+	store := msgs.GetKeyStore()
+	clients, e := store.ListKnownClients()
+	if e != nil {
+		code, ret := bridgemodel.HandleErrors(c, e)
+		c.JSON(code, &ret)
+		return
+	}
+	ret:=make([]v1.RegisteredClientLocation,0)
+	for _,client:= range clients{
+		var x v1.RegisteredClientLocation
+		x.PremID=client
+		//todo get meta data
+		x.MetaData=make(map[string]string)
+		ret=append(ret,x)
+	}
+	c.JSON(200, ret)
+}
 func handlePostRegister(c *gin.Context) {
 	var in *v1.RegisterOnPremReq
 	if strings.HasPrefix(c.Request.Header.Get("Content-Type"), "multipart/form-data") {

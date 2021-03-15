@@ -6,6 +6,7 @@ package bridgemodel
 
 const REGISTRATION_AUTH_SUBJECT = "natssync.auth.registration"
 const NATSPOST_AUTH_SUBJECT = "natssync.auth.natspost"
+const REGISTRATION_QUERY_AUTH_SUBJECT = "natssync.auth.queryreg"
 const REGISTRATION_LIFECYCLE_ADDED = "natssync.registration.lifecyle.added"
 const REGISTRATION_LIFECYCLE_REMOVED = "natssync.registration.lifecyle.removed"
 const ACCOUNT_LIFECYCLE_REMOVED = "account.lifecyle.removed"  // TODO: This should probably be configurable
