@@ -84,7 +84,7 @@ func RunClient(test bool) {
 		}
 		subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
 		_, err = nc.Subscribe(subj, func(msg *nats.Msg) {
-			sendMessageToCloud(msg, serverURL, clientID, *args.cloudEvents)
+			sendMessageToCloud(msg, serverURL, clientID, pkg.Config.CloudEvents)
 		})
 		if err != nil {
 			log.Fatalf("Error subscribing to %s: %s", subj, err)
@@ -117,7 +117,7 @@ func RunClient(test bool) {
 				log.Errorf("Error decoding envelope %s", err.Error())
 				continue
 			}
-			status, err := bridgemodel.ValidateCloudEventsMsgFormat(natmsg.Data, *args.cloudEvents)
+			status, err := bridgemodel.ValidateCloudEventsMsgFormat(natmsg.Data, pkg.Config.CloudEvents)
 			if err != nil {
 				log.Errorf("Error validating the cloud event message: %s", err.Error())
 				return
@@ -145,7 +145,7 @@ func RunClient(test bool) {
 						return
 					}
 					echomsg.Data = cvMessage
-					sendMessageToCloud(&echomsg, serverURL, clientID, *args.cloudEvents)
+					sendMessageToCloud(&echomsg, serverURL, clientID, pkg.Config.CloudEvents)
 					endpost := time.Now()
 					metrics.RecordTimeToPushMessage(int(math.Round(endpost.Sub(startpost).Seconds())))
 				}
