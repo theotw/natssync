@@ -77,9 +77,10 @@ func doping(nc *nats.Conn, subject string, message string) {
 	// Add cloud events
 	mType := subject
 	mSource := "urn:netapp:astra:echolet"
-	cvMessage, err := bridgemodel.GenerateCloudEventsPayload(message, mType, mSource)
+	msgFormat := msgs.GetMsgFormat()
+	cvMessage, err := msgFormat.GeneratePayload(message, mType, mSource)
 	if err != nil {
-		log.Errorf("Failed to generate cloudevents payload: %s", err.Error())
+		log.Errorf("Failed to generate cloud events payload: %s", err.Error())
 		return
 	}
 

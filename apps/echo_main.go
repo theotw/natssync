@@ -45,9 +45,11 @@ func main() {
 		replysub := fmt.Sprintf("%s.%s", msg.Reply, msgs.ECHOLET_SUFFIX)
 		mType := subj
 		mSource := "urn:netapp:astra:echolet"
-		cvMessage, err := bridgemodel.GenerateCloudEventsPayload(echoMsg, mType, mSource)
+		msgFormat := msgs.GetMsgFormat()
+		cvMessage, err := msgFormat.GeneratePayload(echoMsg, mType, mSource)
+
 		if err != nil {
-			log.Errorf("Failed to generate cloudevents payload: %s", err.Error())
+			log.Errorf("Failed to generate cloud events payload: %s", err.Error())
 			return
 		}
 		nc.Publish(replysub, []byte(cvMessage))

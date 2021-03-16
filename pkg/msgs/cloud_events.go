@@ -1,0 +1,75 @@
+package msgs
+
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	log "github.com/sirupsen/logrus"
+	"github.com/theotw/natssync/pkg/bridgemodel"
+)
+
+type MsgPayload struct {
+	Source 		string		`json:"source"`
+	Type		string		`json:"type"`
+	SpecVersion	string		`json:"specversion"`
+	ID			string		`json:"id"`
+	Data		interface{}	`json:"data"`
+}
+
+var cloudEventsPayload MsgPayload
+
+func GetMsgFormat() MsgPayload {
+	return cloudEventsPayload
+}
+
+func (m *MsgPayload) GeneratePayload(message string, mType string, source string) ([]byte, error) {
+	cloudEventsPayload.SpecVersion = "1.0"
+	cloudEventsPayload.Type = mType
+	cloudEventsPayload.ID = bridgemodel.GenerateUUID()
+	cloudEventsPayload.Source = source
+	cloudEventsPayload.Data = message
+
+	reqBytes := new(bytes.Buffer)
+	err := json.NewEncoder(reqBytes).Encode(cloudEventsPayload)
+	if err != nil {
+		return nil, err
+	}
+
+	return reqBytes.Bytes(), nil
+}
+
+func (m *MsgPayload) ValidateMsgFormat(msg []byte, ceEnabled bool) (bool, error){
+	if !ceEnabled {
+		log.Info("Cloud Events disabled, skipping message validation")
+		return true, nil
+	}
+	var err error
+	err = json.Unmarshal(msg, &cloudEventsPayload)
+	if err != nil {
+		log.Errorf("Failed to unmarshal json: %s", err.Error())
+		return false, err
+	}
+	if cloudEventsPayload.SpecVersion != "1.0" {
+		errMsg := fmt.Sprintf("Invalid ID for cloud event, expected 1.0, got %s", cloudEventsPayload.ID)
+		err = errors.New(errMsg)
+		return false, err
+	}
+	if cloudEventsPayload.Source == "" {
+		errMsg := fmt.Sprintf("Source not set for cloud event")
+		err = errors.New(errMsg)
+		return false, err
+	}
+	if cloudEventsPayload.Type == "" {
+		errMsg := fmt.Sprintf("Type not set for cloud event")
+		err = errors.New(errMsg)
+		return false, err
+	}
+	if cloudEventsPayload.ID == "" {
+		errMsg := fmt.Sprintf("ID not set for cloud event")
+		err = errors.New(errMsg)
+		return false, err
+	}
+	log.Info("Successfully validated the cloud events message format")
+	return true, nil
+}
