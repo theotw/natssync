@@ -139,8 +139,11 @@ pipeline {
                 container('pipeline-runner') {
                     script {
                         echo 'In Dir ' + pwd()
-                        IMAGE_REPO= env.DOCKER_REPO
+
+                        IMAGE_REPO=env.DOCKER_REPO
                         IMAGE_TAG=MASTER_IMAGE_TAG
+                        echo 'Using Docker Pull Repo ' + IMAGE_REPO
+                        echo 'Using Docker TAG ' + IMAGE_TAG
                         sh """#!/bin/bash
                         docker login -u $DOCKER_HUB_CREDS_USR -p $DOCKER_HUB_CREDS_PSW
                         make tagAndPushToDockerHub
