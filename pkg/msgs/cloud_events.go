@@ -9,7 +9,7 @@ import (
 	"github.com/theotw/natssync/pkg/bridgemodel"
 )
 
-type MsgPayload struct {
+type CloudEventsFormat struct {
 	Source 		string		`json:"source"`
 	Type		string		`json:"type"`
 	SpecVersion	string		`json:"specversion"`
@@ -17,21 +17,15 @@ type MsgPayload struct {
 	Data		interface{}	`json:"data"`
 }
 
-var cloudEventsPayload MsgPayload
-
-func GetMsgFormat() MsgPayload {
-	return cloudEventsPayload
-}
-
-func (m *MsgPayload) GeneratePayload(message string, mType string, source string) ([]byte, error) {
-	cloudEventsPayload.SpecVersion = "1.0"
-	cloudEventsPayload.Type = mType
-	cloudEventsPayload.ID = bridgemodel.GenerateUUID()
-	cloudEventsPayload.Source = source
-	cloudEventsPayload.Data = message
+func (f *CloudEventsFormat) GeneratePayload(message string, mType string, source string) ([]byte, error) {
+	f.SpecVersion = "1.0"
+	f.Type = mType
+	f.ID = bridgemodel.GenerateUUID()
+	f.Source = source
+	f.Data = message
 
 	reqBytes := new(bytes.Buffer)
-	err := json.NewEncoder(reqBytes).Encode(cloudEventsPayload)
+	err := json.NewEncoder(reqBytes).Encode(f)
 	if err != nil {
 		return nil, err
 	}
@@ -39,33 +33,33 @@ func (m *MsgPayload) GeneratePayload(message string, mType string, source string
 	return reqBytes.Bytes(), nil
 }
 
-func (m *MsgPayload) ValidateMsgFormat(msg []byte, ceEnabled bool) (bool, error){
+func (f *CloudEventsFormat) ValidateMsgFormat(msg []byte, ceEnabled bool) (bool, error){
 	if !ceEnabled {
 		log.Info("Cloud Events disabled, skipping message validation")
 		return true, nil
 	}
 	var err error
-	err = json.Unmarshal(msg, &cloudEventsPayload)
+	err = json.Unmarshal(msg, &f)
 	if err != nil {
 		log.Errorf("Failed to unmarshal json: %s", err.Error())
 		return false, err
 	}
-	if cloudEventsPayload.SpecVersion != "1.0" {
-		errMsg := fmt.Sprintf("Invalid ID for cloud event, expected 1.0, got %s", cloudEventsPayload.ID)
+	if f.SpecVersion != "1.0" {
+		errMsg := fmt.Sprintf("Invalid ID for cloud event, expected 1.0, got %s", f.ID)
 		err = errors.New(errMsg)
 		return false, err
 	}
-	if cloudEventsPayload.Source == "" {
+	if f.Source == "" {
 		errMsg := fmt.Sprintf("Source not set for cloud event")
 		err = errors.New(errMsg)
 		return false, err
 	}
-	if cloudEventsPayload.Type == "" {
+	if f.Type == "" {
 		errMsg := fmt.Sprintf("Type not set for cloud event")
 		err = errors.New(errMsg)
 		return false, err
 	}
-	if cloudEventsPayload.ID == "" {
+	if f.ID == "" {
 		errMsg := fmt.Sprintf("ID not set for cloud event")
 		err = errors.New(errMsg)
 		return false, err

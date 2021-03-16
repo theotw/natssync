@@ -60,6 +60,11 @@ func RunClient(test bool) {
 	if store == nil {
 		log.Fatalf("Unable to get keystore")
 	}
+	msgs.NewMessageFormat()
+	msgFormat := msgs.GetMsgFormat()
+	if msgFormat == nil {
+		log.Fatalf("Unable to get the message format")
+	}
 	if err := RunBridgeClientRestAPI(test); err != nil {
 		log.Errorf("Error starting API server %s", err.Error())
 		os.Exit(1)
@@ -117,7 +122,6 @@ func RunClient(test bool) {
 				log.Errorf("Error decoding envelope %s", err.Error())
 				continue
 			}
-			msgFormat := msgs.GetMsgFormat()
 			status, err := msgFormat.ValidateMsgFormat(natmsg.Data, pkg.Config.CloudEvents)
 			if err != nil {
 				log.Errorf("Error validating the cloud event message: %s", err.Error())
@@ -139,7 +143,6 @@ func RunClient(test bool) {
 					echomsg.Data = []byte(echoMsg)
 					mType := echomsg.Subject
 					mSource := "urn:netapp:astra:bridge-client"
-					msgFormat := msgs.GetMsgFormat()
 					cvMessage, err := msgFormat.GeneratePayload(echoMsg, mType, mSource)
 					if err != nil {
 						log.Errorf("Failed to generate cloud events payload: %s", err.Error())
