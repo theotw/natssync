@@ -145,6 +145,9 @@ pipeline {
                         echo 'Using Docker Pull Repo ' + IMAGE_REPO
                         echo 'Using Docker TAG ' + IMAGE_TAG
                         sh """#!/bin/bash
+                        echo 'IMAGE Tag:  ${IMAGE_TAG}'
+                        export IMAGE_TAG=${IMAGE_TAG}
+                        export IMAGE_REPO=${IMAGE_REPO}
                         docker login -u $DOCKER_HUB_CREDS_USR -p $DOCKER_HUB_CREDS_PSW
                         make tagAndPushToDockerHub
                         """
