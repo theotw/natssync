@@ -117,12 +117,13 @@ jobs:
         run: |
           docker pull nats
           docker run -d -p 4222:4222 nats:latest
-      - name: Install redis
+      - name: Install mongo
         run: |
-          docker pull redis
-          docker run -d -p 6379:6379 redis:latest
+          docker pull mongo
+          docker run -d -p 27017:27017 mongo:latest
       - name: Run the server
         run: |
+          export KEYSTORE_URL="mongodb://127.0.0.1"
           chmod +x echo_client_x64_linux
           go test -v apps/bridge_server_test.go 2>&1 &
           SERVER_PID=$!
