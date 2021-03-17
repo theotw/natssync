@@ -161,8 +161,13 @@ jobs:
         run: |
           docker pull nats
           docker run -d -p 4222:4222 nats:latest
+      - name: Install mongo
+        run: |
+          docker pull mongo
+          docker run -d -p 27017:27017 mongo:latest
       - name: Run the client
         run: |
+          export KEYSTORE_URL="mongodb://127.0.0.1"
           value=`cat server_ip.txt`
           export CLOUD_BRIDGE_URL="http://${value}"
           echo "CLOUD_BRIDGE_URL: ${CLOUD_BRIDGE_URL}"
