@@ -6,9 +6,11 @@ package msgs
 
 import (
 	"errors"
+	"fmt"
+	"strings"
+
 	"github.com/mediocregopher/radix/v3"
 	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg"
 )
 
 //stores keys in a redis storage.
@@ -23,21 +25,27 @@ const PRIVATE_HASH_NAME = "natssync_private_key_store"
 const PUBLIC_HASH_NAME = "natssync_public_key_store"
 const LOCATION_KEY_NAME = "natsync_locationID"
 
-func NewRedisLocationKeyStore() (*RedisKeyStore, error) {
+func NewRedisLocationKeyStore(redisUrl string) (*RedisKeyStore, error) {
 	ret := new(RedisKeyStore)
-	ret.RedisURL = pkg.Config.RedisUrl
+	ret.RedisURL = redisUrl
 	err := ret.Init()
 	return ret, err
 }
 func (t *RedisKeyStore) Init() error {
 	var err error
-	addrs := make([]string, 1)
-	addrs[0] = t.RedisURL
 	t.Pool, err = radix.NewPool("tcp", t.RedisURL, 10)
 	if err != nil {
 		log.Errorf("Unable to connect to redis")
 	}
 	return err
+}
+func (t *RedisKeyStore) ListKnownClients() ([]string, error) {
+	var ret []string
+	err := t.Pool.Do(radix.Cmd(&ret, "HKEYS", PUBLIC_HASH_NAME))
+	if err != nil {
+		log.Errorf("Error loading location IDs %s", err.Error())
+	}
+	return ret, err
 }
 func (t *RedisKeyStore) LoadLocationID() string {
 	var ret string
@@ -51,6 +59,12 @@ func (t *RedisKeyStore) SaveLocationID(locationID string) error {
 	err := t.Pool.Do(radix.Cmd(nil, "SET", LOCATION_KEY_NAME, locationID))
 	return err
 }
+
+func (t *RedisKeyStore) ClearLocationID() error {
+	err := t.Pool.Do(radix.Cmd(nil, "SET", LOCATION_KEY_NAME, ""))
+	return err
+}
+
 func (t *RedisKeyStore) ReadPrivateKeyData(locationID string) ([]byte, error) {
 	log.Tracef("redis Get private key %s", locationID)
 
@@ -94,4 +108,20 @@ func (t *RedisKeyStore) WritePublicKey(locationID string, buf []byte) error {
 	data := string(buf)
 	err := t.Pool.Do(radix.Cmd(nil, "HSET", PUBLIC_HASH_NAME, locationID, data))
 	return err
+}
+
+func (t *RedisKeyStore) RemoveLocation(locationID string) error {
+	var errs []string
+	log.Tracef("redis remove location key %s", locationID)
+	if err := t.Pool.Do(radix.Cmd(nil, "HDEL", PUBLIC_HASH_NAME, locationID)); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if err := t.Pool.Do(radix.Cmd(nil, "HDEL", PRIVATE_HASH_NAME, locationID)); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if len(errs) > 0 {
+		errStr := strings.Join(errs, ", ")
+		return fmt.Errorf(errStr)
+	}
+	return nil
 }

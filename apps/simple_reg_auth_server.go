@@ -12,6 +12,7 @@ import (
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	"os"
 	"runtime"
+	"time"
 )
 
 //the main for an example of a simple auth server.  Authorizes a request if the user ID and secret matches what is set in the env
@@ -21,26 +22,43 @@ import (
 func main() {
 	natsURL := pkg.Config.NatsServerUrl
 	log.Infof("Connecting to NATS server %s", natsURL)
-	nc, err := nats.Connect(natsURL)
+
+	err := bridgemodel.InitNats(natsURL, "echo client", 1*time.Minute)
 	if err != nil {
 		log.Errorf("Unable to connect to NATS, exiting %s", err.Error())
 		os.Exit(2)
-	}
-	expectedAuthToken := pkg.GetEnvWithDefaults("AUTH_TOKEN", "42")
-	subj := bridgemodel.REGISTRATION_AUTH_SUBJECT
-	nc.Subscribe(subj, func(msg *nats.Msg) {
-		log.Infof("Got message %s : ", subj, msg.Reply)
-		var req bridgemodel.RegistrationRequest
-		var resp bridgemodel.RegistrationResponse
-		err := json.Unmarshal(msg.Data, &req)
-		if err == nil {
-			resp.Success = expectedAuthToken == req.AuthToken
-		} else {
-			resp.Success = false
-		}
-		respBits, _ := json.Marshal(&resp)
-		log.Infof("Reg Request %s from %s success=%t", req.AuthToken, req.LocationID, resp.Success)
 
+	}
+	nc := bridgemodel.GetNatsConnection()
+
+	expectedAuthToken := pkg.GetEnvWithDefaults("AUTH_TOKEN", "42")
+	subj := bridgemodel.REGISTRATION_AUTH_WILDCARD
+	nc.Subscribe(subj, func(msg *nats.Msg) {
+		log.Infof("Got message %s : %s", msg.Subject, msg.Reply)
+		var respBits []byte
+		if msg.Subject == bridgemodel.REGISTRATION_AUTH_SUBJECT {
+			var regReq bridgemodel.RegistrationRequest
+			var regResp bridgemodel.RegistrationResponse
+			err := json.Unmarshal(msg.Data, &regReq)
+			if err == nil {
+				regResp.Success = expectedAuthToken == regReq.AuthToken
+			} else {
+				regResp.Success = false
+			}
+			respBits, _ = json.Marshal(&regResp)
+			log.Infof("Reg Request %s from %s success=%t", regReq.AuthToken, regReq.LocationID, regResp.Success)
+		} else if msg.Subject == bridgemodel.UNREGISTRATION_AUTH_SUBJECT {
+			var unregReq bridgemodel.UnRegistrationRequest
+			var unregResp bridgemodel.UnRegistrationResponse
+			err := json.Unmarshal(msg.Data, &unregReq)
+			if err == nil {
+				unregResp.Success = expectedAuthToken == unregReq.AuthToken
+			} else {
+				unregResp.Success = false
+			}
+			respBits, _ = json.Marshal(&unregResp)
+			log.Infof("UnReg Request %s from %s success=%t", unregReq.AuthToken, unregReq.LocationID, unregResp.Success)
+		}
 		nc.Publish(msg.Reply, respBits)
 		nc.Flush()
 	})

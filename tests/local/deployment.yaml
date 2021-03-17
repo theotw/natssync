@@ -1,0 +1,165 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: cloudclient
+  name: cloudclient
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      run: cloudclient
+  template:
+    metadata:
+      labels:
+        run: cloudclient
+    spec:
+      containers:
+        - name: cloudclient
+          resources:
+            requests:
+              memory: 256Mi
+            limits:
+              memory: 1024Mi
+          # You may need to udpate the port in the image path to hit the local registry
+          image: k3d-nats-registry:60839/theotw/natssync-client:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+          env:
+            - name: LOG_LEVEL
+              value: debug
+            - name: LISTEN_STRING
+              value: ":8081"
+            - name: CACHE_MGR
+              value: redis
+            - name: KEYSTORE
+              value: redis
+            - name: REDIS_URL
+              value: "redis.default.svc.cluster.local:6379"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: cloudclient
+  name: cloudclient
+spec:
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 8081
+  selector:
+    run: cloudclient
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: cloudserver
+  name: cloudserver
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      run: cloudserver
+  template:
+    metadata:
+      labels:
+        run: cloudserver
+    spec:
+      containers:
+        - name: cloudserver
+          resources:
+            requests:
+              memory: 256Mi
+            limits:
+              memory: 1024Mi
+          # You may need to udpate the port in the image path to hit the local registry
+          image: k3d-nats-registry:60839/theotw/natssync-server:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8082
+          env:
+            - name: LOG_LEVEL
+              value: debug
+            - name: LISTEN_STRING
+              value: ":8082"
+            - name: CACHE_MGR
+              value: redis
+            - name: KEYSTORE
+              value: redis
+            - name: REDIS_URL
+              value: "redis.default.svc.cluster.local:6379"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: cloudserver
+  name: cloudserver
+spec:
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 8082
+      targetPort: 8082
+  selector:
+    run: cloudserver
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: redis
+  name: redis
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      run: redis
+  template:
+    metadata:
+      labels:
+        run: redis
+    spec:
+      containers:
+        - name: redis
+          resources:
+            requests:
+              memory: 256Mi
+            limits:
+              memory: 1024Mi
+          # You may need to udpate the port in the image path to hit the local registry
+          image: library/redis:6.0.10-alpine3.12
+          imagePullPolicy: IfNotPresent
+          command:
+            - redis-server
+          env:
+            - name: MASTER
+              value: "true"
+          ports:
+            - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: redis
+  name: redis
+spec:
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 6379
+  selector:
+    run: redis
+

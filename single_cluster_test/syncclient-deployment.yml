@@ -14,7 +14,8 @@ spec:
     spec:
       containers:
         - name: sync-client
-          image: theotw/natssync-client
+          image: theotw/natssync-client:latest
+          imagePullPolicy: Never
           env:
             - name: LOG_LEVEL
               value: "trace"
@@ -26,6 +27,8 @@ spec:
               value: "client1"
             - name: REDIS_URL
               value: "redis:6379"
+            - name: KEYSTORE_URL
+              value: "redis://redis:6379"
 
   replicas: 1
 

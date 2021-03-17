@@ -7,8 +7,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg/bridgemodel"
-	"log"
 	"strings"
 	"time"
 
@@ -22,13 +22,15 @@ type Arguments struct {
 	message  *string
 	clientID *string
 	natsURL  *string
+	repeate  *int
 }
 
-func getArguments() Arguments {
+func getECArguments() Arguments {
 	args := Arguments{
-		flag.String("msg", "", "Message to send to the client"),
-		flag.String("id", "", "ID of the receiving client"),
-		flag.String("url", pkg.Config.NatsServerUrl, "URL to connect to NATS"),
+		flag.String("m", "", "Message to send to the client"),
+		flag.String("i", "", "ID of the receiving client"),
+		flag.String("u", pkg.Config.NatsServerUrl, "URL to connect to NATS"),
+		flag.Int("r", 1, "Number of times to repeate, default is 1 -1 means forever"),
 	}
 	flag.Parse()
 	return args
@@ -41,28 +43,50 @@ func getArguments() Arguments {
 //that indicates which part of the journey has been hit.
 //the loop ends when it sees echolet.
 func main() {
-	args := getArguments()
+	args := getECArguments()
 
 	log.Printf("Connecting to NATS Server %s \n", *args.natsURL)
-	nc, err := nats.Connect(*args.natsURL)
+	err := bridgemodel.InitNats(*args.natsURL, "echo client", 1*time.Minute)
 	if err != nil {
 		log.Fatal(err)
 	}
+	nc := bridgemodel.GetNatsConnection()
 	defer nc.Close()
 
 	subject := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, *args.clientID, msgs.ECHO_SUBJECT_BASE)
+
+	i := 0
+	done := false
+	for !done {
+		doping(nc, subject, *args.message)
+		i = i + 1
+		done = *args.repeate != -1 && i >= *args.repeate
+	}
+}
+
+func doping(nc *nats.Conn, subject string, message string) {
+	var err error
+	start := time.Now()
 	replySubject := fmt.Sprintf("%s.%s.%s", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID, bridgemodel.GenerateUUID())
 	replyListenSub := fmt.Sprintf("%s.*", replySubject)
 	sync, err := nc.SubscribeSync(replyListenSub)
 	if err != nil {
 		log.Fatalf("Error subscribing: %e", err)
 	}
-	log.Printf("Subscribed to %s", replyListenSub)
 
-	if err = nc.PublishRequest(subject, replySubject, []byte(*args.message)); err != nil {
+	// Add cloud events
+	mType := subject
+	mSource := "urn:netapp:astra:echolet"
+	cvMessage, err := bridgemodel.GenerateCloudEventsPayload(message, mType, mSource)
+	if err != nil {
+		log.Errorf("Failed to generate cloudevents payload: %s", err.Error())
+		return
+	}
+
+	if err = nc.PublishRequest(subject, replySubject, []byte(cvMessage)); err != nil {
 		log.Fatalf("Error publishing message: %e", err)
 	}
-	log.Printf("Published message: %s", *args.message)
+	log.Infof("Published message: %s", cvMessage)
 
 	if err = nc.Flush(); err != nil {
 		log.Fatalf("Error flushing NATS connection: %e", err)
@@ -74,10 +98,13 @@ func main() {
 			log.Printf("Got Error %s \n", err.Error())
 			break
 		} else {
-			log.Printf("Message received [%s]: %s \n", msg.Subject, string(msg.Data))
+			fmt.Printf("Message received [%s]: %s", msg.Subject, string(msg.Data))
 			if strings.HasSuffix(msg.Subject, msgs.ECHOLET_SUFFIX) {
 				break
 			}
 		}
 	}
+	end := time.Now()
+	delta := end.Sub(start)
+	fmt.Printf("Total time %d ms", delta.Milliseconds())
 }

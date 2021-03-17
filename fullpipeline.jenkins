@@ -38,10 +38,12 @@ pipeline {
         }
     }
     parameters {
+        booleanParam(name: 'PRODUCTION_BUILD', defaultValue: false, description: 'if true, a build number other than date is used')
         string(name: 'TEST_BRANCH', defaultValue: 'main', description: 'L2 Test branch to use')
     }
     environment {
         PATH = "$PATH:/usr/local/go/bin/:/root/go/bin"
+        DOCKER_HUB_CREDS=credentials('bmason-rw-dh-token')
     }
 
     stages {
@@ -53,10 +55,8 @@ pipeline {
                         def gitCommit = "${GIT_COMMIT}"
                         def gitBranch = "${GIT_BRANCH}"
                         def tmpstring = sh(script: 'date +%Y%m%d%H%M', returnStdout: true)
-                        MASTER_IMAGE_TAG = tmpstring.substring(0, tmpstring.length() - 1)
                         sh """#!/bin/bash
                             mkdir -p out
-                            echo $MASTER_IMAGE_TAG >out/buildinfo.txt
                         """
                     }
 
@@ -71,7 +71,7 @@ pipeline {
                         fullName='NatsSync-build/' + String.valueOf(env.BRANCH_NAME)
                         l1Job=build job: fullName,
                                 parameters: [
-                                        string(name: 'IMAGE_TAG_INPUT', value: String.valueOf(MASTER_IMAGE_TAG)),
+                                        booleanParam (name: 'PRODUCTION_BUILD', value: PRODUCTION_BUILD),
                                 ]
                         copyArtifacts(
                                 projectName: fullName,
@@ -81,7 +81,9 @@ pipeline {
                                 flatten: true
 
                         )
-
+                        def tmpstring= sh(script: 'cat out/buildinfo.txt', returnStdout: true)
+                        MASTER_IMAGE_TAG = tmpstring.substring(0, tmpstring.length() - 1)
+                        echo 'Using Master Image ' + MASTER_IMAGE_TAG
                     }
 
                 }
@@ -102,7 +104,6 @@ pipeline {
                                 target:"out/",
                                 filter: 'out/*/**',
                                 flatten: true
-
                         )
 
                     }
@@ -125,6 +126,31 @@ pipeline {
                         """
                         junit allowEmptyResults: true, testResults: 'out/report_*.xml'
                         cobertura coberturaReportFile: 'out/full_coverage.xml'
+                    }
+                }
+            }
+        }
+        stage('publish images') {
+            when {
+                // Only say hello if a "greeting" is requested
+                expression { params.PRODUCTION_BUILD == true }
+            }
+            steps {
+                container('pipeline-runner') {
+                    script {
+                        echo 'In Dir ' + pwd()
+
+                        IMAGE_REPO=env.DOCKER_REPO
+                        IMAGE_TAG=MASTER_IMAGE_TAG
+                        echo 'Using Docker Pull Repo ' + IMAGE_REPO
+                        echo 'Using Docker TAG ' + IMAGE_TAG
+                        sh """#!/bin/bash
+                        echo 'IMAGE Tag:  ${IMAGE_TAG}'
+                        export IMAGE_TAG=${IMAGE_TAG}
+                        export IMAGE_REPO=${IMAGE_REPO}
+                        docker login -u $DOCKER_HUB_CREDS_USR -p $DOCKER_HUB_CREDS_PSW
+                        make tagAndPushToDockerHub
+                        """
                     }
                 }
             }

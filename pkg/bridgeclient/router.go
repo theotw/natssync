@@ -9,6 +9,7 @@ import (
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"github.com/theotw/natssync/pkg"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -19,14 +20,17 @@ var quit chan os.Signal
 // Run - configures and starts the web server
 func RunBridgeClientRestAPI(test bool) error {
 
+	listenString := pkg.GetEnvWithDefaults("LISTEN_STRING", ":8080")
+
 	r := newRouter(test)
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    listenString,
 		Handler: r,
 	}
 
 	go func() {
 		// service connections
+		log.Infof("Starting REST API Server")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %s\n", err)
 		}
@@ -37,7 +41,9 @@ func RunBridgeClientRestAPI(test bool) error {
 
 func newRouter(test bool) *gin.Engine {
 	router := gin.Default()
+
 	root := router.Group("/bridge-client/")
+	root.Handle("GET", "/metrics", metricGetHandlers)
 	if test {
 		root.Handle("GET", "/kill", func(c *gin.Context) {
 			quit <- os.Interrupt
@@ -45,7 +51,9 @@ func newRouter(test bool) *gin.Engine {
 	}
 	v1 := router.Group("/bridge-client/1", routeMiddleware)
 	v1.Handle("GET", "/about", aboutGetUnversioned)
+	v1.Handle("POST", "/unregister", handlePostUnRegister)
 	v1.Handle("POST", "/register", handlePostRegister)
+	v1.Handle("GET", "/register", registrationGetHandler)
 	v1.Handle("GET", "/healthcheck", healthCheckGetUnversioned)
 	addUnversionedRoutes(router)
 	addOpenApiDefRoutes(router)

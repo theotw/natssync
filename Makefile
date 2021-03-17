@@ -2,11 +2,6 @@ CLOUD_OPENAPIDEF_FILE=openapi/bridge_server_v1.yaml
 CLIENT_OPENAPIDEF_FILE=openapi/bridge_client_v1.yaml
 openapicli_jar=third_party/openapi-generator-cli.jar
 
-VERSION=1.0
-
-ifndef BUILD_NUMBER_TO_USE
-	BUILD_NUMBER_TO_USE=$(shell date '+%Y%m%d%H%M')
-endif
 ifndef IMAGE_TAG
 	IMAGE_TAG=latest
 endif
@@ -15,6 +10,16 @@ ifndef IMAGE_REPO
 	IMAGE_REPO=theotw
 endif
 
+ifeq (${IMAGE_TAG},latest)
+	BUILD_VERSION=$(shell date '+%Y%m%d%H%M')
+else
+	BUILD_VERSION=${IMAGE_TAG}
+endif
+
+tmp:
+
+	echo ${IMAGE_TAG}
+	echo ${BUILD_VERSION}
 
 generate: maketmp justgenerate rmtmp
 maketmp:
@@ -28,10 +33,10 @@ rmtmp:
 	rm -r -f tmpclient
 
 echoenv:
-	echo "Version 1"
 	echo "PATH ${PATH}"
 	echo "REPO ${IMAGE_REPO}"
 	echo "TAG ${IMAGE_TAG}"
+
 justgenerate: generateserver generateclient generateversion
 generateserver:
 	docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate -g go-server --package-name v1 -i /local/${CLOUD_OPENAPIDEF_FILE} -o /local/tmpcloud
@@ -48,7 +53,7 @@ generateclient:
 generateversion:
 	echo "//THIS IS A GENERATED FILE, any changes will be overridden " >pkg/version.go
 	echo "package pkg" >>pkg/version.go
-	echo "const VERSION=\"${VERSION}.${BUILD_NUMBER_TO_USE}\"" >>pkg/version.go
+	echo "const VERSION=\"${BUILD_VERSION}\"" >>pkg/version.go
 
 incontainergenerate:generateversion
 	rm -r -f tmpcloud
@@ -103,47 +108,105 @@ buildlinux:
 	go build -v -o out/echo_client_x64_linux apps/echo_client.go
 	go build -v -o out/simple_auth_x64_linux apps/simple_reg_auth_server.go
 
+buildarm: export GOOS=linux
+buildarm: export GOARCH=arm
+buildarm: export CGO_ENABLED=0
+buildarm: export GO111MODULE=on
+buildarm:
+	mkdir -p out
+	rm -f  out/bridgeserver_x64_linuxarm64
+	go build -v -o out/bridgeserver_x86_linux_arm apps/bridge_server.go
+	go build -v -o out/bridgeclient_x86_linux_arm apps/bridge_client.go
+	go build -v -o out/echo_main_x86_linux_arm apps/echo_main.go
+	go build -v -o out/echo_client_x86_linux_arm apps/echo_client.go
+	go build -v -o out/simple_auth_x86_linux_arm apps/simple_reg_auth_server.go
+
 clean:
 	rm -r -f tmp
 	rm -r -f pkg/bridgemodel/generated/v1
 	rm -r -f out
 	rm go.sum
 
+baseimage:
+	docker build --tag natssync-base:latest -f Dockerfilebase .
+baseimagearm:
+	docker build --tag natssync-base:arm-latest -f DockerfilebaseArm .
 
 cloudimage:
-	docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f CloudServer.dockerfile --tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} .
-cloudimageBuildAndPush:cloudimage
+	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} --target natssync-server .
+cloudimageBuildAndPush: cloudimage
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
+cloudimagearm:
+	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f DockerfileArm --tag ${IMAGE_REPO}/natssync-server:arm-${IMAGE_TAG} --target natssync-server-arm .
 
 debugcloudimage:
-	docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f CloudServerDebug.dockerfile --tag ${IMAGE_REPO}/debugnatssync-server:${IMAGE_TAG} .
+	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f CloudServerDebug.dockerfile --tag ${IMAGE_REPO}/debugnatssync-server:${IMAGE_TAG} .
 
 
 testimage:
-	docker build --no-cache -f NatssyncTestImage.dockerfile  --tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} .
+	docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} --target natssync-tests .
 testimageBuildAndPush: testimage
 	docker push ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
 
 clientimage:
-	docker build --no-cache -f CloudClient.dockerfile --tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} .
+	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} --target natssync-client .
 clientimageBuildAndPush: clientimage
 	docker push ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
+clientimagearm:
+	DOCKER_BUILDKIT=1 docker build --no-cache -f DockerfileArm --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-client:arm-${IMAGE_TAG} --target natssync-client-arm .
 
 echoproxylet:
-	docker build --no-cache -f EchoProxylet.dockerfile --tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} .
+	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} --target echo-proxylet .
 echoproxyletBuildAndPush: echoproxylet
 	docker push ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
 
+echoproxyletarm:
+	DOCKER_BUILDKIT=1 docker build --no-cache -f DockerfileArm --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/echo-proxylet:arm-${IMAGE_TAG} --target echo-proxylet-arm .
+
 simpleauth:
-	docker build --no-cache -f SimpleAuthServer.dockerfile --tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} .
+	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} --target simple-reg-auth .
+simpleautharm:
+	DOCKER_BUILDKIT=1 docker build --no-cache -f DockerfileArm --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/simple-reg-auth:arm-${IMAGE_TAG} --target simple-reg-auth-arm .
 
 simpleauthBuildAndPush: simpleauth
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
 
-allimages: cloudimage clientimage echoproxylet simpleauth testimage
+allimages: baseimage testimage cloudimage clientimage echoproxylet simpleauth
 
-allimagesBuildAndPush: cloudimageBuildAndPush clientimageBuildAndPush testimageBuildAndPush echoproxyletBuildAndPush simpleauthBuildAndPush
+allarmimages: baseimagearm cloudimagearm clientimagearm echoproxyletarm simpleautharm
 
+allimagesBuildAndPush:testimageBuildAndPush cloudimageBuildAndPush clientimageBuildAndPush echoproxyletBuildAndPush simpleauthBuildAndPush
+
+tagAndPushToDockerHub:
+	docker pull ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
+	docker tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} theotw/natssync-server:${IMAGE_TAG}
+	docker tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} theotw/natssync-server:latest
+
+	docker pull ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
+	docker tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} theotw/natssync-client:${IMAGE_TAG}
+	docker tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} theotw/natssync-client:latest
+
+	docker pull ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
+	docker tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} theotw/echo-proxylet:${IMAGE_TAG}
+	docker tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} theotw/echo-proxylet:latest
+
+	docker pull ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
+	docker tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} theotw/simple-reg-auth:${IMAGE_TAG}
+	docker tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} theotw/simple-reg-auth:latest
+
+	docker pull ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
+	docker tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} theotw/natssync-tests:${IMAGE_TAG}
+	docker tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} theotw/natssync-tests:latest
+	docker push theotw/natssync-server:${IMAGE_TAG}
+	docker push theotw/natssync-server:latest
+	docker push theotw/natssync-client:${IMAGE_TAG}
+	docker push theotw/natssync-client:latest
+	docker push theotw/echo-proxylet:${IMAGE_TAG}
+	docker push theotw/echo-proxylet:latest
+	docker push theotw/simple-reg-auth:${IMAGE_TAG}
+	docker push theotw/simple-reg-auth:latest
+	docker push theotw/natssync-tests:${IMAGE_TAG}
+	docker push theotw/natssync-tests:latest
 
 pushall:
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}

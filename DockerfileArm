@@ -1,0 +1,34 @@
+# Base image
+FROM natssync-base:arm-latest as base
+
+# Cloud server
+FROM scratch as natssync-server-arm
+WORKDIR /build
+COPY --from=base /build/web /build/web
+COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
+COPY --from=base /build/out/bridgeserver_x86_linux_arm ./bridgeserver_x86_linux_arm
+COPY --from=base /build/third_party/swaggerui/ ./third_party/swaggerui/
+COPY --from=base /build/openapi/bridge_server_v1.yaml ./openapi/
+ENV GIN_MODE=release
+ENTRYPOINT ["./bridgeserver_x86_linux_arm"]
+
+# Cloud Client
+FROM scratch as natssync-client-arm
+WORKDIR /build
+COPY --from=base /build/web /build/web
+COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
+COPY --from=base /build/out/bridgeclient_x86_linux_arm ./bridgeclient_x86_linux_arm
+COPY --from=base /build/third_party/swaggerui/ ./third_party/swaggerui/
+COPY --from=base /build/openapi/bridge_client_v1.yaml ./openapi/
+ENV GIN_MODE=release
+ENTRYPOINT ["./bridgeclient_x86_linux_arm"]
+
+# Echo proxylet
+FROM scratch as echo-proxylet-arm
+COPY --from=base /build/out/echo_main_x86_linux_arm ./echo_main_x86_linux_arm
+ENTRYPOINT ["./echo_main_x86_linux_arm"]
+
+# Simple auth
+FROM scratch as simple-reg-auth-arm
+COPY --from=base /build/out/simple_auth_x86_linux_arm ./simple_auth_x86_linux_arm
+ENTRYPOINT ["./simple_auth_x86_linux_arm"]

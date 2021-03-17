@@ -2,7 +2,7 @@
 set -e
 
 makeNamespace() {
-  kubectl create namespace "$1" || echo "Namespace $namespace already exists"
+  kubectl create namespace "$1" || echo "Namespace $1 already exists"
 }
 
 deployEnvironment() {
@@ -19,9 +19,11 @@ deployEnvironment() {
 }
 
 CLOUD_NAMESPACE="cloud"
-ENT_NAMESPACE="ent"
+ONPREM_NAMESPACE="onprem"
 
 cloudYamls=(
+  "mongo-pod.yml"
+  "mongo-service.yml"
   "nats-deployment.yml"
   "nats-nodeport-service.yml"
   "redis-pod.yml"
@@ -31,14 +33,15 @@ cloudYamls=(
   "syncserver-service.yml"
 )
 
-entYamls=(
+onpremYamls=(
   "redis-pod.yml"
   "redis-service.yml"
   "nats-deployment.yml"
   "nats-service.yml"
   "echoproxylet-deployment.yml"
   "syncclient-deployment.yml"
+  "syncclient-service.yml"
  )
 
 deployEnvironment "${cloudYamls[*]}" "$CLOUD_NAMESPACE"
-deployEnvironment "${entYamls[*]}" "$ENT_NAMESPACE"
+deployEnvironment "${onpremYamls[*]}" "$ONPREM_NAMESPACE"

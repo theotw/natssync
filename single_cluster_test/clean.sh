@@ -3,7 +3,22 @@
 set -e
 
 CLOUD_NAMESPACE="cloud"
-ENT_NAMESPACE="ent"
+ONPREM_NAMESPACE="onprem"
 
-kubectl delete namespace "$CLOUD_NAMESPACE" || True
-kubectl delete namespace "$ENT_NAMESPACE" || True
+deleteAllOfKind() {
+	kind=$1
+	namespace=$2
+	kubectl delete --all "$kind" -n "$namespace"
+}
+
+deleteNamespace() {
+	namespace=$1
+	deleteAllOfKind deployments "$namespace"
+	deleteAllOfKind pods "$namespace"
+	deleteAllOfKind services "$namespace"
+	kubectl delete namespace "$namespace" || True
+}
+
+deleteNamespace "$ONPREM_NAMESPACE"
+deleteNamespace "$CLOUD_NAMESPACE"
+

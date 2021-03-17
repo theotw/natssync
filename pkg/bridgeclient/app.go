@@ -7,21 +7,45 @@ package cloudclient
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
+	"github.com/theotw/natssync/pkg/metrics"
 	"github.com/theotw/natssync/pkg/msgs"
+	"math"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 )
 
+type Arguments struct {
+	natsURL        *string
+	cloudServerURL *string
+	cloudEvents	   *bool
+}
+
+func getClientArguments() Arguments {
+	args := Arguments{
+		flag.String("u", pkg.Config.NatsServerUrl, "URL to connect to NATS"),
+		flag.String("c", pkg.Config.CloudBridgeUrl, "URL to connect to Cloud Server"),
+		flag.Bool("ce", pkg.Config.CloudEvents, "Enable CloudEvents messaging format"),
+	}
+	flag.Parse()
+	return args
+}
 func RunClient(test bool) {
 	log.Info("Starting NATSSync Client")
+	args := getClientArguments()
+	err := bridgemodel.InitNats(*args.natsURL, "echo client", 1*time.Minute)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	log.Infof("Build date: %s", pkg.GetBuildDate())
 	level, levelerr := log.ParseLevel(pkg.Config.LogLevel)
 	if levelerr != nil {
@@ -29,98 +53,128 @@ func RunClient(test bool) {
 		level = log.DebugLevel
 	}
 	log.SetLevel(level)
-	msgs.InitLocationKeyStore()
+	if err := msgs.InitLocationKeyStore(); err != nil {
+		log.Fatalf("Error initalizing key store: %s", err)
+	}
 	store := msgs.GetKeyStore()
 	if store == nil {
-		log.Fatalf("Unable to get keystore \n")
+		log.Fatalf("Unable to get keystore")
 	}
-	err := RunBridgeClientRestAPI(test)
-	if err != nil {
+	if err := RunBridgeClientRestAPI(test); err != nil {
 		log.Errorf("Error starting API server %s", err.Error())
 		os.Exit(1)
 	}
 
-	serverURL := pkg.Config.CloudBridgeUrl
-	var nc *nats.Conn
+	metrics.InitMetrics()
+
+	serverURL := *args.cloudServerURL
+
 	var lastClientID string
 	for true {
+		nc := bridgemodel.GetNatsConnection()
 		clientID := store.LoadLocationID()
 		if len(clientID) == 0 {
-			log.Infof("No client ID, sleeping and retrying \n")
+			log.Infof("No client ID, sleeping and retrying")
 			time.Sleep(5 * time.Second)
 			continue
 		}
 		//in case we re-register and the client ID changes, change what we listen for
 		if (clientID != lastClientID) && nc != nil {
-			nc.Close()
-			nc = nil
 			lastClientID = clientID
 		}
-		if nc == nil {
-			nc, err = nats.Connect(pkg.Config.NatsServerUrl)
+		subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
+		_, err = nc.Subscribe(subj, func(msg *nats.Msg) {
+			sendMessageToCloud(msg, serverURL, clientID, pkg.Config.CloudEvents)
+		})
+		if err != nil {
+			log.Fatalf("Error subscribing to %s: %s", subj, err)
+		}
+		log.Infof("Subscribed to %s", subj)
+
+		url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
+
+		ac := msgs.NewAuthChallenge()
+		httpclient := bridgemodel.NewHttpClient()
+		var msglist []v1.BridgeMessage
+		err := httpclient.SendAuthorizedRequestWithBodyAndResp("GET", url, ac, &msglist)
+		if err != nil {
+			log.Errorf("Error fetching messages %s", err.Error())
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		log.Infof("Received %d messages from server", len(msglist))
+		for _, m := range msglist {
+			var env msgs.MessageEnvelope
+			err = json.Unmarshal([]byte(m.MessageData), &env)
 			if err != nil {
-				log.Errorf("Unable to connect to NATS, retrying... error: %s", err.Error())
-				nc = nil
-				time.Sleep(10 * time.Second)
+				log.Errorf("Error unmarshalling envelope %s", err.Error())
 				continue
-			} else {
-				subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
-				nc.Subscribe(subj, func(msg *nats.Msg) {
-					log.Debugf("Sending msg to cloud %s", msg.Subject)
-
-					sendMessageToCloud(msg, serverURL, clientID)
-				})
 			}
-		} else {
-			url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
 
-			ac := msgs.NewAuthChallenge()
-			httpclient := bridgemodel.NewHttpClient()
-			var msglist []v1.BridgeMessage
-			err := httpclient.SendAuthorizedRequestWithBodyAndResp("GET", url, ac, &msglist)
+			var natmsg bridgemodel.NatsMessage
+			err := msgs.PullObjectFromEnvelope(&natmsg, &env)
 			if err != nil {
-				log.Errorf("Error fetching messages %s", err.Error())
-				time.Sleep(2 * time.Second)
+				log.Errorf("Error decoding envelope %s", err.Error())
 				continue
 			}
-			for _, m := range msglist {
-				var env msgs.MessageEnvelope
-				err = json.Unmarshal([]byte(m.MessageData), &env)
-				if err != nil {
-					log.Errorf("Error unmarshalling envelope %s", err.Error())
-					continue
-				}
+			status, err := bridgemodel.ValidateCloudEventsMsgFormat(natmsg.Data, pkg.Config.CloudEvents)
+			if err != nil {
+				log.Errorf("Error validating the cloud event message: %s", err.Error())
+				return
+			}
+			if !status {
+				log.Errorf("Cloud event message validation failed, ignoring the message...")
+				return
+			}
+			log.Info("Successfully validated the cloud events message format")
+			log.Infof("Received message: %s", string(natmsg.Data))
 
-				var natmsg bridgemodel.NatsMessage
-				err := msgs.PullObjectFromEnvelope(&natmsg, &env)
-				if err != nil {
-					log.Errorf("Error decoding envelope %s", err.Error())
-					continue
-				}
-				if len(natmsg.Reply) > 0 {
-					if strings.HasSuffix(natmsg.Subject, msgs.ECHO_SUBJECT_BASE) {
-						var echomsg nats.Msg
-						echomsg.Subject = fmt.Sprintf("%s.bridge-client", natmsg.Reply)
-						tmpstring := time.Now().Format("20060102-15:04:05.000")
-						echoMsg := fmt.Sprintf("%s | %s \n", tmpstring, "message-client")
-						echomsg.Data = []byte(echoMsg)
-						go sendMessageToCloud(&echomsg, serverURL, clientID)
+			if len(natmsg.Reply) > 0 {
+				if strings.HasSuffix(natmsg.Subject, msgs.ECHO_SUBJECT_BASE) {
+					var echomsg nats.Msg
+					echomsg.Subject = fmt.Sprintf("%s.bridge-client", natmsg.Reply)
+					startpost := time.Now()
+					tmpstring := startpost.Format("20060102-15:04:05.000")
+					echoMsg := fmt.Sprintf("%s | %s", tmpstring, "message-client")
+					echomsg.Data = []byte(echoMsg)
+					mType := echomsg.Subject
+					mSource := "urn:netapp:astra:bridge-client"
+					cvMessage, err := bridgemodel.GenerateCloudEventsPayload(echoMsg, mType, mSource)
+					if err != nil {
+						log.Errorf("Failed to generate cloud events payload: %s", err.Error())
+						return
 					}
-
-					nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data)
-				} else {
-					nc.Publish(natmsg.Subject, natmsg.Data)
+					echomsg.Data = cvMessage
+					sendMessageToCloud(&echomsg, serverURL, clientID, pkg.Config.CloudEvents)
+					endpost := time.Now()
+					metrics.RecordTimeToPushMessage(int(math.Round(endpost.Sub(startpost).Seconds())))
 				}
-				fmt.Println(natmsg)
+
+				if err := nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data); err != nil {
+					log.Errorf("Error publishing request: %s", err)
+				}
+			} else {
+				if err := nc.Publish(natmsg.Subject, natmsg.Data); err != nil {
+					log.Errorf("Error publishing request: %s", err)
+				}
 			}
 		}
-
 	}
-
 }
 
-func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string) {
-	log.Debugf("Sending Msg NB %s \n", msg.Subject)
+func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string, ceEnabled bool) {
+	log.Debugf("Sending Msg NB %s", msg.Subject)
+	log.Debugf("msg.Data %s", msg.Data)
+	status, err := bridgemodel.ValidateCloudEventsMsgFormat(msg.Data, ceEnabled)
+	if err != nil {
+		log.Errorf("Error validating the cloudevent message: %s", err.Error())
+		return
+	}
+	if !status {
+		log.Errorf("Cloud event message validation failed, ignoring the message...")
+		return
+	}
+	log.Info("Successfully validated the cloud events message format")
 	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
 	natmsg := bridgemodel.NatsMessage{Reply: msg.Reply, Subject: msg.Subject, Data: msg.Data}
 	envelope, enverr := msgs.PutObjectInEnvelope(natmsg, clientID, msgs.CLOUD_ID)

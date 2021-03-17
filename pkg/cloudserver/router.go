@@ -11,17 +11,19 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/metrics"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
+
 )
 
 var quit chan os.Signal
 
 // Run - configures and starts the web server
-func RunBridgeServer(test bool) error {
+func RunBridgeServer(test bool) {
 	level, levelerr := log.ParseLevel(pkg.Config.LogLevel)
 	if levelerr != nil {
 		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
@@ -58,7 +60,6 @@ func RunBridgeServer(test bool) error {
 		log.Fatal("Server Shutdown:", err)
 	}
 	log.Println("Server exiting")
-	return nil
 }
 
 func newRouter(test bool) *gin.Engine {
@@ -75,6 +76,7 @@ func newRouter(test bool) *gin.Engine {
 	v1.Handle("GET", "/about", aboutGetUnversioned)
 	v1.Handle("GET", "/healthcheck", healthCheckGetUnversioned)
 	v1.Handle("POST", "/register", handlePostRegister)
+	v1.Handle("POST", "/unregister", handlePostUnRegister)
 	v1.Handle("POST", "/message-queue/:premid", handlePostMessage)
 	v1.Handle("GET", "/message-queue/:premid", handleGetMessages)
 	addUnversionedRoutes(router)
@@ -103,6 +105,9 @@ func routeMiddleware(c *gin.Context) {
 	}
 
 	c.Next()
+	if c.Writer != nil {
+ 		metrics.IncrementHttpResp(c.Writer.Status())
+	}
 }
 func addOpenApiDefRoutes(router *gin.Engine) {
 	router.StaticFile("/bridge-server/api/bridge_server_v1.yaml", "openapi/bridge_server_v1.yaml")

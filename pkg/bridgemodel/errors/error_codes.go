@@ -17,6 +17,7 @@ const (
 	NETWORK_ERROR_IP_NOT_IN_SUBNET = "ip.not.in.subnet"
 	INVALID_REGISTRATION_REQ       = "invalid.reg.request"
 	INVALID_PUB_KEY                = "invalid.pub.key"
+	INVALID_LOCATION_ID            = "invalid.location.id"
 )
 
 const (
@@ -36,14 +37,14 @@ func (t *InternalError) Error() string {
 func (t *InternalError) ErrorCode() string {
 	return fmt.Sprintf("%s.%s", t.Subsystem, t.SubSystemError)
 }
-func NewInernalError(subSystem, code string, params map[string]string) *InternalError {
+func NewInternalError(subSystem, code string, params map[string]string) *InternalError {
 	var x InternalError
 	x.Subsystem = subSystem
 	x.SubSystemError = code
 	x.Params = params
 	return &x
 }
-func NewInernalErrorWithDataParam(subSystem, code string, param string) *InternalError {
+func NewInternalErrorWithDataParam(subSystem, code string, param string) *InternalError {
 	var x InternalError
 	x.Subsystem = subSystem
 	x.SubSystemError = code

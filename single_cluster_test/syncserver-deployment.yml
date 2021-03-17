@@ -15,6 +15,7 @@ spec:
       containers:
         - name: sync-server
           image: theotw/natssync-server
+          imagePullPolicy: Never
           ports:
             - containerPort: 8080
               hostPort: 8080
@@ -25,6 +26,8 @@ spec:
               value: "nats://nats:4222"
             - name: REDIS_URL
               value: "redis:6379"
+            - name: KEYSTORE_URL
+              value: "mongodb://mongo"
 
   replicas: 1
 

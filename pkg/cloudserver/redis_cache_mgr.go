@@ -7,6 +7,7 @@ package cloudserver
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 import (
@@ -41,6 +42,35 @@ func (t *RedisCacheMgr) GetQueueDepths() map[string]int {
 		}
 	}
 	return ret
+}
+
+//oldest message timestamp in the cache
+func (t *RedisCacheMgr) GetAgeOfOldestTimestamp() time.Duration {
+	var ret time.Duration
+	oldest, start := time.Now(), time.Now()
+	var keys []string
+	err := t.Pool.Do(radix.Cmd(&keys, "KEYS", LIST_PREFIX+"*"))
+	if err != nil {
+		log.Errorf("Error getting keys for the oldest timestamp %s \n", err.Error())
+		return ret
+	}
+
+	for _, key := range keys {
+		var data []time.Time
+		err := t.Pool.Do(radix.Cmd(&data,"HMGET", key, "timestamp"))
+		if err != nil {
+			log.Errorf("Error getting timestamp for key %s in get oldest timestamp %s \n", key, err.Error())
+			return ret
+		} else {
+			for _, s := range data {
+				if s.Before(oldest) {
+					oldest = s
+				}
+			}
+			ret = start.Sub(oldest)
+		}
+	}
+    return ret
 }
 
 func (t *RedisCacheMgr) GetMessages(clientID string) ([]*CachedMsg, error) {

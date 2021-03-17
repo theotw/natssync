@@ -6,13 +6,16 @@ package main
 
 import (
 	"fmt"
-	"github.com/nats-io/nats.go"
-	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg"
-	"github.com/theotw/natssync/pkg/msgs"
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/nats-io/nats.go"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/bridgemodel"
+	"github.com/theotw/natssync/pkg/msgs"
 )
 
 //The client/south side echo proxylet.  Answers echo calls
@@ -27,21 +30,37 @@ func main() {
 	}
 	natsURL := pkg.Config.NatsServerUrl
 	log.Infof("Connecting to NATS server %s", natsURL)
-	nc, err := nats.Connect(natsURL)
+	err := bridgemodel.InitNats(natsURL, "echo Main", 1*time.Minute)
 	if err != nil {
 		log.Errorf("Unable to connect to NATS, exiting %s", err.Error())
 		os.Exit(2)
+
 	}
+	nc := bridgemodel.GetNatsConnection()
+
 	subj := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, clientID, msgs.ECHO_SUBJECT_BASE)
 
-	nc.Subscribe(subj, func(msg *nats.Msg) {
-		log.Infof("Got message %s : %s  %s \n", subj, msg.Reply, msg.Data)
+	_, err = nc.Subscribe(subj, func(msg *nats.Msg) {
+		log.Infof("Got message %s : %s  %s", subj, msg.Reply, msg.Data)
 		tmpstring := time.Now().Format("20060102-15:04:05.000")
 		echoMsg := fmt.Sprintf("%s | %s %s %s \n", tmpstring, "echoproxylet", clientID, string(msg.Data))
 		replysub := fmt.Sprintf("%s.%s", msg.Reply, msgs.ECHOLET_SUFFIX)
-		nc.Publish(replysub, []byte(echoMsg))
-		nc.Flush()
-		log.Infof("Flushed message to %s  %s \n", msg.Reply, natsURL)
+		mType := subj
+		mSource := "urn:netapp:astra:echolet"
+		cvMessage, err := bridgemodel.GenerateCloudEventsPayload(echoMsg, mType, mSource)
+		if err != nil {
+			log.Errorf("Failed to generate cloudevents payload: %s", err.Error())
+			return
+		}
+		if err = nc.Publish(replysub, cvMessage); err != nil {
+			log.Errorf("Error publising to %s: %s", replysub, err)
+		}
+		_ = nc.Flush()
 	})
+
+	if err != nil {
+		log.Errorf("Error subscribing to %s: %s", subj, err)
+	}
+
 	runtime.Goexit()
 }

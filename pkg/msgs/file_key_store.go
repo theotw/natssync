@@ -6,22 +6,50 @@ package msgs
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg"
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
+
+const publicKeySuffix = "_public.pem"
 
 type FileKeyStore struct {
 	basePath string
 }
 
-func NewFileKeyStore() (*FileKeyStore, error) {
+func NewFileKeyStore(basePath string) (*FileKeyStore, error) {
 	ret := new(FileKeyStore)
-	ret.basePath = pkg.Config.CertDir
+	ret.basePath = basePath
 	return ret, nil
 }
+
+func (t *FileKeyStore) RemoveLocation(locationID string) error {
+	var errs []string
+	pubKeyFile := t.makePublicKeyFileName(locationID)
+	privKeyFile := t.makePrivateFileName(locationID)
+	locationFile := path.Join(t.basePath, "locationkey.txt")
+	log.Debugf("public key location: %s", pubKeyFile)
+	log.Debugf("private key location: %s", privKeyFile)
+	log.Debugf("location ID: %s", locationFile)
+	if err := os.Remove(pubKeyFile); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if err := os.Remove(privKeyFile); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if err := os.Remove(locationFile); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if len(errs) > 0 {
+		errStr := strings.Join(errs, ", ")
+		return fmt.Errorf(errStr)
+	}
+	return nil
+}
+
 func (t *FileKeyStore) LoadLocationID() string {
 	var ret string
 	fileName := path.Join(t.basePath, "locationkey.txt")
@@ -46,9 +74,36 @@ func (t *FileKeyStore) SaveLocationID(locationID string) error {
 	return err
 }
 
+func (t *FileKeyStore) ClearLocationID() error {
+	fileName := path.Join(t.basePath, "locationkey.txt")
+	f, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.Write([]byte(""))
+	return err
+}
+
 func (t *FileKeyStore) WritePublicKey(locationID string, buf []byte) error {
 	fileName := t.makePublicKeyFileName(locationID)
 	return t.writeKeyFile(fileName, buf)
+}
+func (t *FileKeyStore) ListKnownClients() ([]string, error) {
+	ret := make([]string, 0)
+	dir, err := ioutil.ReadDir(t.basePath)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range dir {
+
+		if strings.HasSuffix(f.Name(), publicKeySuffix) {
+			limit := len(f.Name()) - len(publicKeySuffix)
+			id := f.Name()[:limit]
+			ret = append(ret, id)
+		}
+	}
+	return ret, nil
 }
 func (t *FileKeyStore) WritePrivateKey(locationID string, buf []byte) error {
 	fileName := t.makePrivateFileName(locationID)
@@ -89,7 +144,7 @@ func (t *FileKeyStore) ReadPublicKeyData(locationID string) ([]byte, error) {
 
 func (t *FileKeyStore) makePublicKeyFileName(locationID string) string {
 	var keyFile string
-	keyFile = fmt.Sprintf("%s_public.pem", locationID)
+	keyFile = fmt.Sprintf("%s%s", locationID, publicKeySuffix)
 
 	masterPemPath := path.Join(t.basePath, keyFile)
 	return masterPemPath
