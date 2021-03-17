@@ -38,9 +38,41 @@ jobs:
         make justgenerate
         make buildlinux
 
+    - name: Upload bridgeserver artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: bridgeserver_x64_linux
+        path: out/bridgeserver_x64_linux
+        retention-days: 1
+    - name: Upload bridgeclient artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: bridgeclient_x64_linux
+        path: out/bridgeclient_x64_linux
+        retention-days: 1
+    - name: Upload echo_main artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: echo_main_x64_linux
+        path: out/echo_main_x64_linux
+        retention-days: 1
+    - name: Upload echo_client artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: echo_client_x64_linux
+        path: out/echo_client_x64_linux
+        retention-days: 1
+    - name: Upload simple_auth artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: simple_auth_x64_linux
+        path: out/simple_auth_x64_linux
+        retention-days: 1
+
     - name: Unit / L1 Test
       run: |
         make l1
+
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1.6
       if: always()
