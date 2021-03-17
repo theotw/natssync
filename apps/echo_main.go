@@ -53,7 +53,7 @@ func main() {
 			return
 		}
 		if err = nc.Publish(replysub, cvMessage); err != nil {
-			log.Errorf("Error publising to %s: %s", replysub, err)
+			log.Errorf("Error publishing to %s: %s", replysub, err)
 		}
 		_ = nc.Flush()
 	})
