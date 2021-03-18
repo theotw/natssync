@@ -45,7 +45,7 @@ func getECArguments() Arguments {
 func main() {
 	args := getECArguments()
 
-	log.Printf("Connecting to NATS Server %s \n", *args.natsURL)
+	log.Printf("Connecting to NATS Server %s", *args.natsURL)
 	err := bridgemodel.InitNats(*args.natsURL, "echo client", 1*time.Minute)
 	if err != nil {
 		log.Fatal(err)
@@ -54,6 +54,12 @@ func main() {
 	defer nc.Close()
 
 	subject := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, *args.clientID, msgs.ECHO_SUBJECT_BASE)
+
+	msgs.InitMessageFormat()
+	msgFormat := msgs.GetMsgFormat()
+	if msgFormat == nil {
+		log.Fatalf("Unable to get the message format")
+	}
 
 	i := 0
 	done := false
@@ -77,9 +83,10 @@ func doping(nc *nats.Conn, subject string, message string) {
 	// Add cloud events
 	mType := subject
 	mSource := "urn:netapp:astra:echolet"
-	cvMessage, err := bridgemodel.GenerateCloudEventsPayload(message, mType, mSource)
+	msgFormat := msgs.GetMsgFormat()
+	cvMessage, err := msgFormat.GeneratePayload(message, mType, mSource)
 	if err != nil {
-		log.Errorf("Failed to generate cloudevents payload: %s", err.Error())
+		log.Errorf("Failed to generate cloud events payload: %s", err.Error())
 		return
 	}
 
@@ -95,7 +102,7 @@ func doping(nc *nats.Conn, subject string, message string) {
 	for {
 		msg, err := sync.NextMsg(5 * time.Minute)
 		if err != nil {
-			log.Printf("Got Error %s \n", err.Error())
+			log.Printf("Got Error %s", err.Error())
 			break
 		} else {
 			fmt.Printf("Message received [%s]: %s", msg.Subject, string(msg.Data))
