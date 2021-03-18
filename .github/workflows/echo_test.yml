@@ -49,7 +49,7 @@ jobs:
         echo "ID: `cat locationID.txt`"
 
     - name: Echo Test
-      run: timeout 10 go run apps/echo_client.go -m "hello world" -i `cat locationID.txt`
+      run: timeout 30 go run apps/echo_client.go -m "hello world" -i `cat locationID.txt`
 
     - name: Collect Logs
       if: always()
