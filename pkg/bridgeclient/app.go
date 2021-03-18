@@ -60,7 +60,7 @@ func RunClient(test bool) {
 	if store == nil {
 		log.Fatalf("Unable to get keystore")
 	}
-	msgs.NewMessageFormat()
+	msgs.InitMessageFormat()
 	msgFormat := msgs.GetMsgFormat()
 	if msgFormat == nil {
 		log.Fatalf("Unable to get the message format")

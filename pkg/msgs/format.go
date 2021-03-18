@@ -14,7 +14,7 @@ func GetMsgFormat() MessageFormat {
 	return msgFormat
 }
 
-func NewMessageFormat() {
+func InitMessageFormat() {
 	msgFormat = new(CloudEventsFormat)
 	return
 }

@@ -55,7 +55,7 @@ func main() {
 
 	subject := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, *args.clientID, msgs.ECHO_SUBJECT_BASE)
 
-	msgs.NewMessageFormat()
+	msgs.InitMessageFormat()
 	msgFormat := msgs.GetMsgFormat()
 	if msgFormat == nil {
 		log.Fatalf("Unable to get the message format")
