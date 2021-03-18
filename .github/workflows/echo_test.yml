@@ -53,7 +53,7 @@ jobs:
 
     - name: Collect Logs
       if: always()
-      run: single_cluster_test/docker-logs.sh logs.txt
+      run: single_cluster_test/docker-logs.sh logs
 
     - name: Upload Logs
       if: always()
@@ -66,6 +66,6 @@ jobs:
     - name: Cleanup Deployment
       if: always()
       run: |
-        rm locationID.txt || echo "No locationID.txt"
-        rm logs.txt || echo "No logs.txt"
+        rm ./locationID.txt || echo "No locationID.txt"
+        rm -rf ./logs || echo "No logs directory"
         single_cluster_test/docker-cleanup.sh
