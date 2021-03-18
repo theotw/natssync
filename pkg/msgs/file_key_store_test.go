@@ -87,10 +87,11 @@ func testReadPrivKey(store LocationKeyStore, t *testing.T) {
 }
 
 func testLocationID(store LocationKeyStore, t *testing.T) {
-	expectedID := "locationXX"
+	expectedID := "location"
 	err := store.SaveLocationID(expectedID)
+	expectedID = "locationXX"
 	assert.Nil(t, err, "error saving location ID")
 	locationID := store.LoadLocationID()
-	assert.Equalf(t, expectedID, locationID, "expect the location to match")
+	assert.Equal(t, expectedID, locationID, "expect the location to match")
 
 }
