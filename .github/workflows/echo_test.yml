@@ -32,7 +32,7 @@ jobs:
 
     - name: Build Images
       run: |
-        make generate
+        make justgenerate
         make allimages
 
     - name: Deploy Docker Containers
