@@ -133,40 +133,40 @@ baseimagearm:
 	docker build --tag natssync-base:arm-latest -f DockerfilebaseArm .
 
 cloudimage:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} --target natssync-server .
+	DOCKER_BUILDKIT=1 docker build --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} --target natssync-server .
 cloudimageBuildAndPush: cloudimage
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
 cloudimagearm:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f DockerfileArm --tag ${IMAGE_REPO}/natssync-server:arm-${IMAGE_TAG} --target natssync-server-arm .
+	DOCKER_BUILDKIT=1 docker build --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f DockerfileArm --tag ${IMAGE_REPO}/natssync-server:arm-${IMAGE_TAG} --target natssync-server-arm .
 
 debugcloudimage:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f CloudServerDebug.dockerfile --tag ${IMAGE_REPO}/debugnatssync-server:${IMAGE_TAG} .
+	DOCKER_BUILDKIT=1 docker build --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/debugnatssync-server:${IMAGE_TAG} --target debugnatssync-server .
 
 
 testimage:
-	docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} --target natssync-tests .
+	docker build --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} --target natssync-tests .
 testimageBuildAndPush: testimage
 	docker push ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
 
 clientimage:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} --target natssync-client .
+	DOCKER_BUILDKIT=1 docker build --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} --target natssync-client .
 clientimageBuildAndPush: clientimage
 	docker push ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
 clientimagearm:
-	DOCKER_BUILDKIT=1 docker build --no-cache -f DockerfileArm --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-client:arm-${IMAGE_TAG} --target natssync-client-arm .
+	DOCKER_BUILDKIT=1 docker build -f DockerfileArm --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-client:arm-${IMAGE_TAG} --target natssync-client-arm .
 
 echoproxylet:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} --target echo-proxylet .
+	DOCKER_BUILDKIT=1 docker build --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} --target echo-proxylet .
 echoproxyletBuildAndPush: echoproxylet
 	docker push ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
 
 echoproxyletarm:
-	DOCKER_BUILDKIT=1 docker build --no-cache -f DockerfileArm --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/echo-proxylet:arm-${IMAGE_TAG} --target echo-proxylet-arm .
+	DOCKER_BUILDKIT=1 docker build -f DockerfileArm --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/echo-proxylet:arm-${IMAGE_TAG} --target echo-proxylet-arm .
 
 simpleauth:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} --target simple-reg-auth .
+	DOCKER_BUILDKIT=1 docker build --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} --target simple-reg-auth .
 simpleautharm:
-	DOCKER_BUILDKIT=1 docker build --no-cache -f DockerfileArm --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/simple-reg-auth:arm-${IMAGE_TAG} --target simple-reg-auth-arm .
+	DOCKER_BUILDKIT=1 docker build -f DockerfileArm --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/simple-reg-auth:arm-${IMAGE_TAG} --target simple-reg-auth-arm .
 
 simpleauthBuildAndPush: simpleauth
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
