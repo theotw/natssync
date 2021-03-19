@@ -57,9 +57,9 @@ jobs:
         docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
         export IMAGE_REPO=theotw
         export IMAGE_TAG=$(date -u '+%Y%m%d%H%M')
-        allimagesBuildAndPush
+        make allimagesBuildAndPush
         export IMAGE_TAG=latest
-        allimagesBuildAndPush
+        make allimagesBuildAndPush
 
     - name: Collect Logs
       if: always()
