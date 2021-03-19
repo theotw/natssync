@@ -60,6 +60,11 @@ func RunClient(test bool) {
 	if store == nil {
 		log.Fatalf("Unable to get keystore")
 	}
+	msgs.InitMessageFormat()
+	msgFormat := msgs.GetMsgFormat()
+	if msgFormat == nil {
+		log.Fatalf("Unable to get the message format")
+	}
 	if err := RunBridgeClientRestAPI(test); err != nil {
 		log.Errorf("Error starting API server %s", err.Error())
 		os.Exit(1)
@@ -117,7 +122,7 @@ func RunClient(test bool) {
 				log.Errorf("Error decoding envelope %s", err.Error())
 				continue
 			}
-			status, err := bridgemodel.ValidateCloudEventsMsgFormat(natmsg.Data, pkg.Config.CloudEvents)
+			status, err := msgFormat.ValidateMsgFormat(natmsg.Data, pkg.Config.CloudEvents)
 			if err != nil {
 				log.Errorf("Error validating the cloud event message: %s", err.Error())
 				return
@@ -126,7 +131,6 @@ func RunClient(test bool) {
 				log.Errorf("Cloud event message validation failed, ignoring the message...")
 				return
 			}
-			log.Info("Successfully validated the cloud events message format")
 			log.Infof("Received message: %s", string(natmsg.Data))
 
 			if len(natmsg.Reply) > 0 {
@@ -139,7 +143,7 @@ func RunClient(test bool) {
 					echomsg.Data = []byte(echoMsg)
 					mType := echomsg.Subject
 					mSource := "urn:netapp:astra:bridge-client"
-					cvMessage, err := bridgemodel.GenerateCloudEventsPayload(echoMsg, mType, mSource)
+					cvMessage, err := msgFormat.GeneratePayload(echoMsg, mType, mSource)
 					if err != nil {
 						log.Errorf("Failed to generate cloud events payload: %s", err.Error())
 						return
@@ -164,17 +168,16 @@ func RunClient(test bool) {
 
 func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string, ceEnabled bool) {
 	log.Debugf("Sending Msg NB %s", msg.Subject)
-	log.Debugf("msg.Data %s", msg.Data)
-	status, err := bridgemodel.ValidateCloudEventsMsgFormat(msg.Data, ceEnabled)
+	msgFormat := msgs.GetMsgFormat()
+	status, err := msgFormat.ValidateMsgFormat(msg.Data, ceEnabled)
 	if err != nil {
-		log.Errorf("Error validating the cloudevent message: %s", err.Error())
+		log.Errorf("Error validating the cloud event message: %s", err.Error())
 		return
 	}
 	if !status {
 		log.Errorf("Cloud event message validation failed, ignoring the message...")
 		return
 	}
-	log.Info("Successfully validated the cloud events message format")
 	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
 	natmsg := bridgemodel.NatsMessage{Reply: msg.Reply, Subject: msg.Subject, Data: msg.Data}
 	envelope, enverr := msgs.PutObjectInEnvelope(natmsg, clientID, msgs.CLOUD_ID)

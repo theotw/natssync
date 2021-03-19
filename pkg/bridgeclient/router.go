@@ -32,7 +32,7 @@ func RunBridgeClientRestAPI(test bool) error {
 		// service connections
 		log.Infof("Starting REST API Server")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
+			log.Fatalf("listen: %s", err)
 		}
 	}()
 
