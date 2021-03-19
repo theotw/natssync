@@ -23,7 +23,6 @@ jobs:
 
     - name: Get dependencies
       run: |
-        make justgenerate
         go get -v -t -d ./...
         if [ -f Gopkg.toml ]; then
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
@@ -32,10 +31,6 @@ jobs:
 
     - name: Build Images
       run: |
-        sudo rm -r -f tmpcloud
-        sudo rm -r -f tmpclient
-        sudo rm -r -f out
-        make justgenerate
         make allimages
 
     - name: Deploy Docker Containers
@@ -62,10 +57,3 @@ jobs:
         name: logs
         path: logs
         retention-days: 5
-
-    - name: Cleanup Deployment
-      if: always()
-      run: |
-        rm ./locationID.txt || echo "No locationID.txt"
-        rm -rf ./logs || echo "No logs directory"
-        single_cluster_test/docker-cleanup.sh

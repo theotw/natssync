@@ -23,7 +23,6 @@ jobs:
 
     - name: Get dependencies
       run: |
-        make justgenerate
         go get -v -t -d ./...
         if [ -f Gopkg.toml ]; then
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
@@ -38,8 +37,15 @@ jobs:
         make justgenerate
 
     - name: Unit / L1 Test
-      run: |
-        make l1
+      run: make l1
+
+    - name: Upload Unit Test Results
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: test-results
+        path: out/report_*.xml
+        retention-days: 5
 
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1.6
