@@ -32,6 +32,8 @@ jobs:
 
     - name: Build Images
       run: |
+        export IMAGE_TAG=$(date -u '+%Y%m%d%H%M')
+        echo -n $IMAGE_TAG > IMAGE_TAG
         make justgenerate
         make allimages
 
@@ -54,12 +56,9 @@ jobs:
         DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
       run: |
+        export IMAGE_TAG=$(cat IMAGE_TAG)
         docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
-        export IMAGE_REPO=theotw
-        export IMAGE_TAG=$(date -u '+%Y%m%d%H%M')
-        make allimagesBuildAndPush
-        export IMAGE_TAG=latest
-        make allimagesBuildAndPush
+        make tagAndPushToDockerHub
 
     - name: Collect Logs
       if: always()

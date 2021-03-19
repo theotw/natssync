@@ -171,42 +171,32 @@ simpleautharm:
 simpleauthBuildAndPush: simpleauth
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
 
-allimages: baseimage testimage cloudimage clientimage echoproxylet simpleauth
+allimages: baseimage testimage cloudimage clientimage echoproxylet simpleauth debugcloudimage
 
 allarmimages: baseimagearm cloudimagearm clientimagearm echoproxyletarm simpleautharm
 
 allimagesBuildAndPush:testimageBuildAndPush cloudimageBuildAndPush clientimageBuildAndPush echoproxyletBuildAndPush simpleauthBuildAndPush
 
 tagAndPushToDockerHub:
-	docker pull ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} theotw/natssync-server:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} theotw/natssync-server:latest
+	docker tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} ${IMAGE_REPO}/natssync-server:latest
+	docker tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} ${IMAGE_REPO}/natssync-client:latest
+	docker tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} ${IMAGE_REPO}/echo-proxylet:latest
+	docker tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} ${IMAGE_REPO}/simple-reg-auth:latest
+	docker tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} ${IMAGE_REPO}/natssync-tests:latest
+	docker tag ${IMAGE_REPO}/debugnatssync-server:${IMAGE_TAG} ${IMAGE_REPO}/debugnatssync-server:latest
 
-	docker pull ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} theotw/natssync-client:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} theotw/natssync-client:latest
-
-	docker pull ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} theotw/echo-proxylet:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} theotw/echo-proxylet:latest
-
-	docker pull ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} theotw/simple-reg-auth:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} theotw/simple-reg-auth:latest
-
-	docker pull ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} theotw/natssync-tests:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} theotw/natssync-tests:latest
-	docker push theotw/natssync-server:${IMAGE_TAG}
-	docker push theotw/natssync-server:latest
-	docker push theotw/natssync-client:${IMAGE_TAG}
-	docker push theotw/natssync-client:latest
-	docker push theotw/echo-proxylet:${IMAGE_TAG}
-	docker push theotw/echo-proxylet:latest
-	docker push theotw/simple-reg-auth:${IMAGE_TAG}
-	docker push theotw/simple-reg-auth:latest
-	docker push theotw/natssync-tests:${IMAGE_TAG}
-	docker push theotw/natssync-tests:latest
+	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/natssync-server:latest
+	docker push ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/natssync-client:latest
+	docker push ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/echo-proxylet:latest
+	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/simple-reg-auth:latest
+	docker push ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/natssync-tests:latest
+	docker push ${IMAGE_REPO}/debugnatssync-server:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/debugnatssync-server:latest
 
 pushall:
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
