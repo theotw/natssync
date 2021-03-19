@@ -56,7 +56,7 @@ jobs:
       run: |
         docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
         export IMAGE_REPO=theotw
-        export IMAGE_TAG=$(date -u ‘+%Y%m%d%H%M’)
+        export IMAGE_TAG=$(date -u '+%Y%m%d%H%M')
         allimagesBuildAndPush
         export IMAGE_TAG=latest
         allimagesBuildAndPush
