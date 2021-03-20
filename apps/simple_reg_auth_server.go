@@ -58,6 +58,18 @@ func main() {
 			}
 			respBits, _ = json.Marshal(&unregResp)
 			log.Infof("UnReg Request %s from %s success=%t", unregReq.AuthToken, unregReq.LocationID, unregResp.Success)
+		} else {
+			var regReq bridgemodel.GenericAuthRequest
+			var regResp bridgemodel.GenericAuthResponse
+			err := json.Unmarshal(msg.Data, &regReq)
+			if err == nil {
+				regResp.Success = expectedAuthToken == regReq.AuthToken
+			} else {
+				regResp.Success = false
+			}
+			respBits, _ = json.Marshal(&regResp)
+			log.Infof("Generic AuthRequest %s success=%t", regReq.AuthToken, regResp.Success)
+
 		}
 		nc.Publish(msg.Reply, respBits)
 		nc.Flush()

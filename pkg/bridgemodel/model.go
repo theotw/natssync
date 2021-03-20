@@ -7,11 +7,11 @@ package bridgemodel
 const REGISTRATION_AUTH_SUBJECT = "natssync.auth.registration"
 const NATSPOST_AUTH_SUBJECT = "natssync.auth.natspost"
 const REGISTRATION_QUERY_AUTH_SUBJECT = "natssync.auth.queryreg"
-const REGISTRATION_AUTH_WILDCARD = "natssync.registration.*"
-const UNREGISTRATION_AUTH_SUBJECT = "natssync.registration.unregister"
+const REGISTRATION_AUTH_WILDCARD = "natssync.auth.*"
+const UNREGISTRATION_AUTH_SUBJECT = "natssync.auth.unregister"
 const REGISTRATION_LIFECYCLE_ADDED = "natssync.registration.lifecyle.added"
 const REGISTRATION_LIFECYCLE_REMOVED = "natssync.registration.lifecyle.removed"
-const ACCOUNT_LIFECYCLE_REMOVED = "account.lifecyle.removed"  // TODO: This should probably be configurable
+const ACCOUNT_LIFECYCLE_REMOVED = "account.lifecyle.removed" // TODO: This should probably be configurable
 
 //this is a generic message that will be encrypted and decrypted on the bridge.
 //Its basicly the NATS data
@@ -47,7 +47,7 @@ type RegistrationRequest struct {
 }
 
 type UnRegistrationRequest struct {
-	AuthToken string `json:"authToken"`
+	AuthToken  string `json:"authToken"`
 	LocationID string `json:"locationID"`
 }
 
@@ -63,6 +63,5 @@ type GenericAuthResponse struct {
 	Success bool `json:"success"`
 }
 type UnRegistrationResponse struct {
-
 	Success bool `json:"success"`
 }
