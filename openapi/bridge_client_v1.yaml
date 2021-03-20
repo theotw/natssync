@@ -66,6 +66,7 @@ paths:
         '400':
           description: Client input error
           content:
+
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
@@ -76,7 +77,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /unregister:
+    post:
+      summary: Unregisters an On Prem region
+      description: Unregisters an On Prem region
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnRegisterReq'
+      responses:
+        '201':
+          description: Unregistration accepted no data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationResponse'
+        '400':
+          description: Client input error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
 
   schemas:
@@ -89,6 +118,12 @@ components:
             type: string
 
           description: Metadata to identify this client
+        authToken:
+          type: string
+          description: Auth token for the registration request
+    UnRegisterReq:
+      type: object
+      properties:
         authToken:
           type: string
           description: Auth token for the registration request

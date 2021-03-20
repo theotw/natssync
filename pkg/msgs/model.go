@@ -43,6 +43,7 @@ type LocationKeyStore interface {
 	WritePrivateKey(locationID string, buf []byte) error
 	ListKnownClients() ([]string, error)
 	RemoveLocation(locationID string) error
+	ClearLocationID() error
 }
 
 var keystore LocationKeyStore

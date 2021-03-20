@@ -12,6 +12,8 @@ var totalMessagesRecieved prometheus.Counter
 var totalValidMessagesPosted prometheus.Counter
 var totalClientRegistrationSuccesses prometheus.Counter
 var totalClientRegistrationFailures prometheus.Counter
+var totalClientUnRegistrationSuccesses prometheus.Counter
+var totalClientUnRegistrationFailures prometheus.Counter
 var timeToPushMessage prometheus.Histogram
 //sum of all 200 level returns
 var httpResp200s prometheus.Counter
@@ -100,6 +102,18 @@ func IncrementClientRegistrationFailure(count int) {
 		totalClientRegistrationFailures.Add(float64(count))
 	}
 }
+
+func IncrementClientUnRegistrationSuccess(count int) {
+	if totalClientUnRegistrationSuccesses != nil {
+		totalClientUnRegistrationSuccesses.Add(float64(count))
+	}
+}
+func IncrementClientUnRegistrationFailure(count int) {
+	if totalClientUnRegistrationFailures != nil {
+		totalClientUnRegistrationFailures.Add(float64(count))
+	}
+}
+
 func RecordTimeToPushMessage(count int) {
 	if timeToPushMessage != nil {
 		timeToPushMessage.Observe(float64(count))

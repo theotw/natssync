@@ -7,6 +7,8 @@ package bridgemodel
 const REGISTRATION_AUTH_SUBJECT = "natssync.auth.registration"
 const NATSPOST_AUTH_SUBJECT = "natssync.auth.natspost"
 const REGISTRATION_QUERY_AUTH_SUBJECT = "natssync.auth.queryreg"
+const REGISTRATION_AUTH_WILDCARD = "natssync.registration.*"
+const UNREGISTRATION_AUTH_SUBJECT = "natssync.registration.unregister"
 const REGISTRATION_LIFECYCLE_ADDED = "natssync.registration.lifecyle.added"
 const REGISTRATION_LIFECYCLE_REMOVED = "natssync.registration.lifecyle.removed"
 const ACCOUNT_LIFECYCLE_REMOVED = "account.lifecyle.removed"  // TODO: This should probably be configurable
@@ -44,6 +46,11 @@ type RegistrationRequest struct {
 	LocationID string `json:"locationID"`
 }
 
+type UnRegistrationRequest struct {
+	AuthToken string `json:"authToken"`
+	LocationID string `json:"locationID"`
+}
+
 type RegistrationResponse struct {
 	Success bool `json:"success"`
 }
@@ -53,5 +60,9 @@ type GenericAuthRequest struct {
 	AuthToken string `json:"authToken"`
 }
 type GenericAuthResponse struct {
+	Success bool `json:"success"`
+}
+type UnRegistrationResponse struct {
+
 	Success bool `json:"success"`
 }

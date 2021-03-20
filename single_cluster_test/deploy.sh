@@ -22,6 +22,8 @@ CLOUD_NAMESPACE="cloud"
 ONPREM_NAMESPACE="onprem"
 
 cloudYamls=(
+  "mongo-pod.yml"
+  "mongo-service.yml"
   "nats-deployment.yml"
   "nats-nodeport-service.yml"
   "redis-pod.yml"
@@ -29,8 +31,6 @@ cloudYamls=(
   "simple-reg-deployment.yml"
   "syncserver-deployment.yml"
   "syncserver-service.yml"
-  "mongo-pod.yml"
-  "mongo-service.yml"
 )
 
 onpremYamls=(

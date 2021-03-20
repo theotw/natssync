@@ -76,6 +76,7 @@ func newRouter(test bool) *gin.Engine {
 	v1.Handle("GET", "/about", aboutGetUnversioned)
 	v1.Handle("GET", "/healthcheck", healthCheckGetUnversioned)
 	v1.Handle("POST", "/register", handlePostRegister)
+	v1.Handle("POST", "/unregister", handlePostUnRegister)
 	v1.Handle("POST", "/message-queue/:premid", handlePostMessage)
 	v1.Handle("GET", "/message-queue/:premid", handleGetMessages)
 	v1.Handle("POST", "/messages", natsMsgPostHandler)

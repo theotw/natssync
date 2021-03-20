@@ -36,6 +36,63 @@ func handleGetRegister(c *gin.Context) {
 		c.JSON(400, "")
 	}
 }
+
+func handlePostUnRegister(c *gin.Context) {
+	log.Debug("Handling unregistration post request")
+	var in v1.UnRegisterReq
+	e := c.ShouldBindJSON(&in)
+	if e != nil {
+		code, ret := bridgemodel.HandleErrors(c, e)
+		c.JSON(code, &ret)
+		return
+	}
+
+	keyStore := msgs.GetKeyStore()
+	locationID := keyStore.LoadLocationID()
+	if locationID == "" {
+		err := errors.New("Failed to load locationID")
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+
+	// Call Unregister in the server
+	var req serverv1.UnRegisterOnPremReq
+	req.AuthToken = in.AuthToken
+	req.MetaData = locationID
+	jsonBits, _ := json.Marshal(&req)
+	url := fmt.Sprintf("%s/bridge-server/1/unregister/", pkg.Config.CloudBridgeUrl)
+
+	log.Infof("Calling Unregister with cloud server %s for location %s", url, locationID)
+	resp, err := http.DefaultClient.Post(url, "application/json", bytes.NewReader(jsonBits))
+	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+	log.Debugf("Unregistration response status code %d", resp.StatusCode)
+	if resp.StatusCode >= 300 {
+		code, response := bridgemodel.HandleError(c, errors.New("invalid status "+resp.Status))
+		c.JSON(code, response)
+		return
+	}
+
+	// Clean up local data
+	err = keyStore.RemoveLocation(locationID)
+	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+	err = keyStore.ClearLocationID()
+	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+	c.JSON(201, nil)
+}
+
 func handlePostRegister(c *gin.Context) {
 	log.Debug("Handling registration post request")
 	var in v1.RegisterReq
