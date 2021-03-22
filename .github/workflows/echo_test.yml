@@ -38,7 +38,7 @@ jobs:
         make allimages
 
     - name: Deploy Docker Containers
-      run: single_cluster_test/docker-deploy.sh
+      run: single_cluster_test/docker-deploy.sh $(cat IMAGE_TAG)
 
     - name: Client Registration
       run: |
