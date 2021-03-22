@@ -133,80 +133,70 @@ baseimagearm:
 	docker build --tag natssync-base:arm-latest -f DockerfilebaseArm .
 
 cloudimage:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} --target natssync-server .
+	DOCKER_BUILDKIT=1 docker build --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} --target natssync-server .
 cloudimageBuildAndPush: cloudimage
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
 cloudimagearm:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f DockerfileArm --tag ${IMAGE_REPO}/natssync-server:arm-${IMAGE_TAG} --target natssync-server-arm .
+	DOCKER_BUILDKIT=1 docker build --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f DockerfileArm --tag ${IMAGE_REPO}/natssync-server:arm-${IMAGE_TAG} --target natssync-server-arm .
 
 debugcloudimage:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f CloudServerDebug.dockerfile --tag ${IMAGE_REPO}/debugnatssync-server:${IMAGE_TAG} .
+	DOCKER_BUILDKIT=1 docker build --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG} --target debugnatssync-server .
 
 
 testimage:
-	docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} --target natssync-tests .
+	docker build --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} --target natssync-tests .
 testimageBuildAndPush: testimage
 	docker push ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
 
 clientimage:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} --target natssync-client .
+	DOCKER_BUILDKIT=1 docker build --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} --target natssync-client .
 clientimageBuildAndPush: clientimage
 	docker push ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
 clientimagearm:
-	DOCKER_BUILDKIT=1 docker build --no-cache -f DockerfileArm --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-client:arm-${IMAGE_TAG} --target natssync-client-arm .
+	DOCKER_BUILDKIT=1 docker build -f DockerfileArm --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-client:arm-${IMAGE_TAG} --target natssync-client-arm .
 
 echoproxylet:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} --target echo-proxylet .
+	DOCKER_BUILDKIT=1 docker build --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} --target echo-proxylet .
 echoproxyletBuildAndPush: echoproxylet
 	docker push ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
 
 echoproxyletarm:
-	DOCKER_BUILDKIT=1 docker build --no-cache -f DockerfileArm --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/echo-proxylet:arm-${IMAGE_TAG} --target echo-proxylet-arm .
+	DOCKER_BUILDKIT=1 docker build -f DockerfileArm --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/echo-proxylet:arm-${IMAGE_TAG} --target echo-proxylet-arm .
 
 simpleauth:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} --target simple-reg-auth .
+	DOCKER_BUILDKIT=1 docker build --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} --target simple-reg-auth .
 simpleautharm:
-	DOCKER_BUILDKIT=1 docker build --no-cache -f DockerfileArm --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/simple-reg-auth:arm-${IMAGE_TAG} --target simple-reg-auth-arm .
+	DOCKER_BUILDKIT=1 docker build -f DockerfileArm --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/simple-reg-auth:arm-${IMAGE_TAG} --target simple-reg-auth-arm .
 
 simpleauthBuildAndPush: simpleauth
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
 
-allimages: baseimage testimage cloudimage clientimage echoproxylet simpleauth
+allimages: baseimage testimage cloudimage clientimage echoproxylet simpleauth debugcloudimage
 
 allarmimages: baseimagearm cloudimagearm clientimagearm echoproxyletarm simpleautharm
 
 allimagesBuildAndPush:testimageBuildAndPush cloudimageBuildAndPush clientimageBuildAndPush echoproxyletBuildAndPush simpleauthBuildAndPush
 
 tagAndPushToDockerHub:
-	docker pull ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} theotw/natssync-server:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} theotw/natssync-server:latest
+	docker tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} ${IMAGE_REPO}/natssync-server:latest
+	docker tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} ${IMAGE_REPO}/natssync-client:latest
+	docker tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} ${IMAGE_REPO}/echo-proxylet:latest
+	docker tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} ${IMAGE_REPO}/simple-reg-auth:latest
+	docker tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} ${IMAGE_REPO}/natssync-tests:latest
+	docker tag ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG} ${IMAGE_REPO}/natssync-server-debug:latest
 
-	docker pull ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} theotw/natssync-client:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} theotw/natssync-client:latest
-
-	docker pull ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} theotw/echo-proxylet:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} theotw/echo-proxylet:latest
-
-	docker pull ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} theotw/simple-reg-auth:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} theotw/simple-reg-auth:latest
-
-	docker pull ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} theotw/natssync-tests:${IMAGE_TAG}
-	docker tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} theotw/natssync-tests:latest
-	docker push theotw/natssync-server:${IMAGE_TAG}
-	docker push theotw/natssync-server:latest
-	docker push theotw/natssync-client:${IMAGE_TAG}
-	docker push theotw/natssync-client:latest
-	docker push theotw/echo-proxylet:${IMAGE_TAG}
-	docker push theotw/echo-proxylet:latest
-	docker push theotw/simple-reg-auth:${IMAGE_TAG}
-	docker push theotw/simple-reg-auth:latest
-	docker push theotw/natssync-tests:${IMAGE_TAG}
-	docker push theotw/natssync-tests:latest
+	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/natssync-server:latest
+	docker push ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/natssync-client:latest
+	docker push ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/echo-proxylet:latest
+	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/simple-reg-auth:latest
+	docker push ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/natssync-tests:latest
+	docker push ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/natssync-server-debug:latest
 
 pushall:
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
@@ -217,9 +207,10 @@ pushall:
 
 
 l1:
-	echo ${PATH}
-	go get github.com/jstemmer/go-junit-report
-	mkdir -p out
-	#go test -v -coverpkg=github.com/theotw/natssync/pkg/... -coverprofile=out/unit_coverage.out github.com/theotw/natssync/pkg/...
-	go test -v -coverpkg=github.com/theotw/natssync/pkg/... -coverprofile=out/unit_coverage.out github.com/theotw/natssync/pkg/...  2>&1 >out/l1_out.txt
-	cat out/l1_out.txt | go-junit-report > out/report_l1.xml
+	SUCCESS=0; \
+	go get github.com/jstemmer/go-junit-report; \
+	mkdir -p out; \
+	go test -v -coverpkg=github.com/theotw/natssync/pkg/... -coverprofile=out/unit_coverage.out github.com/theotw/natssync/pkg/... > out/l1_out.txt 2>&1 || SUCCESS=1; \
+	cat out/l1_out.txt | go-junit-report > out/report_l1.xml || echo "Failure generating report xml"; \
+	cat out/l1_out.txt; \
+	exit $$SUCCESS;

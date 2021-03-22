@@ -1,4 +1,4 @@
-name: Go
+name: Unit Test
 
 on:
   push:
@@ -9,12 +9,10 @@ on:
     branches: '*'
 
 jobs:
-
-  build:
-    name: Build
+  unittest:
+    name: Unit Test
     runs-on: ubuntu-latest
     steps:
-
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:
@@ -32,22 +30,27 @@ jobs:
             dep ensure
         fi
 
-    - name: Build
+    - name: Make Generate
       run: |
         sudo rm -r -f tmpcloud
         sudo rm -r -f tmpclient
         sudo rm -r -f out
         make justgenerate
-        make buildlinux
 
     - name: Unit / L1 Test
-      run: |
-        make l1
+      run: make l1
+
+    - name: Upload Unit Test Results
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: test-results
+        path: out/report_*.xml
+        retention-days: 5
+
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1.6
       if: always()
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         files: out/report_*.xml
-
-
