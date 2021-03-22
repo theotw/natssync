@@ -202,8 +202,8 @@ func handleMultipartFormRegistration(c *gin.Context) (ret *v1.RegisterOnPremReq,
 			}
 		case "metaData":
 			{
-				ret.MetaData=make(map[string]string)
-				err:=json.Unmarshal(bits,&ret.MetaData)
+				ret.MetaData = make(map[string]string)
+				err := json.Unmarshal(bits, &ret.MetaData)
 				if err != nil {
 					log.Errorf("Error reading meta data %s", err.Error())
 					reterr = err
@@ -220,16 +220,16 @@ func handleMultipartFormRegistration(c *gin.Context) (ret *v1.RegisterOnPremReq,
 
 	return
 }
-func handleGetRegisteredLocations(c *gin.Context){
-	authHeader:=c.Request.Header.Get("Authorization")
-	response, e := sendGenericAuthRequest(c,bridgemodel.REGISTRATION_QUERY_AUTH_SUBJECT ,authHeader)
+func handleGetRegisteredLocations(c *gin.Context) {
+	authHeader := c.Request.Header.Get("Authorization")
+	response, e := sendGenericAuthRequest(c, bridgemodel.REGISTRATION_QUERY_AUTH_SUBJECT, authHeader)
 	if e != nil {
 		code, ret := bridgemodel.HandleErrors(c, e)
 		c.JSON(code, &ret)
 		return
 	}
 	if !response.Success {
-		c.JSON(401,"")
+		c.JSON(401, "")
 		return
 	}
 	store := msgs.GetKeyStore()
@@ -239,13 +239,13 @@ func handleGetRegisteredLocations(c *gin.Context){
 		c.JSON(code, &ret)
 		return
 	}
-	ret:=make([]v1.RegisteredClientLocation,0)
-	for _,client:= range clients{
+	ret := make([]v1.RegisteredClientLocation, 0)
+	for _, client := range clients {
 		var x v1.RegisteredClientLocation
-		x.PremID=client
+		x.PremID = client
 		//todo get meta data
-		x.MetaData=make(map[string]string)
-		ret=append(ret,x)
+		x.MetaData = make(map[string]string)
+		ret = append(ret, x)
 	}
 	c.JSON(200, ret)
 }
@@ -383,7 +383,7 @@ func sendRegRequestToAuthServer(c *gin.Context, in *v1.RegisterOnPremReq) (*brid
 	}
 	return ret, nil
 }
-func sendGenericAuthRequest(c *gin.Context,subject string, authToken string) (*bridgemodel.GenericAuthResponse, error) {
+func sendGenericAuthRequest(c *gin.Context, subject string, authToken string) (*bridgemodel.GenericAuthResponse, error) {
 	timeout := time.Second * 30
 	nc := bridgemodel.GetNatsConnection()
 	ret := new(bridgemodel.GenericAuthResponse)
@@ -441,47 +441,54 @@ func metricGetHandlers(c *gin.Context) {
 	promhttp.Handler().ServeHTTP(c.Writer, c.Request)
 }
 
-func natsMsgPostHandler(c *gin.Context){
+func natsMsgPostHandler(c *gin.Context) {
 	var msg v1.NatsMessageReq
 	e := c.ShouldBindJSON(&msg)
-	if e != nil{
+	if e != nil {
 		code, ret := bridgemodel.HandleErrors(c, e)
 		c.JSON(code, &ret)
 		return
 	}
 
-	response, e := sendGenericAuthRequest(c,bridgemodel.NATSPOST_AUTH_SUBJECT ,msg.AuthToken)
+	response, e := sendGenericAuthRequest(c, bridgemodel.NATSPOST_AUTH_SUBJECT, msg.AuthToken)
 	if e != nil {
 		code, ret := bridgemodel.HandleErrors(c, e)
 		c.JSON(code, &ret)
 		return
 	}
 	if !response.Success {
-		c.JSON(401,"")
+		c.JSON(401, "")
 		return
 	}
 
 	connection := bridgemodel.GetNatsConnection()
-	if msg.Reply=="generate"{
-		msg.Reply=msgs.MakeNBReplySubject()
+	if msg.Reply == "generate" {
+		msg.Reply = msgs.MakeNBReplySubject()
 	}
 	var sub *nats.Subscription
-	if len(msg.Reply)>0 {
-		sub,_=connection.SubscribeSync(msg.Reply)
+	if len(msg.Reply) > 0 {
+		var replySub string
+		echoReplyPrefix := fmt.Sprintf("%s.%s", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
+		if strings.HasPrefix(msg.Reply, echoReplyPrefix) {
+			replySub = msg.Reply + ".echolet"
+		} else {
+			replySub = msg.Reply
+		}
+		sub, _ = connection.SubscribeSync(replySub)
 	}
-	nMsg:=new(nats.Msg)
-	nMsg.Reply=msg.Reply
-	nMsg.Subject=msg.Subject
-	nMsg.Data=[]byte(msg.Data)
+	nMsg := new(nats.Msg)
+	nMsg.Reply = msg.Reply
+	nMsg.Subject = msg.Subject
+	nMsg.Data = []byte(msg.Data)
 	connection.PublishMsg(nMsg)
-	retData:=""
-	if sub != nil{
+	retData := ""
+	if sub != nil {
 		replyMsg, e := sub.NextMsg(time.Duration(msg.Timeout) * time.Second)
-		if e != nil{
-			log.Errorf("Error waiting for reply message from nats post %s",e)
-		}else{
-			retData=string(replyMsg.Data)
+		if e != nil {
+			log.Errorf("Error waiting for reply message from nats post %s", e)
+		} else {
+			retData = string(replyMsg.Data)
 		}
 	}
-	c.JSON(202,retData)
+	c.JSON(202, retData)
 }
