@@ -92,6 +92,7 @@ func RunClient(test bool) {
 			}
 			lastClientID = clientID
 		}
+		//same as above, if we re-register, we drop the subscibe and need to resubscribe
 		if currentSubscription == nil {
 			subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
 			sub, err := nc.Subscribe(subj, func(msg *nats.Msg) {
