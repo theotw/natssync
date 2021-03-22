@@ -35,13 +35,20 @@ func (t *FileKeyStore) RemoveLocation(locationID string) error {
 	log.Debugf("private key location: %s", privKeyFile)
 	log.Debugf("location ID: %s", locationFile)
 	log.Infof("Clearing the public key file %s", pubKeyFile)
-	if err := os.Remove(pubKeyFile); err != nil {
+	err := os.Remove(pubKeyFile)
+	if err != nil {
 		errs = append(errs, err.Error())
+		log.Errorf("Error clearing the public key file %s", pubKeyFile)
+	} else {
+		log.Infof("Cleared the public key file %s", pubKeyFile)
 	}
-	log.Infof("Cleared the public key file %s", pubKeyFile)
+
 	log.Infof("Clearing the private key file %s", privKeyFile)
-	if err := os.Remove(privKeyFile); err != nil {
+	err = os.Remove(privKeyFile)
+	if err != nil {
 		errs = append(errs, err.Error())
+	} else {
+		log.Errorf("Error clearing the private key file %s", privKeyFile)
 	}
 	log.Infof("Cleared the private key file %s", privKeyFile)
 	if len(errs) > 0 {
