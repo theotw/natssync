@@ -140,7 +140,7 @@ cloudimagearm:
 	DOCKER_BUILDKIT=1 docker build --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} -f DockerfileArm --tag ${IMAGE_REPO}/natssync-server:arm-${IMAGE_TAG} --target natssync-server-arm .
 
 debugcloudimage:
-	DOCKER_BUILDKIT=1 docker build --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/debugnatssync-server:${IMAGE_TAG} --target debugnatssync-server .
+	DOCKER_BUILDKIT=1 docker build --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG} --target debugnatssync-server .
 
 
 testimage:
@@ -183,7 +183,7 @@ tagAndPushToDockerHub:
 	docker tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} ${IMAGE_REPO}/echo-proxylet:latest
 	docker tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} ${IMAGE_REPO}/simple-reg-auth:latest
 	docker tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} ${IMAGE_REPO}/natssync-tests:latest
-	docker tag ${IMAGE_REPO}/debugnatssync-server:${IMAGE_TAG} ${IMAGE_REPO}/debugnatssync-server:latest
+	docker tag ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG} ${IMAGE_REPO}/natssync-server-debug:latest
 
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-server:latest
@@ -195,8 +195,8 @@ tagAndPushToDockerHub:
 	docker push ${IMAGE_REPO}/simple-reg-auth:latest
 	docker push ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-tests:latest
-	docker push ${IMAGE_REPO}/debugnatssync-server:${IMAGE_TAG}
-	docker push ${IMAGE_REPO}/debugnatssync-server:latest
+	docker push ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/natssync-server-debug:latest
 
 pushall:
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
