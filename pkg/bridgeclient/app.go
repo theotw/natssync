@@ -26,7 +26,7 @@ import (
 type Arguments struct {
 	natsURL        *string
 	cloudServerURL *string
-	cloudEvents	   *bool
+	cloudEvents    *bool
 }
 
 func getClientArguments() Arguments {
@@ -75,6 +75,7 @@ func RunClient(test bool) {
 	serverURL := *args.cloudServerURL
 
 	var lastClientID string
+	var currentSubscription *nats.Subscription
 	for true {
 		nc := bridgemodel.GetNatsConnection()
 		clientID := store.LoadLocationID()
@@ -85,16 +86,25 @@ func RunClient(test bool) {
 		}
 		//in case we re-register and the client ID changes, change what we listen for
 		if (clientID != lastClientID) && nc != nil {
+			if currentSubscription != nil {
+				currentSubscription.Unsubscribe()
+				currentSubscription = nil
+			}
 			lastClientID = clientID
 		}
-		subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
-		_, err = nc.Subscribe(subj, func(msg *nats.Msg) {
-			sendMessageToCloud(msg, serverURL, clientID, pkg.Config.CloudEvents)
-		})
-		if err != nil {
-			log.Fatalf("Error subscribing to %s: %s", subj, err)
+		if currentSubscription == nil {
+			subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
+			sub, err := nc.Subscribe(subj, func(msg *nats.Msg) {
+				sendMessageToCloud(msg, serverURL, clientID, pkg.Config.CloudEvents)
+			})
+			if err != nil {
+				log.Fatalf("Error subscribing to %s: %s", subj, err)
+				continue
+			} else {
+				currentSubscription = sub
+				log.Infof("Subscribed to %s", subj)
+			}
 		}
-		log.Infof("Subscribed to %s", subj)
 
 		url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
 
