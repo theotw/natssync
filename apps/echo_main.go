@@ -52,7 +52,7 @@ func main() {
 		echoMsg := fmt.Sprintf("%s | %s %s %s", tmpstring, "echoproxylet", clientID, string(msg.Data))
 		replysub := fmt.Sprintf("%s.%s", msg.Reply, msgs.ECHOLET_SUFFIX)
 		mType := subj
-		mSource := "urn:netapp:astra:echolet"
+		mSource := "urn:theotw:astra:echolet"
 		msgFormat := msgs.GetMsgFormat()
 		cvMessage, err := msgFormat.GeneratePayload(echoMsg, mType, mSource)
 
