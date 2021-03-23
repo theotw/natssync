@@ -153,7 +153,7 @@ func RunClient(test bool) {
 					echoMsg := fmt.Sprintf("%s | %s", tmpstring, "message-client")
 					echomsg.Data = []byte(echoMsg)
 					mType := echomsg.Subject
-					mSource := "urn:netapp:astra:bridge-client"
+					mSource := "urn:theotw:astra:bridge-client"
 					cvMessage, err := msgFormat.GeneratePayload(echoMsg, mType, mSource)
 					if err != nil {
 						log.Errorf("Failed to generate cloud events payload: %s", err.Error())

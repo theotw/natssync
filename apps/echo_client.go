@@ -82,7 +82,7 @@ func doping(nc *nats.Conn, subject string, message string) {
 
 	// Add cloud events
 	mType := subject
-	mSource := "urn:netapp:astra:echolet"
+	mSource := "urn:theotw:astra:echolet"
 	msgFormat := msgs.GetMsgFormat()
 	cvMessage, err := msgFormat.GeneratePayload(message, mType, mSource)
 	if err != nil {
