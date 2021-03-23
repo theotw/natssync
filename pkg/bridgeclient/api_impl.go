@@ -25,11 +25,9 @@ import (
 	"net/http"
 )
 
-const WAIT_MAX = 30
-
 func handleGetRegister(c *gin.Context) {
 	store := msgs.GetKeyStore()
-	locationID := store.LoadLocationID()
+	locationID := store.GetLocationID()
 	if len(locationID) > 0 {
 		c.JSON(200, "")
 	} else {
@@ -48,7 +46,7 @@ func handlePostUnRegister(c *gin.Context) {
 	}
 
 	keyStore := msgs.GetKeyStore()
-	locationID := keyStore.LoadLocationID()
+	locationID := keyStore.GetLocationID()
 	if locationID == "" {
 		err := errors.New("Failed to load locationID")
 		code, response := bridgemodel.HandleError(c, err)
@@ -78,13 +76,13 @@ func handlePostUnRegister(c *gin.Context) {
 	}
 
 	// Clean up local data
-	err = keyStore.RemoveLocation(locationID)
+	err = keyStore.RemoveCloudMasterData()
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)
 		return
 	}
-	err = keyStore.ClearLocationID()
+	err = keyStore.RemoveKeyPair()
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)
@@ -165,25 +163,15 @@ func handlePostRegister(c *gin.Context) {
 		c.JSON(code, response)
 		return
 	}
+
+	//this step must be last, other parts of the code watch for this key
 	err = msgs.SaveKeyPair(regResp.PermId, pair)
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)
 		return
 	}
-	err = msgs.GetKeyStore().WritePublicKey(msgs.CLOUD_ID, []byte(regResp.CloudPublicKey))
-	if err != nil {
-		code, response := bridgemodel.HandleError(c, err)
-		c.JSON(code, response)
-		return
-	}
-	//this step must be last, other parts of the code watch for this key
-	err = msgs.GetKeyStore().SaveLocationID(regResp.PermId)
-	if err != nil {
-		code, response := bridgemodel.HandleError(c, err)
-		c.JSON(code, response)
-		return
-	}
+
 	ret := new(v1.RegistrationResponse)
 	ret.LocationID = regResp.PermId
 	c.JSON(200, ret)
@@ -191,9 +179,10 @@ func handlePostRegister(c *gin.Context) {
 
 func registrationGetHandler(c *gin.Context) {
 	ret := new(v1.RegistrationResponse)
-	ret.LocationID = msgs.GetKeyStore().LoadLocationID()
+	ret.LocationID = msgs.GetKeyStore().GetLocationID()
 	c.JSON(200, ret)
 }
+
 func aboutGetUnversioned(c *gin.Context) {
 	var resp v1.AboutResponse
 	resp.AppVersion = pkg.VERSION  // Run `make generate` to create version

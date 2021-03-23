@@ -27,30 +27,28 @@ func InitCloudKey() error {
 	if err != nil {
 		return err
 	}
-	//first checkout the keys
-	_, keyErr := LoadPrivateKey(CLOUD_ID)
-	if keyErr != nil {
-		log.Debugf("Unable to find cloud master private key %s", keyErr.Error())
-	}
-	_, pubKeyErr := LoadPublicKey(CLOUD_ID)
-	if pubKeyErr != nil {
-		log.Debugf("Unable to find cloud master public key %s", pubKeyErr.Error())
-	}
+	t := GetKeyStore()
 
-	if keyErr != nil || pubKeyErr != nil {
+	//first checkout the keys
+	_, _, keyErr := t.ReadKeyPair()
+	if keyErr != nil {
+		log.Debugf("Unable to find cloud master keys %s", keyErr.Error())
 		err = GenerateAndSaveKey(CLOUD_ID)
 	}
+
 	return err
 }
+
 func GenerateAndSaveKey(locationID string) error {
 	pair, err := GenerateNewKeyPair()
 	if err != nil {
 		log.Errorf("Unable to generate new key pair %s", err.Error())
 		return err
 	}
-	err2 := SaveKeyPair(locationID, pair)
-	if err2 != nil {
-		return err2
+
+	err = SaveKeyPair(locationID, pair)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -58,24 +56,28 @@ func GenerateAndSaveKey(locationID string) error {
 
 func SaveKeyPair(locationID string, pair *rsa.PrivateKey) error {
 	log.Infof("Saving key pair for %s", locationID)
-	err := StorePrivateKey(locationID, pair)
+	t := GetKeyStore()
+
+	publicKey, err := encodePublicKeyAsBytes(&pair.PublicKey)
 	if err != nil {
 		return err
 	}
-	err = StorePublicKey(locationID, &pair.PublicKey)
+
+	privateKey, err := encodePrivateKeyAsBytes(pair)
 	if err != nil {
 		return err
 	}
-	return nil
+
+	return t.WriteKeyPair(locationID, publicKey, privateKey)
 }
 
 func LoadPublicKey(locationID string) (*rsa.PublicKey, error) {
 	t := GetKeyStore()
-	all, err := t.ReadPublicKeyData(locationID)
+	key, _, err := t.ReadLocation(locationID)
 	if err != nil {
 		return nil, err
 	}
-	data, _ := pem.Decode(all)
+	data, _ := pem.Decode(key)
 	var ret *rsa.PublicKey
 	pubKey, err := x509.ParsePKIXPublicKey(data.Bytes)
 	if pubKey != nil && err == nil {
@@ -85,20 +87,19 @@ func LoadPublicKey(locationID string) (*rsa.PublicKey, error) {
 	return ret, err
 }
 
-func LoadPrivateKey(locationID string) (*rsa.PrivateKey, error) {
+func LoadPrivateKey() (*rsa.PrivateKey, error) {
 	t := GetKeyStore()
-	all, err := t.ReadPrivateKeyData(locationID)
+	_, key, err := t.ReadKeyPair()
 	if err != nil {
 		return nil, err
 	}
 
-	data, _ := pem.Decode(all)
+	data, _ := pem.Decode(key)
 	privateKeyImported, err := x509.ParsePKCS1PrivateKey(data.Bytes)
 	return privateKeyImported, err
 }
 
-func StorePrivateKey(locationID string, key *rsa.PrivateKey) error {
-	t := GetKeyStore()
+func encodePrivateKeyAsBytes(key *rsa.PrivateKey) ([]byte, error) {
 	fileBits := x509.MarshalPKCS1PrivateKey(key)
 	privateKeyBlock := &pem.Block{
 		Type:  "RSA PRIVATE KEY",
@@ -106,16 +107,16 @@ func StorePrivateKey(locationID string, key *rsa.PrivateKey) error {
 	}
 	var buf bytes.Buffer
 	err := pem.Encode(&buf, privateKeyBlock)
-	if err == nil {
-		err = t.WritePrivateKey(locationID, buf.Bytes())
+	if err != nil {
+		return nil, err
 	}
-	return err
+	return buf.Bytes(), nil
 }
-func StorePublicKey(locationID string, key *rsa.PublicKey) error {
-	t := GetKeyStore()
-	pubFileBits, e := x509.MarshalPKIXPublicKey(key)
-	if e != nil {
-		return e
+
+func encodePublicKeyAsBytes(key *rsa.PublicKey) ([]byte, error) {
+	pubFileBits, err := x509.MarshalPKIXPublicKey(key)
+	if err != nil {
+		return nil, err
 	}
 	publicKeyBlock := &pem.Block{
 		Type:  "PUBLIC KEY",
@@ -123,13 +124,14 @@ func StorePublicKey(locationID string, key *rsa.PublicKey) error {
 	}
 
 	var buf bytes.Buffer
-	err := pem.Encode(&buf, publicKeyBlock)
-	if err == nil {
-		err = t.WritePublicKey(locationID, buf.Bytes())
+	err = pem.Encode(&buf, publicKeyBlock)
+	if err != nil {
+		return nil, err
 	}
 
-	return err
+	return buf.Bytes(), nil
 }
+
 func GenerateNewKeyPair() (*rsa.PrivateKey, error) {
 	log.Info("Generating new key pair")
 	// Private Key generation
@@ -155,7 +157,7 @@ func PutObjectInEnvelope(ob interface{}, senderID string, recipientID string) (*
 	return PutMessageInEnvelope(bits, senderID, recipientID)
 }
 func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*MessageEnvelope, error) {
-	master, err := LoadPrivateKey(senderID)
+	master, err := LoadPrivateKey()
 
 	if err != nil {
 		return nil, err
@@ -190,8 +192,8 @@ func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*Mes
 }
 func NewAuthChallenge() *v1.AuthChallenge {
 	store := GetKeyStore()
-	locationID := store.LoadLocationID()
-	key, err := LoadPrivateKey(locationID)
+	locationID := store.GetLocationID()
+	key, err := LoadPrivateKey()
 	if err != nil {
 		log.Errorf("Unable to load private Key for location %s error %s", locationID, err.Error())
 		return nil
@@ -260,7 +262,7 @@ func pullMessageFromEnvelopev1(envelope *MessageEnvelope) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	msgKey, err := rsaDecrypt(envelope.MsgKey, envelope.RecipientID)
+	msgKey, err := rsaDecrypt(envelope.MsgKey)
 	if err != nil {
 		return nil, err
 	}
@@ -278,6 +280,7 @@ func pullMessageFromEnvelopev1(envelope *MessageEnvelope) ([]byte, error) {
 	plainMsgBits, err := DoAesECBDecrypt(cipherMsgBits, msgKey)
 	return plainMsgBits, err
 }
+
 func pullMessageFromEnvelopev2(envelope *MessageEnvelope) ([]byte, error) {
 	cipherMsgBits, err := base64.StdEncoding.DecodeString(envelope.Message)
 	if err != nil {
@@ -288,7 +291,7 @@ func pullMessageFromEnvelopev2(envelope *MessageEnvelope) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	msgKey, err := rsaDecrypt(envelope.MsgKey, envelope.RecipientID)
+	msgKey, err := rsaDecrypt(envelope.MsgKey)
 	if err != nil {
 		return nil, err
 	}
@@ -306,6 +309,7 @@ func pullMessageFromEnvelopev2(envelope *MessageEnvelope) ([]byte, error) {
 	plainMsgBits, err := DoAesCBCDecrypt(cipherMsgBits, msgKey)
 	return plainMsgBits, err
 }
+
 func rsaEncrypt(plain []byte, clientID string) (string, error) {
 	pubKey, err := LoadPublicKey(clientID)
 	if err != nil {
@@ -318,8 +322,9 @@ func rsaEncrypt(plain []byte, clientID string) (string, error) {
 	cipherText := base64.StdEncoding.EncodeToString(cipher)
 	return cipherText, nil
 }
-func rsaDecrypt(cipherText string, clientID string) ([]byte, error) {
-	privkey, err := LoadPrivateKey(clientID)
+
+func rsaDecrypt(cipherText string) ([]byte, error) {
+	privkey, err := LoadPrivateKey()
 	if err != nil {
 		return nil, err
 	}
@@ -330,5 +335,4 @@ func rsaDecrypt(cipherText string, clientID string) ([]byte, error) {
 
 	plain, err := rsa.DecryptPKCS1v15(rand.Reader, privkey, cipher)
 	return plain, err
-
 }

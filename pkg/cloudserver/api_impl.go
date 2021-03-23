@@ -315,13 +315,18 @@ func handlePostRegister(c *gin.Context) {
 	store := msgs.GetKeyStore()
 
 	var resp v1.RegisterOnPremResponse
-	pkBits, err := store.ReadPublicKeyData(msgs.CLOUD_ID)
+	pkBits, _, err := store.ReadKeyPair()
 	if err != nil {
-		code, ret := bridgemodel.HandleErrors(c, e)
+		code, ret := bridgemodel.HandleErrors(c, err)
 		c.JSON(code, &ret)
 		return
 	}
-	store.WritePublicKey(locationID, pubKeyBits)
+	err = store.WriteLocation(locationID, pubKeyBits, in.MetaData)
+	if err != nil {
+		code, ret := bridgemodel.HandleErrors(c, err)
+		c.JSON(code, &ret)
+		return
+	}
 	resp.CloudPublicKey = string(pkBits)
 	resp.PermId = locationID
 	nc := bridgemodel.GetNatsConnection()

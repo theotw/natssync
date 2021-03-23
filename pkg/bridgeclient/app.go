@@ -77,7 +77,7 @@ func RunClient(test bool) {
 	var lastClientID string
 	for true {
 		nc := bridgemodel.GetNatsConnection()
-		clientID := store.LoadLocationID()
+		clientID := store.GetLocationID()
 		if len(clientID) == 0 {
 			log.Infof("No client ID, sleeping and retrying")
 			time.Sleep(5 * time.Second)
