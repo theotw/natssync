@@ -53,7 +53,7 @@ func main() {
 	nc := bridgemodel.GetNatsConnection()
 	defer nc.Close()
 
-	subject := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, *args.clientID, msgs.ECHO_SUBJECT_BASE)
+	subject := msgs.MakeEchoSubject(*args.clientID)
 
 	msgs.InitMessageFormat()
 	msgFormat := msgs.GetMsgFormat()
@@ -73,7 +73,7 @@ func main() {
 func doping(nc *nats.Conn, subject string, message string) {
 	var err error
 	start := time.Now()
-	replySubject := fmt.Sprintf("%s.%s.%s", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID, bridgemodel.GenerateUUID())
+	replySubject := msgs.MakeNBReplySubject()
 	replyListenSub := fmt.Sprintf("%s.*", replySubject)
 	sync, err := nc.SubscribeSync(replyListenSub)
 	if err != nil {
