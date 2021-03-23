@@ -21,7 +21,7 @@ pipeline {
             effect: "NoSchedule"
           containers:
           - name: pipeline-runner
-            image: docker.repo.eng.netapp.com/masonb/fullstackdev:202101211239
+            image: bmason42/fullstackdev
             customWorkspace: /home/jenkins
             command:
             - cat

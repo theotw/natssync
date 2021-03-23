@@ -163,6 +163,12 @@ func handlePostRegister(c *gin.Context) {
 		c.JSON(code, response)
 		return
 	}
+	err = msgs.GetKeyStore().WriteLocation(msgs.CLOUD_ID, []byte(regResp.CloudPublicKey), regResp.PermId)
+	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
 
 	//this step must be last, other parts of the code watch for this key
 	err = msgs.SaveKeyPair(regResp.PermId, pair)
@@ -173,7 +179,7 @@ func handlePostRegister(c *gin.Context) {
 	}
 
 	ret := new(v1.RegistrationResponse)
-	ret.LocationID = regResp.PermId
+	ret.LocationID = regResp.PremID
 	c.JSON(200, ret)
 }
 
