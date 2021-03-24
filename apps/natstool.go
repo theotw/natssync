@@ -43,7 +43,7 @@ func main() {
 
 	if *args.subscribe != "" {
 		sub, err = nc.Subscribe(*args.subscribe, func(msg *nats.Msg) {
-			log.Printf("Received message: %s\n", string(msg.Data))
+			log.Printf("Received message [%s]: %s\n",msg.Subject, string(msg.Data))
 		})
 		if err != nil {
 			log.Fatalf("Error subscribing: %s", err)

@@ -222,7 +222,7 @@ func handleMultipartFormRegistration(c *gin.Context) (ret *v1.RegisterOnPremReq,
 }
 func handleGetRegisteredLocations(c *gin.Context) {
 	authHeader := c.Request.Header.Get("Authorization")
-	response, e := sendGenericAuthRequest(c, bridgemodel.REGISTRATION_QUERY_AUTH_SUBJECT, authHeader)
+	response, e := sendGenericAuthRequest(bridgemodel.REGISTRATION_QUERY_AUTH_SUBJECT, authHeader)
 	if e != nil {
 		code, ret := bridgemodel.HandleErrors(c, e)
 		c.JSON(code, &ret)
@@ -270,7 +270,7 @@ func handlePostUnRegister(c *gin.Context) {
 		}
 	}
 
-	response, e := sendUnRegRequestToAuthServer(c, in)
+	response, e := sendUnRegRequestToAuthServer(in)
 	if e != nil {
 		metrics.IncrementClientUnRegistrationFailure(1)
 		code, ret := bridgemodel.HandleErrors(c, e)
@@ -285,8 +285,17 @@ func handlePostUnRegister(c *gin.Context) {
 		return
 	}
 
-	err := msgs.GetKeyStore().RemoveLocation(in.MetaData)
+	clientID := in.MetaData
+	err := msgs.GetKeyStore().RemoveLocation(clientID)
 	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+	nc := bridgemodel.GetNatsConnection()
+	log.Tracef("Publishing subscription remove msg for clientID %s", clientID)
+	if err = nc.Publish(bridgemodel.REGISTRATION_LIFECYCLE_REMOVED, []byte(clientID)); err != nil {
+		log.Error(err)
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)
 		return
@@ -331,7 +340,7 @@ func handlePostRegister(c *gin.Context) {
 		c.JSON(bridgemodel.HandleError(c, ierr))
 		return
 	}
-	response, e := sendRegRequestToAuthServer(c, in)
+	response, e := sendRegRequestToAuthServer(in)
 	if e != nil {
 		metrics.IncrementClientRegistrationFailure(1)
 		code, ret := bridgemodel.HandleErrors(c, e)
@@ -356,7 +365,13 @@ func handlePostRegister(c *gin.Context) {
 		c.JSON(code, &ret)
 		return
 	}
-	err = store.WriteLocation(locationID, pubKeyBits, in.MetaData)
+	metadata, err := json.Marshal(in.MetaData)
+	if err != nil {
+		code, ret := bridgemodel.HandleErrors(c, err)
+		c.JSON(code, &ret)
+		return
+	}
+	err = store.WriteLocation(locationID, pubKeyBits, string(metadata))
 	if err != nil {
 		code, ret := bridgemodel.HandleErrors(c, err)
 		c.JSON(code, &ret)
@@ -369,7 +384,7 @@ func handlePostRegister(c *gin.Context) {
 	c.JSON(201, &resp)
 }
 
-func sendRegRequestToAuthServer(c *gin.Context, in *v1.RegisterOnPremReq) (*bridgemodel.RegistrationResponse, error) {
+func sendRegRequestToAuthServer(in *v1.RegisterOnPremReq) (*bridgemodel.RegistrationResponse, error) {
 	timeout := time.Second * 30
 	nc := bridgemodel.GetNatsConnection()
 	ret := new(bridgemodel.RegistrationResponse)
@@ -388,7 +403,7 @@ func sendRegRequestToAuthServer(c *gin.Context, in *v1.RegisterOnPremReq) (*brid
 	}
 	return ret, nil
 }
-func sendGenericAuthRequest(c *gin.Context, subject string, authToken string) (*bridgemodel.GenericAuthResponse, error) {
+func sendGenericAuthRequest(subject string, authToken string) (*bridgemodel.GenericAuthResponse, error) {
 	timeout := time.Second * 30
 	nc := bridgemodel.GetNatsConnection()
 	ret := new(bridgemodel.GenericAuthResponse)
@@ -407,7 +422,7 @@ func sendGenericAuthRequest(c *gin.Context, subject string, authToken string) (*
 	return ret, nil
 }
 
-func sendUnRegRequestToAuthServer(c *gin.Context, in *v1.UnRegisterOnPremReq) (*bridgemodel.UnRegistrationResponse, error) {
+func sendUnRegRequestToAuthServer(in *v1.UnRegisterOnPremReq) (*bridgemodel.UnRegistrationResponse, error) {
 	timeout := time.Second * 30
 	nc := bridgemodel.GetNatsConnection()
 	ret := new(bridgemodel.UnRegistrationResponse)
@@ -455,7 +470,7 @@ func natsMsgPostHandler(c *gin.Context) {
 		return
 	}
 
-	response, e := sendGenericAuthRequest(c, bridgemodel.NATSPOST_AUTH_SUBJECT, msg.AuthToken)
+	response, e := sendGenericAuthRequest(bridgemodel.NATSPOST_AUTH_SUBJECT, msg.AuthToken)
 	if e != nil {
 		code, ret := bridgemodel.HandleErrors(c, e)
 		c.JSON(code, &ret)

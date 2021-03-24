@@ -11,7 +11,7 @@ const REGISTRATION_AUTH_WILDCARD = "natssync.auth.*"
 const UNREGISTRATION_AUTH_SUBJECT = "natssync.auth.unregister"
 const REGISTRATION_LIFECYCLE_ADDED = "natssync.registration.lifecyle.added"
 const REGISTRATION_LIFECYCLE_REMOVED = "natssync.registration.lifecyle.removed"
-const ACCOUNT_LIFECYCLE_REMOVED = "account.lifecyle.removed" // TODO: This should probably be configurable
+const ACCOUNT_LIFECYCLE_REMOVED = "account.lifecycle.removed" // TODO: This should probably be configurable
 
 //this is a generic message that will be encrypted and decrypted on the bridge.
 //Its basicly the NATS data
