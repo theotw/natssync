@@ -55,7 +55,7 @@ func (t *HttpClient) SendAuthorizedRequestWithBodyAndResp(method string, url str
 }
 
 func (t *HttpClient) sendAuthorizedRequest(method string, url string, body []byte) (response *http.Response, err error) {
-	log.Tracef("Sending Auth Req\n")
+	log.Tracef("Sending Auth Req")
 	request, err := http.NewRequest(method, url, bytes.NewReader(body))
 	if err != nil {
 		return
