@@ -47,6 +47,9 @@ jobs:
         curl -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"client1"}' "http://localhost:8081/bridge-client/1/register" | jq .locationID | sed s/\"//g > locationID.txt
         echo "ID: `cat locationID.txt`"
 
+    - name: Echo Test
+      run: timeout 30 go run apps/echo_client.go -m "hello world" -i `cat locationID.txt`
+
     - name: Run Integration Tests
       run: |
         export CACHE_MGR=mem
