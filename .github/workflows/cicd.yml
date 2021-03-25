@@ -9,8 +9,8 @@ on:
     branches: '*'
 
 jobs:
-  echotest:
-    name: Integration Tests
+  build_and_test:
+    name: CICD tests
     runs-on: ubuntu-latest
     steps:
     - name: Set up Go 1.x
