@@ -36,7 +36,7 @@ jobs:
         echo -n $IMAGE_TAG > IMAGE_TAG
         make justgenerate
         make allimages
-        -
+
     - name: Unit / L1 Test
       run: make l1
 
