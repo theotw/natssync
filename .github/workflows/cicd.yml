@@ -70,8 +70,6 @@ jobs:
 
     - name: Run Integration Tests
       run: |
-        export CACHE_MGR=mem
-        export KEYSTORE=file
         export syncserver_url='http://localhost:8080'
         echo 'test version 5'
         go test -v github.com/theotw/natssync/tests/integration/...
