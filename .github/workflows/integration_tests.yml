@@ -36,6 +36,24 @@ jobs:
         echo -n $IMAGE_TAG > IMAGE_TAG
         make justgenerate
         make allimages
+        -
+    - name: Unit / L1 Test
+      run: make l1
+
+    - name: Upload Unit Test Results
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: test-results
+        path: out/report_*.xml
+        retention-days: 5
+
+    - name: Publish Unit Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v1.6
+      if: always()
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        files: out/report_*.xml
 
     - name: Deploy Docker Containers
       run: single_cluster_test/docker-deploy.sh $(cat IMAGE_TAG)
