@@ -2,7 +2,7 @@ name: Integration Tests
 
 on:
   push:
-    branches: '*'
+    branches: [ main ]
   pull_request:
     branches: '*'
   workflow_dispatch:
@@ -30,13 +30,6 @@ jobs:
             dep ensure
         fi
 
-    - name: Build Images
-      run: |
-        export IMAGE_TAG=$(date -u '+%Y%m%d%H%M')
-        echo -n $IMAGE_TAG > IMAGE_TAG
-        make justgenerate
-        make allimages
-
     - name: Unit / L1 Test
       run: make l1
 
@@ -54,6 +47,13 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         files: out/report_*.xml
+
+    - name: Build Images
+      run: |
+        export IMAGE_TAG=$(date -u '+%Y%m%d%H%M')
+        echo -n $IMAGE_TAG > IMAGE_TAG
+        make justgenerate
+        make allimages
 
     - name: Deploy Docker Containers
       run: single_cluster_test/docker-deploy.sh $(cat IMAGE_TAG)
@@ -78,7 +78,7 @@ jobs:
 
     - name: Client Unregistration
       run: |
-        curl -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"`cat locationID.txt`"}' "http://localhost:8081/bridge-client/1/unregister"
+        curl -i -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"`cat locationID.txt`"}' "http://localhost:8081/bridge-client/1/unregister"
         echo "Unregistered ID: `cat locationID.txt`"
 
     - name: Deploy to DockerHub
