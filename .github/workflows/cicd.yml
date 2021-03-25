@@ -1,16 +1,16 @@
-name: Client Echo Test
+name: Integration Tests
 
 on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main ]
+    branches: '*'
   workflow_dispatch:
     branches: '*'
 
 jobs:
-  echotest:
-    name: Dockerized Echo Test
+  build_and_test:
+    name: CICD tests
     runs-on: ubuntu-latest
     steps:
     - name: Set up Go 1.x
@@ -29,6 +29,24 @@ jobs:
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             dep ensure
         fi
+
+    - name: Unit / L1 Test
+      run: make l1
+
+    - name: Upload Unit Test Results
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: test-results
+        path: out/report_*.xml
+        retention-days: 5
+
+    - name: Publish Unit Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v1.6
+      if: always()
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        files: out/report_*.xml
 
     - name: Build Images
       run: |
@@ -49,6 +67,17 @@ jobs:
 
     - name: Echo Test
       run: timeout 30 go run apps/echo_client.go -m "hello world" -i `cat locationID.txt`
+
+    - name: Run Integration Tests
+      run: |
+        export syncserver_url='http://localhost:8080'
+        echo 'test version 5'
+        go test -v github.com/theotw/natssync/tests/integration/...
+
+    - name: Client Unregistration
+      run: |
+        curl -i -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"`cat locationID.txt`"}' "http://localhost:8081/bridge-client/1/unregister"
+        echo "Unregistered ID: `cat locationID.txt`"
 
     - name: Deploy to DockerHub
       if: github.ref == 'refs/heads/main'
