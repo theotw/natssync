@@ -74,7 +74,7 @@ func (t *FileKeyStore) RemoveKeyPair() error {
 	return nil
 }
 
-func (t *FileKeyStore) GetLocationID() string {
+func (t *FileKeyStore) LoadLocationID() string {
 	locationID, err := t.readFile(locationIDFileName)
 	if err != nil {
 		return ""

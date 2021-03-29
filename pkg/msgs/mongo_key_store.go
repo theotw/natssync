@@ -120,7 +120,7 @@ func (m *MongoKeyStore) RemoveKeyPair() error {
 	return err
 }
 
-func (m *MongoKeyStore) GetLocationID() string {
+func (m *MongoKeyStore) LoadLocationID() string {
 	log.Trace("Getting location ID")
 	keypair, err := m.getServiceKeyPair()
 	if err != nil {

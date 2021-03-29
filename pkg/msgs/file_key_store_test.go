@@ -71,7 +71,7 @@ func testFileKeystoreReadKeyPair(t *testing.T, keystore *FileKeyStore) {
 }
 
 func testFileKeystoreGetLocationID(t *testing.T, keystore *FileKeyStore) {
-	id := keystore.GetLocationID()
+	id := keystore.LoadLocationID()
 	assert.Equal(t, "id-2", id)
 }
 

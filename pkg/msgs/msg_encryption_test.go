@@ -105,7 +105,7 @@ func doTestLocationID(t *testing.T) {
 	store := GetKeyStore()
 	err := store.WriteKeyPair(unitTestLocation, nil, nil)
 	assert.Nil(t, err, "Not expecting an error for location ID save")
-	id := store.GetLocationID()
+	id := store.LoadLocationID()
 	assert.Equal(t, "unittestlocationID", id)
 }
 

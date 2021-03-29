@@ -36,7 +36,7 @@ type LocationKeyStore interface {
 	WriteKeyPair(locationID string, publicKey []byte, privateKey []byte) error
 	ReadKeyPair() ([]byte, []byte, error)
 	RemoveKeyPair() error
-	GetLocationID() string
+	LoadLocationID() string
 	WriteLocation(locationID string, buf []byte, metadata map[string]string) error
 	ReadLocation(locationID string) ([]byte, map[string]string, error)
 	RemoveLocation(locationID string) error

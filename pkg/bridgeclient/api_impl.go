@@ -27,7 +27,7 @@ import (
 
 func handleGetRegister(c *gin.Context) {
 	store := msgs.GetKeyStore()
-	locationID := store.GetLocationID()
+	locationID := store.LoadLocationID()
 	if len(locationID) > 0 {
 		c.JSON(200, "")
 	} else {
@@ -46,7 +46,7 @@ func handlePostUnRegister(c *gin.Context) {
 	}
 
 	keyStore := msgs.GetKeyStore()
-	locationID := keyStore.GetLocationID()
+	locationID := keyStore.LoadLocationID()
 	if locationID == "" {
 		err := errors.New("Failed to load locationID")
 		code, response := bridgemodel.HandleError(c, err)
@@ -185,7 +185,7 @@ func handlePostRegister(c *gin.Context) {
 
 func registrationGetHandler(c *gin.Context) {
 	ret := new(v1.RegistrationResponse)
-	ret.LocationID = msgs.GetKeyStore().GetLocationID()
+	ret.LocationID = msgs.GetKeyStore().LoadLocationID()
 	c.JSON(200, ret)
 }
 
