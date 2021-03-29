@@ -37,8 +37,8 @@ type LocationKeyStore interface {
 	ReadKeyPair() ([]byte, []byte, error)
 	RemoveKeyPair() error
 	GetLocationID() string
-	WriteLocation(locationID string, buf []byte, metadata string) error
-	ReadLocation(locationID string) ([]byte, string, error)
+	WriteLocation(locationID string, buf []byte, metadata map[string]string) error
+	ReadLocation(locationID string) ([]byte, map[string]string, error)
 	RemoveLocation(locationID string) error
 	RemoveCloudMasterData() error
 	ListKnownClients() ([]string, error)

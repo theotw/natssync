@@ -365,13 +365,7 @@ func handlePostRegister(c *gin.Context) {
 		c.JSON(code, &ret)
 		return
 	}
-	metadata, err := json.Marshal(in.MetaData)
-	if err != nil {
-		code, ret := bridgemodel.HandleErrors(c, err)
-		c.JSON(code, &ret)
-		return
-	}
-	err = store.WriteLocation(locationID, pubKeyBits, string(metadata))
+	err = store.WriteLocation(locationID, pubKeyBits, in.MetaData)
 	if err != nil {
 		code, ret := bridgemodel.HandleErrors(c, err)
 		c.JSON(code, &ret)

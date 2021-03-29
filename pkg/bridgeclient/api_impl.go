@@ -163,7 +163,7 @@ func handlePostRegister(c *gin.Context) {
 		c.JSON(code, response)
 		return
 	}
-	err = msgs.GetKeyStore().WriteLocation(msgs.CLOUD_ID, []byte(regResp.CloudPublicKey), regResp.PremID)
+	err = msgs.GetKeyStore().WriteLocation(msgs.CLOUD_ID, []byte(regResp.CloudPublicKey), regResp.MetaData)
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)

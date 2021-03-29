@@ -18,7 +18,7 @@ import (
 type TrustedLocation struct {
 	LocationID string `json:"locationID" bson:"locationID"`
 	PublicKey  []byte `json:"publicKey" bson:"publicKey"`
-	MetaData   string `json:"metaData" bson:"metaData"`
+	MetaData   map[string]string `json:"metaData" bson:"metaData"`
 }
 
 type ServiceKeyData struct {
@@ -130,7 +130,7 @@ func (m *MongoKeyStore) GetLocationID() string {
 	return keypair.LocationID
 }
 
-func (m *MongoKeyStore) WriteLocation(locationID string, buf []byte, metadata string) error {
+func (m *MongoKeyStore) WriteLocation(locationID string, buf []byte, metadata map[string]string) error {
 	log.Tracef("Mongo set public key for '%s'", locationID)
 	key := TrustedLocation{LocationID: locationID, PublicKey: buf, MetaData: metadata}
 	collection := m.getLocationsCollection()
@@ -138,7 +138,7 @@ func (m *MongoKeyStore) WriteLocation(locationID string, buf []byte, metadata st
 	return err
 }
 
-func (m *MongoKeyStore) ReadLocation(locationID string) ([]byte, string, error) {
+func (m *MongoKeyStore) ReadLocation(locationID string) ([]byte, map[string]string, error) {
 	log.Tracef("Mongo get public key for '%s'", locationID)
 	collection := m.getLocationsCollection()
 	var location TrustedLocation

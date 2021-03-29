@@ -5,6 +5,7 @@
 package msgs
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -81,33 +82,44 @@ func (t *FileKeyStore) GetLocationID() string {
 	return string(locationID)
 }
 
-func (t *FileKeyStore) WriteLocation(locationID string, buf []byte, metadata string) error {
+func (t *FileKeyStore) WriteLocation(locationID string, buf []byte, metadata map[string]string) error {
 	var err error
 	locationFile := t.makePublicKeyFileName(locationID)
 	if err = t.writeFile(locationFile, buf); err != nil {
 		return err
 	}
 	metaFile := t.makeMetaDataFileName(locationID)
-	if err = t.writeFile(metaFile, []byte(metadata)); err != nil {
+
+	metadataBytes, err := json.Marshal(metadata)
+	if err != nil {
+		return err
+	}
+
+	if err = t.writeFile(metaFile, metadataBytes); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (t *FileKeyStore) ReadLocation(locationID string) ([]byte, string, error) {
+func (t *FileKeyStore) ReadLocation(locationID string) ([]byte, map[string]string, error) {
 	locationFile := t.makePublicKeyFileName(locationID)
 	publicKey, err := t.readFile(locationFile)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 
 	metaFile := t.makeMetaDataFileName(locationID)
-	metadata, err := t.readFile(metaFile)
+	metadataBytes, err := t.readFile(metaFile)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 
-	return publicKey, string(metadata), nil
+	metadata := make(map[string]string)
+	if err = json.Unmarshal(metadataBytes, &metadata); err != nil {
+		return nil, nil, err
+	}
+
+	return publicKey, metadata, nil
 }
 
 func (t *FileKeyStore) removeLocationData(locationID string, allowCloudMaster bool) error {

@@ -82,20 +82,21 @@ func testFileKeystoreRemoveKeyPair(t *testing.T, keystore *FileKeyStore) {
 
 func testFileKeyStoreWriteLocation(t *testing.T, keystore *FileKeyStore) {
 	key := "This is definitely a key"
-	data := "metadata"
-	err := keystore.WriteLocation("foo", []byte(key), data)
+	metadata := map[string]string{"foo": "bar"}
+	err := keystore.WriteLocation("foo", []byte(key), metadata)
 	assert.Nil(t, err)
 }
 
 func testFileKeyStoreReadLocation(t *testing.T, keystore *FileKeyStore) {
+	metadata := map[string]string{"foo": "bar"}
 	key, data, err := keystore.ReadLocation("foo")
 	assert.Nil(t, err)
 	assert.Equal(t, "This is definitely a key", string(key))
-	assert.Equal(t, "metadata", data)
+	assert.Equal(t, metadata, data)
 	key, data, err = keystore.ReadLocation("foo2")
 	assert.Error(t, err)
 	assert.Nil(t, key)
-	assert.Equal(t, "", data)
+	assert.Nil(t, data)
 }
 
 func testFileKeyStoreListKnownClients(t *testing.T, keystore *FileKeyStore) {
@@ -113,12 +114,12 @@ func testFileKeystoreRemoveLocation(t *testing.T, keystore *FileKeyStore) {
 }
 
 func testFileKeystoreRemoveCloudMasterData(t *testing.T, keystore *FileKeyStore) {
-	err := keystore.WriteLocation(CLOUD_ID, []byte("somekey"), "metadata")
+	err := keystore.WriteLocation(CLOUD_ID, []byte("somekey"), make(map[string]string))
 	assert.Nil(t, err)
 	err = keystore.RemoveCloudMasterData()
 	assert.Nil(t, err)
 	key, data, err := keystore.ReadLocation(CLOUD_ID)
 	assert.Error(t, err)
 	assert.Nil(t, key)
-	assert.Equal(t, "", data)
+	assert.Nil(t, data)
 }

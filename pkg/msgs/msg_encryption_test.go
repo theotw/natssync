@@ -20,6 +20,7 @@ func TestEncryption(t *testing.T) {
 	parentDir := os.TempDir()
 	keystoreDir, _ := ioutil.TempDir(parentDir, "keystoretest")
 	pkg.Config.KeystoreUrl = "file://"+keystoreDir
+	metadata := map[string]string{"foo": "bar"}
 
 	if err := InitCloudKey(); err != nil {
 		t.Fatal(err)
@@ -30,7 +31,7 @@ func TestEncryption(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = store.WriteLocation(CLOUD_ID, pubKey, ""); err != nil {
+	if err = store.WriteLocation(CLOUD_ID, pubKey, metadata); err != nil {
 		t.Fatal(err)
 	}
 	defer store.RemoveCloudMasterData()
@@ -40,7 +41,7 @@ func TestEncryption(t *testing.T) {
 		t.Fatalf("Unable to generate new key pair %s", err)
 	}
 	key, err := encodePublicKeyAsBytes(&pair.PublicKey)
-	if err = store.WriteLocation("client1", key, ""); err != nil {
+	if err = store.WriteLocation("client1", key, metadata); err != nil {
 		t.Fatal(err)
 	}
 	defer store.RemoveLocation("client1")
@@ -61,12 +62,12 @@ func doTestMessageEnvelope(t *testing.T) {
 		}
 	}
 	if msg == nil {
-		t.Fatalf("Error with put in envelope %s", err.Error())
+		t.Fatalf("Error with put in envelope %s", err)
 	}
 
 	msg2, err := PullMessageFromEnvelope(envelope)
 	if err != nil {
-		t.Fatalf("Error with put in envelope %s", err.Error())
+		t.Fatalf("Error with put in envelope %s", err)
 	}
 
 	assert.Equal(t, msg, msg2)
