@@ -190,12 +190,11 @@ func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*Mes
 
 	return ret, nil
 }
+
 func NewAuthChallenge() *v1.AuthChallenge {
-	store := GetKeyStore()
-	locationID := store.GetLocationID()
 	key, err := LoadPrivateKey()
 	if err != nil {
-		log.Errorf("Unable to load private Key for location %s error %s", locationID, err.Error())
+		log.Errorf("Unable to load private Key: %s", err.Error())
 		return nil
 	}
 	timeStr := time.Now().String()
@@ -209,6 +208,7 @@ func NewAuthChallenge() *v1.AuthChallenge {
 	ret.AuthChellengeB = base64.StdEncoding.EncodeToString(sig)
 	return ret
 }
+
 func ValidateAuthChallenge(locationID string, challenge *v1.AuthChallenge) bool {
 	pubKey, err := LoadPublicKey(locationID)
 	if err != nil {
@@ -332,7 +332,6 @@ func rsaDecrypt(cipherText string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	plain, err := rsa.DecryptPKCS1v15(rand.Reader, privkey, cipher)
 	return plain, err
 }

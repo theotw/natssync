@@ -32,17 +32,17 @@ func TestNewConfiguration(t *testing.T) {
 	config := NewConfiguration()
 
 	type envVarDefault struct {
-		value    string
-		expected string
+		value    interface{}
+		expected interface{}
 	}
 
 	var envVarDefaults = []envVarDefault{
 		{config.NatsServerUrl, "nats://127.0.0.1:4222"},
 		{config.CloudBridgeUrl, "http://localhost:8081"},
 		{config.LogLevel, "debug"},
-		{config.RedisUrl, "localhost:6379"},
-		{config.CacheMgr, "redis"},
 		{config.KeystoreUrl, "file:///tmp"},
+		{config.ListenString, ":8080"},
+		{config.CloudEvents, false},
 	}
 
 	for _, envVar := range envVarDefaults {
