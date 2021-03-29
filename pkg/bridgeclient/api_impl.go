@@ -25,8 +25,6 @@ import (
 	"net/http"
 )
 
-const WAIT_MAX = 30
-
 func handleGetRegister(c *gin.Context) {
 	store := msgs.GetKeyStore()
 	locationID := store.LoadLocationID()
@@ -78,13 +76,13 @@ func handlePostUnRegister(c *gin.Context) {
 	}
 
 	// Clean up local data
-	err = keyStore.RemoveLocation(locationID)
+	err = keyStore.RemoveCloudMasterData()
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)
 		return
 	}
-	err = keyStore.ClearLocationID()
+	err = keyStore.RemoveKeyPair()
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)
@@ -165,25 +163,21 @@ func handlePostRegister(c *gin.Context) {
 		c.JSON(code, response)
 		return
 	}
+	err = msgs.GetKeyStore().WriteLocation(msgs.CLOUD_ID, []byte(regResp.CloudPublicKey), regResp.MetaData)
+	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+
+	//this step must be last, other parts of the code watch for this key
 	err = msgs.SaveKeyPair(regResp.PremID, pair)
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)
 		return
 	}
-	err = msgs.GetKeyStore().WritePublicKey(msgs.CLOUD_ID, []byte(regResp.CloudPublicKey))
-	if err != nil {
-		code, response := bridgemodel.HandleError(c, err)
-		c.JSON(code, response)
-		return
-	}
-	//this step must be last, other parts of the code watch for this key
-	err = msgs.GetKeyStore().SaveLocationID(regResp.PremID)
-	if err != nil {
-		code, response := bridgemodel.HandleError(c, err)
-		c.JSON(code, response)
-		return
-	}
+
 	ret := new(v1.RegistrationResponse)
 	ret.LocationID = regResp.PremID
 	c.JSON(200, ret)
@@ -194,6 +188,7 @@ func registrationGetHandler(c *gin.Context) {
 	ret.LocationID = msgs.GetKeyStore().LoadLocationID()
 	c.JSON(200, ret)
 }
+
 func aboutGetUnversioned(c *gin.Context) {
 	var resp v1.AboutResponse
 	resp.AppVersion = pkg.VERSION  // Run `make generate` to create version

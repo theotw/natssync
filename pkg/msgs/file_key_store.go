@@ -5,6 +5,7 @@
 package msgs
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -15,6 +16,11 @@ import (
 )
 
 const publicKeySuffix = "_public.pem"
+const metadataFileSuffix = ".meta"
+
+const privateKeyFileName = "private.pem"
+const publicKeyFileName = "public.pem"
+const locationIDFileName = "locationID.txt"
 
 type FileKeyStore struct {
 	basePath string
@@ -26,141 +32,190 @@ func NewFileKeyStore(basePath string) (*FileKeyStore, error) {
 	return ret, nil
 }
 
-func (t *FileKeyStore) RemoveLocation(locationID string) error {
-	var errs []string
-	pubKeyFile := t.makePublicKeyFileName(locationID)
-	privKeyFile := t.makePrivateFileName(locationID)
-	locationFile := path.Join(t.basePath, "locationkey.txt")
-	log.Debugf("public key location: %s", pubKeyFile)
-	log.Debugf("private key location: %s", privKeyFile)
-	log.Debugf("location ID: %s", locationFile)
-	log.Infof("Clearing the public key file %s", pubKeyFile)
-	err := os.Remove(pubKeyFile)
+func (t *FileKeyStore) WriteKeyPair(locationID string, publicKey []byte, privateKey []byte) error {
+	var err error
+	if err = t.writeFile(privateKeyFileName, privateKey); err != nil {
+		return err
+	}
+	if err = t.writeFile(publicKeyFileName, publicKey); err != nil {
+		return err
+	}
+	if err = t.writeFile(locationIDFileName, []byte(locationID)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *FileKeyStore) ReadKeyPair() ([]byte, []byte, error) {
+	publicKey, err := t.readFile(publicKeyFileName)
 	if err != nil {
-		errs = append(errs, err.Error())
-		log.Errorf("Error clearing the public key file %s", pubKeyFile)
-	} else {
-		log.Infof("Cleared the public key file %s", pubKeyFile)
+		return nil, nil, err
 	}
 
-	log.Infof("Clearing the private key file %s", privKeyFile)
-	err = os.Remove(privKeyFile)
+	privateKey, err := t.readFile(privateKeyFileName)
 	if err != nil {
-		errs = append(errs, err.Error())
-	} else {
-		log.Errorf("Error clearing the private key file %s", privKeyFile)
+		return nil, nil, err
 	}
-	log.Infof("Cleared the private key file %s", privKeyFile)
-	if len(errs) > 0 {
-		errStr := strings.Join(errs, ", ")
-		return fmt.Errorf(errStr)
+
+	return publicKey, privateKey, nil
+}
+
+func (t *FileKeyStore) RemoveKeyPair() error {
+	var err error
+	if err = t.removeFile(privateKeyFileName); err != nil {
+		return err
+	}
+	if err = t.removeFile(publicKeyFileName); err != nil {
+		return err
+	}
+	if err = t.removeFile(locationIDFileName); err != nil {
+		return err
 	}
 	return nil
 }
 
 func (t *FileKeyStore) LoadLocationID() string {
-	var ret string
-	fileName := path.Join(t.basePath, "locationkey.txt")
-	f, err := os.Open(fileName)
-	if err == nil {
-		defer f.Close()
-		all, err := ioutil.ReadAll(f)
-		if err == nil {
-			ret = string(all)
-		}
+	locationID, err := t.readFile(locationIDFileName)
+	if err != nil {
+		return ""
 	}
-	return ret
+	return string(locationID)
 }
-func (t *FileKeyStore) SaveLocationID(locationID string) error {
-	fileName := path.Join(t.basePath, "locationkey.txt")
-	f, err := os.Create(fileName)
+
+func (t *FileKeyStore) WriteLocation(locationID string, buf []byte, metadata map[string]string) error {
+	var err error
+	locationFile := t.makePublicKeyFileName(locationID)
+	if err = t.writeFile(locationFile, buf); err != nil {
+		return err
+	}
+	metaFile := t.makeMetaDataFileName(locationID)
+
+	metadataBytes, err := json.Marshal(metadata)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	_, err = f.Write([]byte(locationID))
-	return err
-}
 
-func (t *FileKeyStore) ClearLocationID() error {
-	fileName := path.Join(t.basePath, "locationkey.txt")
-	f, err := os.Create(fileName)
-	if err != nil {
+	if err = t.writeFile(metaFile, metadataBytes); err != nil {
 		return err
 	}
-	defer f.Close()
-	_, err = f.Write([]byte(""))
-	return err
+	return nil
 }
 
-func (t *FileKeyStore) WritePublicKey(locationID string, buf []byte) error {
-	fileName := t.makePublicKeyFileName(locationID)
-	return t.writeKeyFile(fileName, buf)
+func (t *FileKeyStore) ReadLocation(locationID string) ([]byte, map[string]string, error) {
+	locationFile := t.makePublicKeyFileName(locationID)
+	publicKey, err := t.readFile(locationFile)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	metaFile := t.makeMetaDataFileName(locationID)
+	metadataBytes, err := t.readFile(metaFile)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	metadata := make(map[string]string)
+	if err = json.Unmarshal(metadataBytes, &metadata); err != nil {
+		return nil, nil, err
+	}
+
+	return publicKey, metadata, nil
 }
+
+func (t *FileKeyStore) removeLocationData(locationID string, allowCloudMaster bool) error {
+	var err error
+
+	if locationID == CLOUD_ID && !allowCloudMaster {
+		log.Errorf("Removing default cloud location ID")
+		err = fmt.Errorf("unable to remove cloud master location")
+		return err
+	}
+
+	filename := t.makePublicKeyFileName(locationID)
+	if err = t.removeFile(filename); err != nil {
+		return err
+	}
+
+	metafile := t.makeMetaDataFileName(locationID)
+	if err = t.removeFile(metafile); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t *FileKeyStore) RemoveLocation(locationID string) error {
+	return t.removeLocationData(locationID, false)
+}
+
+func (t *FileKeyStore) RemoveCloudMasterData() error {
+	return t.removeLocationData(CLOUD_ID, true)
+}
+
 func (t *FileKeyStore) ListKnownClients() ([]string, error) {
 	ret := make([]string, 0)
 	dir, err := ioutil.ReadDir(t.basePath)
 	if err != nil {
 		return nil, err
 	}
-	for _, f := range dir {
 
+	for _, f := range dir {
 		if strings.HasSuffix(f.Name(), publicKeySuffix) {
 			limit := len(f.Name()) - len(publicKeySuffix)
 			id := f.Name()[:limit]
 			ret = append(ret, id)
 		}
 	}
+
 	return ret, nil
 }
-func (t *FileKeyStore) WritePrivateKey(locationID string, buf []byte) error {
-	fileName := t.makePrivateFileName(locationID)
-	return t.writeKeyFile(fileName, buf)
-}
 
-func (t *FileKeyStore) writeKeyFile(fileName string, buf []byte) error {
-	keyFile, err := os.Create(fileName)
+func (t *FileKeyStore) writeFile(fileName string, buf []byte) error {
+	pathToFile := path.Join(t.basePath, fileName)
+	log.Tracef("Writing to file %s", pathToFile)
+	keyFile, err := os.Create(pathToFile)
 	if err != nil {
 		log.Errorf("Unable to open key file %s \n", err.Error())
 		return err
 	}
+
 	defer keyFile.Close()
-	keyFile.Write(buf)
+	_, err = keyFile.Write(buf)
+	if err != nil {
+		log.Errorf("Unable to write key file %s \n", err.Error())
+		return err
+	}
+
 	return nil
 }
 
-func (t *FileKeyStore) ReadPrivateKeyData(locationID string) ([]byte, error) {
-	keyPath := t.makePrivateFileName(locationID)
-	f, err := os.Open(keyPath)
+func (t *FileKeyStore) readFile(fileName string) ([]byte, error) {
+	pathToFile := path.Join(t.basePath, fileName)
+	log.Tracef("Reading from file %s", pathToFile)
+	f, err := os.Open(pathToFile)
 	if err != nil {
 		return nil, err
 	}
+
 	defer f.Close()
-	all, err := ioutil.ReadAll(f)
-	return all, err
+	fileData, err := ioutil.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+
+	return fileData, nil
 }
-func (t *FileKeyStore) ReadPublicKeyData(locationID string) ([]byte, error) {
-	keyPath := t.makePublicKeyFileName(locationID)
-	f, err := os.Open(keyPath)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	all, err := ioutil.ReadAll(f)
-	return all, err
+
+func (t *FileKeyStore) removeFile(fileName string) error {
+	pathToFile := path.Join(t.basePath, fileName)
+	log.Tracef("Removing file %s", pathToFile)
+	return os.Remove(pathToFile)
 }
 
 func (t *FileKeyStore) makePublicKeyFileName(locationID string) string {
-	var keyFile string
-	keyFile = fmt.Sprintf("%s%s", locationID, publicKeySuffix)
-
-	masterPemPath := path.Join(t.basePath, keyFile)
-	return masterPemPath
+	return fmt.Sprintf("%s%s", locationID, publicKeySuffix)
 }
-func (t *FileKeyStore) makePrivateFileName(locationID string) string {
-	var keyFile string
-	keyFile = fmt.Sprintf("%s.pem", locationID)
 
-	masterPemPath := path.Join(t.basePath, keyFile)
-	return masterPemPath
+func (t *FileKeyStore) makeMetaDataFileName(locationID string) string {
+	return fmt.Sprintf("%s%s", locationID, metadataFileSuffix)
 }

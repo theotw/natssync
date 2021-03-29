@@ -76,7 +76,7 @@ jobs:
 
     - name: Client Unregistration
       run: |
-        curl -i -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"`cat locationID.txt`"}' "http://localhost:8081/bridge-client/1/unregister"
+        curl -i -f -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"`cat locationID.txt`"}' "http://localhost:8081/bridge-client/1/unregister"
         echo "Unregistered ID: `cat locationID.txt`"
 
     - name: Deploy to DockerHub

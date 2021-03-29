@@ -5,6 +5,7 @@
 package msgs
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -15,7 +16,12 @@ import (
 	_ "github.com/theotw/natssync/tests/unit"
 )
 
-func TestKeyStore(t *testing.T) {
+type testCase struct {
+	name string
+	run func(t *testing.T, keystore *FileKeyStore)
+}
+
+func TestFileKeyStore(t *testing.T) {
 	parentDir := os.TempDir()
 	keystoreDir, err := ioutil.TempDir(parentDir, "keystoretest")
 	if err != nil {
@@ -28,69 +34,92 @@ func TestKeyStore(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	t.Run("Location ID ", func(t *testing.T) {
-		testLocationID(store, t)
-	})
-	t.Run("Save Pub Keys ", func(t *testing.T) {
-		testSavePubKey(store, t)
-	})
+	tests := []testCase{
+		{"Write Keypair", testFileKeystoreWriteKeyPair},
+		{"Read Keypair", testFileKeystoreReadKeyPair},
+		{"Get LocationID", testFileKeystoreGetLocationID},
+		{"Remove Keypair", testFileKeystoreRemoveKeyPair},
+		{"Write Location", testFileKeyStoreWriteLocation},
+		{"Read Location", testFileKeyStoreReadLocation},
+		{"List Clients", testFileKeyStoreListKnownClients},
+		{"Remove Location", testFileKeystoreRemoveLocation},
+		{"Remove Cloud Master Data", testFileKeystoreRemoveCloudMasterData},
+	}
 
-	t.Run("Read Pub Keys", func(t *testing.T) {
-		testReadPubKey(store, t)
-	})
-	t.Run("Save Priv Keys ", func(t *testing.T) {
-		testSavePrivKey(store, t)
-	})
-
-	t.Run("Read Priv Keys", func(t *testing.T) {
-		testReadPrivKey(store, t)
-	})
-
-	t.Run("Load IDS ", func(t *testing.T) {
-		testLoadIDs(store, t)
-	})
-
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.run(t, store)
+		})
+	}
 }
-func testLoadIDs(store LocationKeyStore, t *testing.T) {
-	clients, err := store.ListKnownClients()
+
+func testFileKeystoreWriteKeyPair(t *testing.T, keystore *FileKeyStore) {
+	for i := 0; i < 3; i++ {
+		id := fmt.Sprintf("id-%d", i)
+		pubkey := fmt.Sprintf("pubkey%d", i)
+		privkey := fmt.Sprintf("privkey%d", i)
+		err := keystore.WriteKeyPair(id, []byte(pubkey), []byte(privkey))
+		assert.Nil(t, err)
+	}
+}
+
+func testFileKeystoreReadKeyPair(t *testing.T, keystore *FileKeyStore) {
+	pubkey, privkey, err := keystore.ReadKeyPair()
+	assert.Equal(t, "pubkey2", string(pubkey))
+	assert.Equal(t, "privkey2", string(privkey))
 	assert.Nil(t, err)
-	assert.Equal(t, 3, len(clients))
-
-}
-func testSavePubKey(store LocationKeyStore, t *testing.T) {
-	var err error
-	err = store.WritePublicKey("1", []byte("one"))
-	assert.Nil(t, err, "Expecting no error on write")
-	store.WritePublicKey("2", []byte("two"))
-	assert.Nil(t, err, "Expecting no error on write")
-	store.WritePublicKey("3", []byte("three"))
-	assert.Nil(t, err, "Expecting no error on write")
-}
-func testReadPubKey(store LocationKeyStore, t *testing.T) {
-	data, err := store.ReadPublicKeyData("2")
-	assert.Nil(t, err, "Not expecting error on read")
-	assert.Equal(t, []byte("two"), data)
-}
-func testSavePrivKey(store LocationKeyStore, t *testing.T) {
-	var err error
-	err = store.WritePrivateKey("1", []byte("onep"))
-	assert.Nil(t, err, "Expecting no error on write")
-	store.WritePublicKey("2", []byte("twop"))
-	assert.Nil(t, err, "Expecting no error on write")
-	store.WritePublicKey("3", []byte("threep"))
-	assert.Nil(t, err, "Expecting no error on write")
-}
-func testReadPrivKey(store LocationKeyStore, t *testing.T) {
-	data, err := store.ReadPublicKeyData("2")
-	assert.Nil(t, err, "Not expecting error on read")
-	assert.Equal(t, []byte("twop"), data)
 }
 
-func testLocationID(store LocationKeyStore, t *testing.T) {
-	expectedID := "location"
-	err := store.SaveLocationID(expectedID)
-	assert.Nil(t, err, "error saving location ID")
-	locationID := store.LoadLocationID()
-	assert.Equalf(t, expectedID, locationID, "expect the location to match")
+func testFileKeystoreGetLocationID(t *testing.T, keystore *FileKeyStore) {
+	id := keystore.LoadLocationID()
+	assert.Equal(t, "id-2", id)
+}
 
+func testFileKeystoreRemoveKeyPair(t *testing.T, keystore *FileKeyStore) {
+	err := keystore.RemoveKeyPair()
+	assert.Nil(t, err)
+}
+
+func testFileKeyStoreWriteLocation(t *testing.T, keystore *FileKeyStore) {
+	key := "This is definitely a key"
+	metadata := map[string]string{"foo": "bar"}
+	err := keystore.WriteLocation("foo", []byte(key), metadata)
+	assert.Nil(t, err)
+}
+
+func testFileKeyStoreReadLocation(t *testing.T, keystore *FileKeyStore) {
+	metadata := map[string]string{"foo": "bar"}
+	key, data, err := keystore.ReadLocation("foo")
+	assert.Nil(t, err)
+	assert.Equal(t, "This is definitely a key", string(key))
+	assert.Equal(t, metadata, data)
+	key, data, err = keystore.ReadLocation("foo2")
+	assert.Error(t, err)
+	assert.Nil(t, key)
+	assert.Nil(t, data)
+}
+
+func testFileKeyStoreListKnownClients(t *testing.T, keystore *FileKeyStore) {
+	expectedClients := []string{"foo"}
+	clients, err := keystore.ListKnownClients()
+	assert.Nil(t, err)
+	assert.Equal(t, expectedClients, clients)
+}
+
+func testFileKeystoreRemoveLocation(t *testing.T, keystore *FileKeyStore) {
+	err := keystore.RemoveLocation("foo")
+	assert.Nil(t, err)
+	err = keystore.RemoveLocation(CLOUD_ID)
+	assert.Error(t, err)
+}
+
+func testFileKeystoreRemoveCloudMasterData(t *testing.T, keystore *FileKeyStore) {
+	err := keystore.WriteLocation(CLOUD_ID, []byte("somekey"), make(map[string]string))
+	assert.Nil(t, err)
+	err = keystore.RemoveCloudMasterData()
+	assert.Nil(t, err)
+	key, data, err := keystore.ReadLocation(CLOUD_ID)
+	assert.Error(t, err)
+	assert.Nil(t, key)
+	assert.Nil(t, data)
 }

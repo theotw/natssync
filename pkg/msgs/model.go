@@ -33,17 +33,15 @@ type MessageEnvelope struct {
 
 
 type LocationKeyStore interface {
-	//loads the location ID for this client.  If not initialized, a blank string is returned
+	WriteKeyPair(locationID string, publicKey []byte, privateKey []byte) error
+	ReadKeyPair() ([]byte, []byte, error)
+	RemoveKeyPair() error
 	LoadLocationID() string
-	//loads the location ID
-	SaveLocationID(locationID string) error
-	ReadPrivateKeyData(locationID string) ([]byte, error)
-	ReadPublicKeyData(locationID string) ([]byte, error)
-	WritePublicKey(locationID string, buf []byte) error
-	WritePrivateKey(locationID string, buf []byte) error
-	ListKnownClients() ([]string, error)
+	WriteLocation(locationID string, buf []byte, metadata map[string]string) error
+	ReadLocation(locationID string) ([]byte, map[string]string, error)
 	RemoveLocation(locationID string) error
-	ClearLocationID() error
+	RemoveCloudMasterData() error
+	ListKnownClients() ([]string, error)
 }
 
 var keystore LocationKeyStore
@@ -75,15 +73,14 @@ func CreateLocationKeyStore(keystoreUrl string) (ret LocationKeyStore, err error
 			ret, err = NewFileKeyStore(keystoreUri)
 			break
 		}
-	case "redis://":
-		{
-			ret, err = NewRedisLocationKeyStore(keystoreUri)
-			break
-		}
 	case "mongodb://":
 		{
 			ret, err = NewMongoKeyStore(keystoreUri)
 			break
+		}
+	default:
+		{
+			ret, err = nil, fmt.Errorf("unsupported keystore type %s", keystoreType)
 		}
 	}
 	return

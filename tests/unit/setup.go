@@ -19,10 +19,6 @@ func init() {
 	newConfig := pkg.NewConfiguration()
 	parentDir := os.TempDir()
 	keystoreDir, _ := ioutil.TempDir(parentDir, "keystoretest")
-	pkg.Config.CertDir = keystoreDir
-	newConfig.CacheMgr = "mem"
-	newConfig.Keystore = "file"
-
+	newConfig.KeystoreUrl = "file://"+keystoreDir
 	pkg.Config = newConfig
-
 }
