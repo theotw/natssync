@@ -504,5 +504,6 @@ func natsMsgPostHandler(c *gin.Context) {
 			retData = string(replyMsg.Data)
 		}
 	}
-	c.JSON(202, retData)
+	c.Status(202)
+	c.Writer.Write([]byte(retData))
 }

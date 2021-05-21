@@ -8,7 +8,7 @@ require (
 	github.com/go-delve/delve v1.6.0 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/jstemmer/go-junit-report v0.9.1 // indirect
-	github.com/mediocregopher/radix/v3 v3.6.0
+	github.com/mediocregopher/radix/v3 v3.6.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/nats-io/nats.go v1.10.0
 	github.com/prometheus/client_golang v1.9.0
