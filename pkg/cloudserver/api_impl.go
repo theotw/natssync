@@ -221,7 +221,7 @@ func handleMultipartFormRegistration(c *gin.Context) (ret *v1.RegisterOnPremReq,
 	return
 }
 func handleGetRegisteredLocations(c *gin.Context) {
-	authHeader := c.Request.Header.Get("Authorization")
+	authHeader := c.Request.Header.Get("x-Authorization")
 	response, e := sendGenericAuthRequest(bridgemodel.REGISTRATION_QUERY_AUTH_SUBJECT, authHeader)
 	if e != nil {
 		code, ret := bridgemodel.HandleErrors(c, e)
@@ -232,6 +232,8 @@ func handleGetRegisteredLocations(c *gin.Context) {
 		c.JSON(401, "")
 		return
 	}
+	key, _ := c.GetQuery("key")
+	value, _ := c.GetQuery("value")
 	store := msgs.GetKeyStore()
 	clients, e := store.ListKnownClients()
 	if e != nil {
@@ -242,10 +244,17 @@ func handleGetRegisteredLocations(c *gin.Context) {
 	ret := make([]v1.RegisteredClientLocation, 0)
 	for _, client := range clients {
 		var x v1.RegisteredClientLocation
-		x.PremID = client
-		//todo get meta data
-		x.MetaData = make(map[string]string)
-		ret = append(ret, x)
+		_, metaData, e := store.ReadLocation(client)
+		if e == nil {
+			actualValue := metaData[key]
+			if actualValue == value {
+				x.PremID = client
+				x.MetaData = metaData
+				ret = append(ret, x)
+			}
+		} else {
+			log.Errorf("Unable to read location info for location ID %s", client)
+		}
 	}
 	c.JSON(200, ret)
 }

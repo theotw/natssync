@@ -27,14 +27,26 @@ paths:
                 $ref: '#/components/schemas/AboutResponse'
   /register:
     get:
-      summary: Gets a list of the registered clients/locations
-      description: Gets a list of the registered clients/locations
+      summary: This endpoint allow the called to find a client ID/location ID based on the meta data assigned to it.
+      description: This endpoint allow the called to find a client ID/location ID based on the meta data assigned to it.  The query string of key and value is how you search.  It is possible to get more than 1 value back based on how the meta data was applied
       parameters:
         - in: header
-          name: Authorization
+          name: x-Authorization
           description: Auth token used to authorized request
           schema:
             type: string
+        - in: query
+          name: key
+          description: meta data key to search
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: value
+          description: value to match to in the meta data
+          schema:
+            type: string
+          required: true
 
       responses:
         '200':
