@@ -232,8 +232,22 @@ func handleGetRegisteredLocations(c *gin.Context) {
 		c.JSON(401, "")
 		return
 	}
-	key, _ := c.GetQuery("key")
-	value, _ := c.GetQuery("value")
+	type filterKV struct {
+		k string
+		v string
+	}
+	filterKeys := make([]*filterKV, 0)
+	value, _ := c.GetQuery("filter")
+	filterElements := strings.Split(value, ",")
+	for _, x := range filterElements {
+		parts := strings.Split(x, "=")
+		if len(parts) == 2 {
+			kv := new(filterKV)
+			kv.k = parts[0]
+			kv.v = parts[1]
+			filterKeys = append(filterKeys, kv)
+		}
+	}
 	store := msgs.GetKeyStore()
 	clients, e := store.ListKnownClients()
 	if e != nil {
@@ -246,8 +260,15 @@ func handleGetRegisteredLocations(c *gin.Context) {
 		var x v1.RegisteredClientLocation
 		_, metaData, e := store.ReadLocation(client)
 		if e == nil {
-			actualValue := metaData[key]
-			if actualValue == value {
+			keymatch := false
+			for _, kv := range filterKeys {
+				actualValue := metaData[kv.k]
+				keymatch = (actualValue == value)
+				if !keymatch {
+					break
+				}
+			}
+			if keymatch {
 				x.PremID = client
 				x.MetaData = metaData
 				ret = append(ret, x)

@@ -36,18 +36,11 @@ paths:
           schema:
             type: string
         - in: query
-          name: key
-          description: meta data key to search
+          name: filter
+          description: a comma seperated list of metadata key=values to filter on
           schema:
             type: string
           required: true
-        - in: query
-          name: value
-          description: value to match to in the meta data
-          schema:
-            type: string
-          required: true
-
       responses:
         '200':
           description: List of known clients
