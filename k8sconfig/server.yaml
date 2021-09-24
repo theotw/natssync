@@ -1,0 +1,160 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: natssync-server-config
+data:
+  # property-like keys; each key maps to a simple value
+  nats_url: "nats://nats:4222"
+  cloud_bridge_url: ""
+  key_store: "file:///data"
+  log_level: "trace"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats
+spec:
+  type: NodePort
+  selector:
+    type: nats
+  ports:
+    - protocol: TCP
+      port: 4222
+      nodePort: 30221
+      targetPort: 4222
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats-syncserver
+spec:
+  type: NodePort
+  selector:
+    type: nats-syncserver
+  ports:
+    - protocol: TCP
+      port: 8080
+      nodePort: 30080
+      targetPort: 8080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpproxy
+spec:
+  type: NodePort
+  selector:
+    type: httpproxyserver
+  ports:
+    - protocol: TCP
+      port: 8081
+      nodePort: 30081
+      targetPort: 8080
+
+---
+
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: nats
+  labels:
+    type: nats
+    role: nats
+spec:
+  containers:
+    - name: nats
+      image: nats
+      imagePullPolicy: Always
+
+  hostNetwork: true
+  dnsPolicy: Default
+
+---
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: nats-syncserver
+  labels:
+    type: nats-syncserver
+spec:
+  containers:
+    - name: sync-server
+      image: theotw/natssync-server:latest
+      imagePullPolicy: Always
+      ports:
+        - containerPort: 8080
+      env:
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: natssync-server-config
+              key: log_level
+
+        - name: NATS_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: natssync-server-config
+              key: nats_url
+
+        - name: KEYSTORE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: natssync-server-config
+              key: key_store
+
+
+---
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: authserver
+  labels:
+    type: authserver
+spec:
+  containers:
+    - name: authserver
+      image: theotw/simple-reg-auth:latest
+      imagePullPolicy: Always
+      env:
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: natssync-server-config
+              key: log_level
+
+        - name: NATS_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: natssync-server-config
+              key: nats_url
+
+---
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: httpproxyserver
+  labels:
+    type: httpproxyserver
+spec:
+  containers:
+    - name: httpproxyserver
+      image: theotw/httpproxy_server:latest
+      imagePullPolicy: Always
+      env:
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: natssync-server-config
+              key: log_level
+
+        - name: NATS_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: natssync-server-config
+              key: nats_url

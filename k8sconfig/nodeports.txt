@@ -1,0 +1,5 @@
+client nats 30220
+server nats 30221
+nats sync server 30280
+nats sync client 30281
+

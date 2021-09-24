@@ -135,6 +135,9 @@ func (m *MongoKeyStore) WriteLocation(locationID string, buf []byte, metadata ma
 	key := TrustedLocation{LocationID: locationID, PublicKey: buf, MetaData: metadata}
 	collection := m.getLocationsCollection()
 	_, err := collection.InsertOne(context.TODO(), key)
+	if err != nil{
+		log.Errorf("Error writing mongo record %v %s",key,err.Error())
+	}
 	return err
 }
 

@@ -1,0 +1,145 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: natsync-client-config
+data:
+  # property-like keys; each key maps to a simple value
+  nats_url: "nats://nats:4222"
+  cloud_bridge_url: "http://message-bridge.hcieng.com"
+  key_store: "file:///data"
+  log_leve: "trace"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats
+spec:
+  type: NodePort
+  selector:
+    type: nats
+  ports:
+    - protocol: TCP
+      port: 4222
+      nodePort: 30220
+      targetPort: 4222
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sync-client
+spec:
+  type: NodePort
+  selector:
+    type: sync-client
+  ports:
+    - protocol: TCP
+      port: 8080
+      nodePort: 30281
+      targetPort: 8080
+---
+
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: nats
+  labels:
+    type: nats
+    role: nats
+spec:
+  containers:
+    - name: nats
+      image: nats
+  hostNetwork: true
+  dnsPolicy: Default
+
+---
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: sync-client
+  labels:
+    type: sync-client
+spec:
+
+  containers:
+    - name: sync-client
+      image: theotw/natssync-client:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 8080
+      env:
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: natsync-client-config
+              key: log_leve
+
+        - name: NATS_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: natsync-client-config
+              key: nats_url
+
+        - name: CLOUD_BRIDGE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: natsync-client-config
+              key: cloud_bridge_url
+        - name: KEYSTORE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: natsync-client-config
+              key: key_store
+
+
+---
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: echo-proxylet
+spec:
+  containers:
+    - name: echo-proxlet
+      image: theotw/echo-proxylet:latest
+      imagePullPolicy: Always
+      env:
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: natsync-client-config
+              key: log_leve
+
+        - name: NATS_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: natsync-client-config
+              key: nats_url
+
+
+---
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: http-proxylet
+spec:
+  containers:
+    - name: httpproxylet
+      image: theotw/httpproxylet:latest
+      imagePullPolicy: Always
+      env:
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: natsync-client-config
+              key: log_leve
+
+        - name: NATS_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: natsync-client-config
+              key: nats_url

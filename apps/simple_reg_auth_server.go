@@ -23,7 +23,7 @@ func main() {
 	natsURL := pkg.Config.NatsServerUrl
 	log.Infof("Connecting to NATS server %s", natsURL)
 
-	err := bridgemodel.InitNats(natsURL, "echo client", 1*time.Minute)
+	err := bridgemodel.InitNats(natsURL, "simple auth server", 5*time.Minute)
 	if err != nil {
 		log.Errorf("Unable to connect to NATS, exiting %s", err.Error())
 		os.Exit(2)

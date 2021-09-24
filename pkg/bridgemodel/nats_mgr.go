@@ -40,7 +40,7 @@ func InitNats(natsUrlList string, connectionName string, timeout time.Duration) 
 		if err != nil {
 			log.Errorf("Error connecting to nats on URL %s  / Error %s", natsUrlList, err.Error())
 			//increasing sleep longer
-			time.Sleep(i * time.Second)
+			time.Sleep(5* time.Second)
 			now := time.Now()
 			done = now.Sub(start) >= timeout
 			errToReturn = err
@@ -51,6 +51,7 @@ func InitNats(natsUrlList string, connectionName string, timeout time.Duration) 
 		}
 		errToReturn = nil
 	}
+	log.Infof("Leaving NATS Init ")
 	return errToReturn
 }
 
