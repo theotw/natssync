@@ -1,7 +1,7 @@
 CLOUD_OPENAPIDEF_FILE=openapi/bridge_server_v1.yaml
 CLIENT_OPENAPIDEF_FILE=openapi/bridge_client_v1.yaml
 openapicli_jar=third_party/openapi-generator-cli.jar
-
+OPENAPI_IMAGE=openapitools/openapi-generator-cli:v5.2.0
 ifndef IMAGE_TAG
 	IMAGE_TAG=latest
 endif
@@ -39,13 +39,13 @@ echoenv:
 
 justgenerate: generateserver generateclient generateversion
 generateserver:
-	docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate -g go-server --package-name v1 -i /local/${CLOUD_OPENAPIDEF_FILE} -o /local/tmpcloud
+	docker run --rm -v "${PWD}:/local" ${OPENAPI_IMAGE} generate -g go-server --package-name v1 -i /local/${CLOUD_OPENAPIDEF_FILE} -o /local/tmpcloud
 	rm -r -f pkg/bridgemodel/generated/v1
 	mkdir -p pkg/bridgemodel/generated/v1
 	cp tmpcloud/go/model* pkg/bridgemodel/generated/v1
 
 generateclient:
-	docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate -g go-server --package-name v1 -i /local/${CLIENT_OPENAPIDEF_FILE} -o /local/tmpclient
+	docker run --rm -v "${PWD}:/local" ${OPENAPI_IMAGE} generate -g go-server --package-name v1 -i /local/${CLIENT_OPENAPIDEF_FILE} -o /local/tmpclient
 	rm -r -f pkg/bridgeclient/generated/v1
 	mkdir -p pkg/bridgeclient/generated/v1
 	cp tmpclient/go/model* pkg/bridgeclient/generated/v1
