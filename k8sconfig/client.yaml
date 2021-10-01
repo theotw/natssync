@@ -51,7 +51,6 @@ spec:
   containers:
     - name: nats
       image: nats
-  hostNetwork: true
   dnsPolicy: Default
 
 ---

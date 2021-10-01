@@ -68,8 +68,6 @@ spec:
     - name: nats
       image: nats
       imagePullPolicy: Always
-
-  hostNetwork: true
   dnsPolicy: Default
 
 ---
