@@ -94,9 +94,16 @@ func RunClient(test bool) {
 		}
 		//same as above, if we re-register, we drop the subscibe and need to resubscribe
 		if currentSubscription == nil {
-			subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
+			subj := fmt.Sprintf("%s.>", msgs.NATSSYNC_MESSAGE_PREFIX)
 			sub, err := nc.Subscribe(subj, func(msg *nats.Msg) {
-				sendMessageToCloud(msg, serverURL, clientID, pkg.Config.CloudEvents)
+				subject, err2 := msgs.ParseSubject(subj)
+				if err2 == nil {
+					//if the target client ID is not this client, push it to the server
+					if subject.LocationID != lastClientID {
+						sendMessageToCloud(msg, serverURL, clientID, pkg.Config.CloudEvents)
+					}
+				}
+
 			})
 			if err != nil {
 				log.Fatalf("Error subscribing to %s: %s", subj, err)

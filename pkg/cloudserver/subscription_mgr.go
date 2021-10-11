@@ -51,7 +51,7 @@ func InitSubscriptionMgr() error {
 		return err
 	}
 	for _, clientID := range knownClients {
-		subject := fmt.Sprintf("%s.%s.>", msgs.SB_MSG_PREFIX, clientID)
+		subject := fmt.Sprintf("%s.%s.>", msgs.NATSSYNC_MESSAGE_PREFIX, clientID)
 		//sub, err := nc.SubscribeSync(subject)
 		sub, err := nc.QueueSubscribeSync(subject, "natssync-get")
 		if err != nil {
@@ -71,7 +71,7 @@ func handleNewSubscription(msg *nats.Msg) {
 	nc := bridgemodel.GetNatsConnection()
 
 	clientID := string(msg.Data)
-	subject := fmt.Sprintf("%s.%s.>", msgs.SB_MSG_PREFIX, clientID)
+	subject := fmt.Sprintf("%s.%s.>", msgs.NATSSYNC_MESSAGE_PREFIX, clientID)
 	sub, err := nc.SubscribeSync(subject)
 	if err != nil {
 		log.Errorf("Error subscribing to subject: %s error: %s \n", subject, err.Error())

@@ -491,7 +491,7 @@ func natsMsgPostHandler(c *gin.Context) {
 	var sub *nats.Subscription
 	if len(msg.Reply) > 0 {
 		var replySub string
-		echoReplyPrefix := fmt.Sprintf("%s.%s", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
+		echoReplyPrefix := fmt.Sprintf("%s.%s", msgs.NATSSYNC_MESSAGE_PREFIX, msgs.CLOUD_ID)
 		if strings.HasPrefix(msg.Reply, echoReplyPrefix) {
 			replySub = msg.Reply + ".echolet"
 		} else {

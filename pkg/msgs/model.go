@@ -5,6 +5,7 @@
 package msgs
 
 import (
+	"errors"
 	"fmt"
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	"strings"
@@ -17,10 +18,9 @@ import (
 const ENVELOPE_VERSION_1 = 1 //EBC AES
 const ENVELOPE_VERSION_2 = 2 // CBC AES
 const CLOUD_ID = "cloud-master"
-const NB_MSG_PREFIX = "natssync-nb"
-const SB_MSG_PREFIX = "natssync-sb"
 const ECHOLET_SUFFIX = "echolet"
 const ECHO_SUBJECT_BASE = "echo"
+const NATSSYNC_MESSAGE_PREFIX = "natssync"
 
 type MessageEnvelope struct {
 	EnvelopeVersion int
@@ -30,7 +30,6 @@ type MessageEnvelope struct {
 	Signature       string
 	MsgKey          string
 }
-
 
 type LocationKeyStore interface {
 	WriteKeyPair(locationID string, publicKey []byte, privateKey []byte) error
@@ -92,12 +91,37 @@ func InitLocationKeyStore() error {
 	return err
 }
 
-func MakeNBReplySubject() string{
-	replySubject := fmt.Sprintf("%s.%s.%s", NB_MSG_PREFIX, CLOUD_ID, bridgemodel.GenerateUUID())
+func MakeNBReplySubject() string {
+	replySubject := fmt.Sprintf("%s.%s.%s", NATSSYNC_MESSAGE_PREFIX, CLOUD_ID, bridgemodel.GenerateUUID())
 	return replySubject
 }
 
-func MakeEchoSubject(clientID string) string{
-	subject := fmt.Sprintf("%s.%s.%s", SB_MSG_PREFIX,clientID, ECHO_SUBJECT_BASE)
+func MakeEchoSubject(clientID string) string {
+	subject := fmt.Sprintf("%s.%s.%s", NATSSYNC_MESSAGE_PREFIX, clientID, ECHO_SUBJECT_BASE)
 	return subject
+}
+func MakeMessageSubject(locationID string, params string) string {
+	if len(params) == 0 {
+		return fmt.Sprintf("%s.%s", NATSSYNC_MESSAGE_PREFIX, locationID)
+	}
+	return fmt.Sprintf("%s.%s.%s", NATSSYNC_MESSAGE_PREFIX, locationID, params)
+}
+
+type ParsedSubject struct {
+	OriginalSubject string
+	LocationID      string
+	AppData         []string //dotted strings parts after the location ID
+}
+
+func ParseSubject(subject string) (*ParsedSubject, error) {
+	parts := strings.Split(subject, ".")
+	if len(parts) < 2 || (parts[0] != NATSSYNC_MESSAGE_PREFIX) {
+		return nil, errors.New("invalid.message.subject")
+	}
+	ret := new(ParsedSubject)
+	ret.LocationID = parts[1]
+	ret.AppData = parts[2:]
+	ret.OriginalSubject = subject
+
+	return ret, nil
 }

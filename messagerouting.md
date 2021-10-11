@@ -8,9 +8,7 @@ There are a coupe conventions for message format and selection that must be foll
 
 ## Message to be sent via sync
 Messages to be sent through the NATSSync system need to be prefix with:
-`natssync.<system flag>.<locationID>.`
-* Where the system flag is a segment of the message reserved for natssync routing info. 
-  Client listening for messages should wild card the system flag segment.
+`natssync.<locationID>.`
 * Where  location ID is the final destination of the message.
 
 The location ID of 1 is reserved for the natssync server.

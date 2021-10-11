@@ -38,7 +38,7 @@ func main() {
 	}
 	nc := bridgemodel.GetNatsConnection()
 
-	subj := fmt.Sprintf("%s.%s.%s", msgs.SB_MSG_PREFIX, clientID, msgs.ECHO_SUBJECT_BASE)
+	subj := fmt.Sprintf("%s.%s.%s", msgs.NATSSYNC_MESSAGE_PREFIX, clientID, msgs.ECHO_SUBJECT_BASE)
 
 	msgs.InitMessageFormat()
 	msgFormat := msgs.GetMsgFormat()
