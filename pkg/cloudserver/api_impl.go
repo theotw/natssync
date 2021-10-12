@@ -452,8 +452,6 @@ func aboutGetUnversioned(c *gin.Context) {
 	resp.ApiVersions = make([]string, 0)
 	resp.ApiVersions = append(resp.ApiVersions, "1")
 	log.Tracef("About call %s", resp.ApiVersions)
-	log.Debugf("About call %s", resp.ApiVersions)
-	log.Infof("About call %s", resp.ApiVersions)
 	c.JSON(http.StatusOK, resp)
 }
 func healthCheckGetUnversioned(c *gin.Context) {
