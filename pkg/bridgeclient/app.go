@@ -96,10 +96,12 @@ func RunClient(test bool) {
 		if currentSubscription == nil {
 			subj := fmt.Sprintf("%s.>", msgs.NATSSYNC_MESSAGE_PREFIX)
 			sub, err := nc.Subscribe(subj, func(msg *nats.Msg) {
-				subject, err2 := msgs.ParseSubject(subj)
+				parsedSubject, err2 := msgs.ParseSubject(msg.Subject)
 				if err2 == nil {
+					log.Tracef("Stored  Client ID %s", clientID)
+					log.Tracef("Message Location ID %s", parsedSubject.LocationID)
 					//if the target client ID is not this client, push it to the server
-					if subject.LocationID != lastClientID {
+					if parsedSubject.LocationID != clientID {
 						sendMessageToCloud(msg, serverURL, clientID, pkg.Config.CloudEvents)
 					}
 				}

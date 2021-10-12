@@ -313,6 +313,7 @@ func handlePostUnRegister(c *gin.Context) {
 }
 
 func handlePostRegister(c *gin.Context) {
+	log.Tracef("POST Register Handler")
 	var in *v1.RegisterOnPremReq
 	if strings.HasPrefix(c.Request.Header.Get("Content-Type"), "multipart/form-data") {
 		var err error
@@ -450,7 +451,9 @@ func aboutGetUnversioned(c *gin.Context) {
 	resp.AppVersion = pkg.VERSION // Run `make generate` to create version
 	resp.ApiVersions = make([]string, 0)
 	resp.ApiVersions = append(resp.ApiVersions, "1")
-
+	log.Tracef("About call %s", resp.ApiVersions)
+	log.Debugf("About call %s", resp.ApiVersions)
+	log.Infof("About call %s", resp.ApiVersions)
 	c.JSON(http.StatusOK, resp)
 }
 func healthCheckGetUnversioned(c *gin.Context) {

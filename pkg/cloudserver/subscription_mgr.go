@@ -64,6 +64,7 @@ func InitSubscriptionMgr() error {
 }
 
 func handleNewSubscription(msg *nats.Msg) {
+
 	if msg.Data == nil || len(msg.Data) == 0 {
 		log.Debugf("Got a new subscription message with no data")
 		return
@@ -71,6 +72,7 @@ func handleNewSubscription(msg *nats.Msg) {
 	nc := bridgemodel.GetNatsConnection()
 
 	clientID := string(msg.Data)
+	log.Tracef("In handle New Subscription %s", clientID)
 	subject := fmt.Sprintf("%s.%s.>", msgs.NATSSYNC_MESSAGE_PREFIX, clientID)
 	sub, err := nc.SubscribeSync(subject)
 	if err != nil {
@@ -88,7 +90,7 @@ func handleRemovedSubscription(msg *nats.Msg) {
 		return
 	}
 	clientID := string(msg.Data)
-
+	log.Tracef("In handle Remove Subscription %s", clientID)
 	mapSync.Lock()
 	defer mapSync.Unlock()
 	log.Infof("Removing subscription for clientID %s", clientID)
@@ -127,8 +129,10 @@ func handleRemoveAccount(msg *nats.Msg) {
 //gets the subscription for the client ID or returns nil
 func GetSubscriptionForClient(clientID string) *nats.Subscription {
 	var ret *nats.Subscription
+	log.Tracef("Start Get Subscript for client  %s", clientID)
 	mapSync.RLock()
 	ret = natsSubscriptions[clientID]
 	mapSync.RUnlock()
+	log.Tracef("End Get Subscript for client  %s", clientID)
 	return ret
 }

@@ -20,7 +20,7 @@ const ENVELOPE_VERSION_2 = 2 // CBC AES
 const CLOUD_ID = "cloud-master"
 const ECHOLET_SUFFIX = "echolet"
 const ECHO_SUBJECT_BASE = "echo"
-const NATSSYNC_MESSAGE_PREFIX = "natssync"
+const NATSSYNC_MESSAGE_PREFIX = "natssyncmsg"
 
 type MessageEnvelope struct {
 	EnvelopeVersion int

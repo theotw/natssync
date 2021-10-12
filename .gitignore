@@ -5,5 +5,4 @@ mods
 go.sum
 dump.rdb
 .idea
-pkg/version.go 
 
