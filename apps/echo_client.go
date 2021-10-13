@@ -52,6 +52,20 @@ func main() {
 	}
 	nc := bridgemodel.GetNatsConnection()
 	defer nc.Close()
+	sync, err := nc.SubscribeSync(bridgemodel.ResponseForLocationID)
+	if err != nil {
+		log.Fatalf("Unable to subscript to location subject %s", err.Error())
+	}
+	nc.Publish(bridgemodel.RequestForLocationID, []byte(""))
+	msg, err := sync.NextMsg(10 * time.Second)
+	var locationID string
+	if err != nil {
+		log.Errorf("Unable to get location ID from sync client, using cloud master %s", err.Error())
+		locationID = msgs.CLOUD_ID
+	} else {
+		locationID = string(msg.Data)
+	}
+	log.Infof("Got Location ID to use for reply %s", locationID)
 
 	subject := msgs.MakeEchoSubject(*args.clientID)
 
@@ -64,16 +78,16 @@ func main() {
 	i := 0
 	done := false
 	for !done {
-		doping(nc, subject, *args.message)
+		doping(nc, subject, *args.message, locationID)
 		i = i + 1
 		done = *args.repeate != -1 && i >= *args.repeate
 	}
 }
 
-func doping(nc *nats.Conn, subject string, message string) {
+func doping(nc *nats.Conn, subject string, message string, locationID string) {
 	var err error
 	start := time.Now()
-	replySubject := msgs.MakeNBReplySubject()
+	replySubject := msgs.MakeReplySubject(locationID)
 	replyListenSub := fmt.Sprintf("%s.*", replySubject)
 	sync, err := nc.SubscribeSync(replyListenSub)
 	if err != nil {
@@ -105,7 +119,7 @@ func doping(nc *nats.Conn, subject string, message string) {
 			log.Printf("Got Error %s", err.Error())
 			break
 		} else {
-			fmt.Printf("Message received [%s]: %s", msg.Subject, string(msg.Data))
+			fmt.Printf("Message received [%s]: \n", msg.Subject)
 			if strings.HasSuffix(msg.Subject, msgs.ECHOLET_SUFFIX) {
 				break
 			}

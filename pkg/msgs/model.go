@@ -90,7 +90,10 @@ func InitLocationKeyStore() error {
 	keystore, err = CreateLocationKeyStore(pkg.Config.KeystoreUrl)
 	return err
 }
-
+func MakeReplySubject(replyToLocationID string) string {
+	replySubject := fmt.Sprintf("%s.%s.%s", NATSSYNC_MESSAGE_PREFIX, replyToLocationID, bridgemodel.GenerateUUID())
+	return replySubject
+}
 func MakeNBReplySubject() string {
 	replySubject := fmt.Sprintf("%s.%s.%s", NATSSYNC_MESSAGE_PREFIX, CLOUD_ID, bridgemodel.GenerateUUID())
 	return replySubject

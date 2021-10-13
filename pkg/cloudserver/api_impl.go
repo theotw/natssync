@@ -115,8 +115,25 @@ func handlePostMessage(c *gin.Context) {
 			_, resp := bridgemodel.HandleError(c, err)
 			errors = append(errors, resp)
 		}
-		log.Tracef("Posting message to nats %s", natmsg.Subject)
-		nc.Publish(natmsg.Subject, natmsg.Data)
+		log.Tracef("Posting message to nats sub=%s, repl=%s", natmsg.Subject, natmsg.Reply)
+		if strings.HasSuffix(natmsg.Subject, msgs.ECHO_SUBJECT_BASE) {
+			if len(natmsg.Reply) == 0 {
+				log.Errorf("Got an echo message with no reply")
+			} else {
+				var echomsg nats.Msg
+				echomsg.Subject = fmt.Sprintf("%s.bridge-server", natmsg.Reply)
+				startpost := time.Now()
+				tmpstring := startpost.Format("20060102-15:04:05.000")
+				echoMsg := fmt.Sprintf("%s | %s", tmpstring, "message-server")
+				echomsg.Data = []byte(echoMsg)
+				nc.Publish(echomsg.Subject, echomsg.Data)
+			}
+		}
+		if len(natmsg.Reply) > 0 {
+			nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data)
+		} else {
+			nc.Publish(natmsg.Subject, natmsg.Data)
+		}
 		nc.Flush()
 	}
 	if len(errors) > 1 {
@@ -411,7 +428,7 @@ func sendGenericAuthRequest(subject string, authToken string) (*bridgemodel.Gene
 	timeout := time.Second * 30
 	nc := bridgemodel.GetNatsConnection()
 	ret := new(bridgemodel.GenericAuthResponse)
-	log.Tracef("Posting message to nats ")
+	log.Tracef("Posting generic auth message to nats ")
 	regReq := bridgemodel.GenericAuthRequest{AuthToken: authToken}
 	reqBits, _ := json.Marshal(&regReq)
 	respMsg, err := nc.Request(subject, reqBits, timeout)
