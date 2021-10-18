@@ -74,6 +74,12 @@ func RunClient(test bool) {
 
 	serverURL := *args.cloudServerURL
 
+	connection := bridgemodel.GetNatsConnection()
+	connection.Subscribe(bridgemodel.RequestForLocationID, func(msg *nats.Msg) {
+		clientID := store.LoadLocationID()
+		connection.Publish(bridgemodel.ResponseForLocationID, []byte(clientID))
+	})
+
 	var lastClientID string
 	var currentSubscription *nats.Subscription
 	for true {
@@ -91,12 +97,23 @@ func RunClient(test bool) {
 				currentSubscription = nil
 			}
 			lastClientID = clientID
+			//announce the cloud ID/location ID at startup
+			connection.Publish(bridgemodel.ResponseForLocationID, []byte(clientID))
 		}
 		//same as above, if we re-register, we drop the subscibe and need to resubscribe
 		if currentSubscription == nil {
-			subj := fmt.Sprintf("%s.%s.>", msgs.NB_MSG_PREFIX, msgs.CLOUD_ID)
+			subj := fmt.Sprintf("%s.>", msgs.NATSSYNC_MESSAGE_PREFIX)
 			sub, err := nc.Subscribe(subj, func(msg *nats.Msg) {
-				sendMessageToCloud(msg, serverURL, clientID, pkg.Config.CloudEvents)
+				parsedSubject, err2 := msgs.ParseSubject(msg.Subject)
+				if err2 == nil {
+					log.Tracef("Stored  Client ID %s", clientID)
+					log.Tracef("Message Location ID %s", parsedSubject.LocationID)
+					//if the target client ID is not this client, push it to the server
+					if parsedSubject.LocationID != clientID {
+						sendMessageToCloud(msg, serverURL, clientID, pkg.Config.CloudEvents)
+					}
+				}
+
 			})
 			if err != nil {
 				log.Fatalf("Error subscribing to %s: %s", subj, err)
@@ -142,7 +159,7 @@ func RunClient(test bool) {
 				log.Errorf("Cloud event message validation failed, ignoring the message...")
 				return
 			}
-			log.Infof("Received message: %s", string(natmsg.Data))
+			log.Infof("Received message: sub=%s reply=%s", natmsg.Subject, natmsg.Reply)
 
 			if len(natmsg.Reply) > 0 {
 				if strings.HasSuffix(natmsg.Subject, msgs.ECHO_SUBJECT_BASE) {

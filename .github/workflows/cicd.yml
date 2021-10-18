@@ -71,6 +71,8 @@ jobs:
     - name: Run Integration Tests
       run: |
         export syncserver_url='http://localhost:8080'
+        export syncclient_url='http://localhost:8081'
+        export natsserver_url='nats://localhost:4222'
         echo 'test version 5'
         go test -v github.com/theotw/natssync/tests/integration/...
 

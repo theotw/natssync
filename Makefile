@@ -37,7 +37,7 @@ echoenv:
 	echo "REPO ${IMAGE_REPO}"
 	echo "TAG ${IMAGE_TAG}"
 
-justgenerate: generateserver generateclient generateversion
+justgenerate: generateserver generateclient
 generateserver:
 	docker run --rm -v "${PWD}:/local" ${OPENAPI_IMAGE} generate -g go-server --package-name v1 -i /local/${CLOUD_OPENAPIDEF_FILE} -o /local/tmpcloud
 	rm -r -f pkg/bridgemodel/generated/v1
@@ -50,12 +50,7 @@ generateclient:
 	mkdir -p pkg/bridgeclient/generated/v1
 	cp tmpclient/go/model* pkg/bridgeclient/generated/v1
 
-generateversion:
-	echo "//THIS IS A GENERATED FILE, any changes will be overridden " >pkg/version.go
-	echo "package pkg" >>pkg/version.go
-	echo "const VERSION=\"${BUILD_VERSION}\"" >>pkg/version.go
-
-incontainergenerate:generateversion
+incontainergenerate:
 	rm -r -f tmpcloud
 	rm -r -f tmpclient
 	mkdir tmpcloud
@@ -88,11 +83,11 @@ buildmac: export GOSUM=${GOSUM_ENV}
 buildmac:
 	mkdir -p out
 	rm -f  out/bridgeserver_x64_darwin
-	go build -v -o out/bridgeserver_x64_darwin apps/bridge_server.go
-	go build -v -o out/bridgeclient_x64_darwin apps/bridge_client.go
-	go build -v -o out/echo_main_x64_darwin apps/echo_main.go
-	go build -v -o out/echo_client_x64_darwin apps/echo_client.go
-	go build -v -o out/simple_auth_x64_darwin apps/simple_reg_auth_server.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/bridgeserver_x64_darwin apps/bridge_server.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/bridgeclient_x64_darwin apps/bridge_client.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/echo_main_x64_darwin apps/echo_main.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/echo_client_x64_darwin apps/echo_client.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/simple_auth_x64_darwin apps/simple_reg_auth_server.go
 
 
 buildlinux:	export GOOS=linux
@@ -102,11 +97,11 @@ buildlinux: export GO111MODULE=on
 buildlinux:
 	mkdir -p out
 	rm -f  out/bridgeserver_x64_linux
-	go build -v -o out/bridgeserver_x64_linux apps/bridge_server.go
-	go build -v -o out/bridgeclient_x64_linux apps/bridge_client.go
-	go build -v -o out/echo_main_x64_linux apps/echo_main.go
-	go build -v -o out/echo_client_x64_linux apps/echo_client.go
-	go build -v -o out/simple_auth_x64_linux apps/simple_reg_auth_server.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/bridgeserver_x64_linux apps/bridge_server.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/bridgeclient_x64_linux apps/bridge_client.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/echo_main_x64_linux apps/echo_main.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/echo_client_x64_linux apps/echo_client.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/simple_auth_x64_linux apps/simple_reg_auth_server.go
 
 buildarm: export GOOS=linux
 buildarm: export GOARCH=arm

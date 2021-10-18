@@ -9,9 +9,12 @@ import (
 	"context"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
+	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/bridgemodel"
 	"github.com/theotw/natssync/pkg/metrics"
+	"github.com/theotw/natssync/pkg/msgs"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -36,7 +39,13 @@ func RunBridgeServer(test bool) {
 		Addr:    pkg.Config.ListenString,
 		Handler: r,
 	}
+	connection := bridgemodel.GetNatsConnection()
+	connection.Subscribe(bridgemodel.RequestForLocationID, func(msg *nats.Msg) {
+		connection.Publish(bridgemodel.ResponseForLocationID, []byte(msgs.CLOUD_ID))
+	})
 
+	//announce the cloud ID/location ID at startup
+	connection.Publish(bridgemodel.ResponseForLocationID, []byte(msgs.CLOUD_ID))
 	go func() {
 		// service connections
 		log.Info("In goroutine list and server")

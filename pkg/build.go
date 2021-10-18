@@ -4,30 +4,6 @@
 
 package pkg
 
-import (
-	"io/ioutil"
-	"strings"
-
-	log "github.com/sirupsen/logrus"
-)
-
-const buildDateFileLocation = "BUILD_DATE"
-var buildDate string
-
-func loadBuildDate() {
-	date, err := ioutil.ReadFile(buildDateFileLocation)
-	if err != nil {
-		log.Errorf("Unable to load build date information: %s", err)
-		buildDate = "unknown"
-		return
-	}
-	buildDate = strings.TrimSpace(string(date))
-	log.Debugf("Loaded build date %s from file %s", buildDate, buildDateFileLocation)
-}
-
 func GetBuildDate() string {
-	if buildDate == "" {
-		loadBuildDate()
-	}
-	return buildDate
+	return VERSION
 }
