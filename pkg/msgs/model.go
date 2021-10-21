@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -36,6 +37,10 @@ type LocationData struct {
 	PublicKey []byte
 	PrivateKey []byte
 	Metadata map[string]string
+	Created time.Time
+	LastModified time.Time
+	LastKeypairRotation time.Time
+	ForceKeypairRotation bool
 }
 type LocationKeyStore interface {
 	WriteKeyPair(locationID string, publicKey []byte, privateKey []byte) error
