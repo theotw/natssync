@@ -31,6 +31,12 @@ type MessageEnvelope struct {
 	MsgKey          string
 }
 
+type LocationData struct {
+	LocationID string
+	PublicKey []byte
+	PrivateKey []byte
+	Metadata map[string]string
+}
 type LocationKeyStore interface {
 	WriteKeyPair(locationID string, publicKey []byte, privateKey []byte) error
 	ReadKeyPair() ([]byte, []byte, error)
