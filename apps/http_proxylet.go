@@ -32,35 +32,34 @@ func runHttpAPI(m *nats.Msg, nc *nats.Conn, i int) {
 		nc.Publish(m.Reply, []byte("ack"))
 		nc.Flush()
 		return
-	} else {
-		urlToUse := fmt.Sprintf("http://%s%s", req.Target, req.HttpPath)
-		reader := bytes.NewReader(req.Body)
-		localreq, _ := http.NewRequest(req.HttpMethod, urlToUse, reader)
-		for _, x := range req.Headers {
-			localreq.Header.Add(x.Key, x.Values[0])
-		}
+	}
+	urlToUse := fmt.Sprintf("http://%s%s", req.Target, req.HttpPath)
+	reader := bytes.NewReader(req.Body)
+	localreq, _ := http.NewRequest(req.HttpMethod, urlToUse, reader)
+	for _, x := range req.Headers {
+		localreq.Header.Add(x.Key, x.Values[0])
+	}
 
-		localresp, httperr := http.DefaultClient.Do(localreq)
-		if httperr != nil {
-			log.Errorf("Error decoding http message %s", httperr.Error())
-			resp.HttpStatusCode = 502
-			resp.RespBody = httperr.Error()
+	localresp, httperr := http.DefaultClient.Do(localreq)
+	if httperr != nil {
+		log.Errorf("Error decoding http message %s", httperr.Error())
+		resp.HttpStatusCode = 502
+		resp.RespBody = httperr.Error()
+	} else {
+		resp.HttpStatusCode = localresp.StatusCode
+		bodybits, bodyerr := ioutil.ReadAll(localresp.Body)
+		if bodyerr == nil {
+			resp.RespBody = string(bodybits)
 		} else {
-			resp.HttpStatusCode = localresp.StatusCode
-			bodybits, bodyerr := ioutil.ReadAll(localresp.Body)
-			if bodyerr == nil {
-				resp.RespBody = string(bodybits)
+			log.Errorf("Got an error reading a resp body from http api %s %s", req.Target, bodyerr.Error())
+			resp.RespBody = bodyerr.Error()
+		}
+		resp.Headers = make(map[string]string)
+		for k, v := range localresp.Header {
+			if len(v) > 0 {
+				resp.Headers[k] = v[0]
 			} else {
-				log.Errorf("Got an error reading a resp body from http api %s %s", req.Target, bodyerr.Error())
-				resp.RespBody = bodyerr.Error()
-			}
-			resp.Headers = make(map[string]string)
-			for k, v := range localresp.Header {
-				if len(v) > 0 {
-					resp.Headers[k] = v[0]
-				} else {
-					resp.Headers[k] = ""
-				}
+				resp.Headers[k] = ""
 			}
 		}
 	}
@@ -84,7 +83,7 @@ func ConfigureDefaultTransport() {
 	}
 }
 func main() {
-	log.Info("Version %s",pkg.VERSION)
+	log.Info("Version %s", pkg.VERSION)
 	logLevel := httpproxy.GetEnvWithDefaults("LOG_LEVEL", "debug")
 	level, levelerr := log.ParseLevel(logLevel)
 	if levelerr != nil {
