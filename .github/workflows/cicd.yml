@@ -50,7 +50,7 @@ jobs:
 
     - name: Build Images
       run: |
-        $BASE_VERSION=$(cat version.txt)
+        BASE_VERSION=$(cat version.txt)
         export IMAGE_TAG=$BASE_VERSION.$(date -u '+%Y%m%d%H%M')
         echo $BASE_VERSION
         echo $IMAGE_TAG
