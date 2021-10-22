@@ -226,3 +226,4 @@ l1:
 writeimage:
 	$(shell echo ${IMAGE_TAG} >'IMAGE_TAG')
 cicd: allimages
+
