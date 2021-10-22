@@ -2,24 +2,27 @@ CLOUD_OPENAPIDEF_FILE=openapi/bridge_server_v1.yaml
 CLIENT_OPENAPIDEF_FILE=openapi/bridge_client_v1.yaml
 openapicli_jar=third_party/openapi-generator-cli.jar
 OPENAPI_IMAGE=openapitools/openapi-generator-cli:v5.2.0
-ifndef IMAGE_TAG
-	IMAGE_TAG=latest
-endif
+
 
 ifndef IMAGE_REPO
 	IMAGE_REPO=theotw
 endif
+BASE_VERSION := $(shell cat 'version.txt')
+BUILD_DATE=$(shell date '+%Y%m%d%H%M')
 
-ifeq (${IMAGE_TAG},latest)
-	BUILD_VERSION=$(shell date '+%Y%m%d%H%M')
+ifndef IMAGE_TAG
+	BUILD_VERSION=${BASE_VERSION}.${BUILD_DATE}
+	IMAGE_TAG=${BUILD_VERSION}
 else
 	BUILD_VERSION=${IMAGE_TAG}
 endif
 
-tmp:
 
-	echo ${IMAGE_TAG}
-	echo ${BUILD_VERSION}
+printversion:
+	echo Base: ${BASE_VERSION}
+	echo Date: ${BUILD_DATE}
+	echo Image: ${IMAGE_TAG}
+	echo Build: ${BUILD_VERSION}
 
 generate: maketmp justgenerate rmtmp
 maketmp:
@@ -80,41 +83,33 @@ buildmac: export CGO_ENABLED=0
 buildmac: export GO111MODULE=on
 buildmac: export GOPROXY=${GOPROXY_ENV}
 buildmac: export GOSUM=${GOSUM_ENV}
-buildmac:
-	mkdir -p out
-	rm -f  out/bridgeserver_x64_darwin
-	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/bridgeserver_x64_darwin apps/bridge_server.go
-	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/bridgeclient_x64_darwin apps/bridge_client.go
-	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/echo_main_x64_darwin apps/echo_main.go
-	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/echo_client_x64_darwin apps/echo_client.go
-	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/simple_auth_x64_darwin apps/simple_reg_auth_server.go
+buildmac: basebuild
 
 
 buildlinux:	export GOOS=linux
 buildlinux: export GOARCH=amd64
 buildlinux: export CGO_ENABLED=0
 buildlinux: export GO111MODULE=on
-buildlinux:
+buildlinux: basebuild
+
+build: basebuild
+
+basebuild:
 	mkdir -p out
 	rm -f  out/bridgeserver_x64_linux
-	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/bridgeserver_x64_linux apps/bridge_server.go
-	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/bridgeclient_x64_linux apps/bridge_client.go
-	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/echo_main_x64_linux apps/echo_main.go
-	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/echo_client_x64_linux apps/echo_client.go
-	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/simple_auth_x64_linux apps/simple_reg_auth_server.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/bridgeserver_${GOARCH}_${GOOS} apps/bridge_server.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/bridgeclient_${GOARCH}_${GOOS} apps/bridge_client.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/echo_main_${GOARCH}_${GOOS} apps/echo_main.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/echo_client_${GOARCH}_${GOOS} apps/echo_client.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/simple_auth_${GOARCH}_${GOOS} apps/simple_reg_auth_server.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/http_proxy_${GOARCH}_${GOOS} apps/httpproxy_server.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/http_proxylet_${GOARCH}_${GOOS} apps/http_proxylet.go
 
 buildarm: export GOOS=linux
 buildarm: export GOARCH=arm
 buildarm: export CGO_ENABLED=0
 buildarm: export GO111MODULE=on
-buildarm:
-	mkdir -p out
-	rm -f  out/bridgeserver_x64_linuxarm64
-	go build -v -o out/bridgeserver_x86_linux_arm apps/bridge_server.go
-	go build -v -o out/bridgeclient_x86_linux_arm apps/bridge_client.go
-	go build -v -o out/echo_main_x86_linux_arm apps/echo_main.go
-	go build -v -o out/echo_client_x86_linux_arm apps/echo_client.go
-	go build -v -o out/simple_auth_x86_linux_arm apps/simple_reg_auth_server.go
+buildarm: basebuild
 
 clean:
 	rm -r -f tmp
@@ -166,7 +161,14 @@ simpleautharm:
 simpleauthBuildAndPush: simpleauth
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
 
-allimages: baseimage testimage cloudimage clientimage echoproxylet simpleauth debugcloudimage
+httpproxy:
+	DOCKER_BUILDKIT=1 docker build -f Dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/httpproxy_server:${IMAGE_TAG} --target http_proxy .
+
+httpproxylet:
+	DOCKER_BUILDKIT=1 docker build -f Dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG} --target http_proxylet .
+
+
+allimages: baseimage testimage cloudimage clientimage echoproxylet simpleauth debugcloudimage httpproxy httpproxylet
 
 allarmimages: baseimagearm cloudimagearm clientimagearm echoproxyletarm simpleautharm
 
@@ -179,6 +181,8 @@ tagAndPushToDockerHub:
 	docker tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} ${IMAGE_REPO}/simple-reg-auth:latest
 	docker tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} ${IMAGE_REPO}/natssync-tests:latest
 	docker tag ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG} ${IMAGE_REPO}/natssync-server-debug:latest
+	docker tag ${IMAGE_REPO}/httpproxy_server:${IMAGE_TAG} ${IMAGE_REPO}/httpproxy_server:latest
+	docker tag ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG} ${IMAGE_REPO}/httpproxylet:latest
 
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-server:latest
@@ -192,6 +196,12 @@ tagAndPushToDockerHub:
 	docker push ${IMAGE_REPO}/natssync-tests:latest
 	docker push ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-server-debug:latest
+	docker push ${IMAGE_REPO}/httpproxy_server:${IMAGE_TAG}
+ 	docker push ${IMAGE_REPO}/httpproxy_server:latest
+	docker push ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG}
+ 	docker push ${IMAGE_REPO}/httpproxylet:latest
+
+
 
 pushall:
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
@@ -199,6 +209,8 @@ pushall:
 	docker push ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/httpproxy_server:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG}
 
 
 l1:
@@ -209,3 +221,9 @@ l1:
 	cat out/l1_out.txt | go-junit-report > out/report_l1.xml || echo "Failure generating report xml"; \
 	cat out/l1_out.txt; \
 	exit $$SUCCESS;
+
+
+writeimage:
+	$(shell echo ${IMAGE_TAG} >'IMAGE_TAG')
+cicd: allimages
+

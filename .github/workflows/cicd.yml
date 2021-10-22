@@ -50,10 +50,12 @@ jobs:
 
     - name: Build Images
       run: |
-        export IMAGE_TAG=$(date -u '+%Y%m%d%H%M')
-        echo -n $IMAGE_TAG > IMAGE_TAG
-        make justgenerate
-        make allimages
+        BASE_VERSION=$(cat version.txt)
+        export IMAGE_TAG=$BASE_VERSION.$(date -u '+%Y%m%d%H%M')
+        echo $BASE_VERSION
+        echo $IMAGE_TAG
+        echo $IMAGE_TAG > IMAGE_TAG
+        make cicd
 
     - name: Deploy Docker Containers
       run: single_cluster_test/docker-deploy.sh $(cat IMAGE_TAG)
