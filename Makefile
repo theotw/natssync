@@ -9,17 +9,20 @@ ifndef IMAGE_REPO
 endif
 BASE_VERSION := $(shell cat 'version.txt')
 BUILD_DATE=$(shell date '+%Y%m%d%H%M')
-BUILD_VERSION=${BASE_VERSION}.${BUILD_DATE}
+
 ifndef IMAGE_TAG
+	BUILD_VERSION=${BASE_VERSION}.${BUILD_DATE}
 	IMAGE_TAG=${BUILD_VERSION}
+else
+	BUILD_VERSION=${IMAGE_TAG}
 endif
 
 
 printversion:
-	echo ${BASE_VERSION}
-	echo ${IMAGE_TAG}
-	echo ${BUILD_DATE}
-	echo ${BUILD_VERSION}
+	echo Base: ${BASE_VERSION}
+	echo Date: ${BUILD_DATE}
+	echo Image: ${IMAGE_TAG}
+	echo Build: ${BUILD_VERSION}
 
 generate: maketmp justgenerate rmtmp
 maketmp:
@@ -222,4 +225,4 @@ l1:
 
 writeimage:
 	$(shell echo ${IMAGE_TAG} >'IMAGE_TAG')
-cicd: writeimage allimages
+cicd: allimages

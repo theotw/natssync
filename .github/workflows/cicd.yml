@@ -50,7 +50,11 @@ jobs:
 
     - name: Build Images
       run: |
-        make justgenerate
+        cat version.txt >> $BASE_VERSION
+        export IMAGE_TAG=$BASE_VERSION.$(date -u '+%Y%m%d%H%M')
+        echo $BASE_VERSION
+        echo $IMAGE_TAG
+        echo $IMAGE_TAG > IMAGE_TAG
         make cicd
 
     - name: Deploy Docker Containers
