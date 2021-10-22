@@ -5,6 +5,8 @@
 package main
 
 import (
+	"github.com/prometheus/common/log"
+	"github.com/theotw/natssync/pkg"
 	cloudclient "github.com/theotw/natssync/pkg/bridgeclient"
 )
 
@@ -14,5 +16,6 @@ import (
 //CLOUD_BRIDGE_URL=http://somehost:port
 //PREM_ID=the location ID from a registration request
 func main() {
+	log.Info("Version %s",pkg.VERSION)
 	cloudclient.RunClient(false)
 }

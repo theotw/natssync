@@ -4,9 +4,14 @@
 
 package main
 
-import "github.com/theotw/natssync/pkg/cloudserver"
+import (
+	log "github.com/sirupsen/logrus"
+	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/cloudserver"
+)
 
 //The main app for the server that runs in the cloud
 func main() {
+	log.Info("Version %s",pkg.VERSION)
 	cloudserver.RunBridgeServerApp(false)
 }
