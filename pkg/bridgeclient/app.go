@@ -19,6 +19,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -102,25 +103,9 @@ func RunClient(test bool) {
 		}
 		//same as above, if we re-register, we drop the subscibe and need to resubscribe
 		if currentSubscription == nil {
-			subj := fmt.Sprintf("%s.>", msgs.NATSSYNC_MESSAGE_PREFIX)
-			sub, err := nc.Subscribe(subj, func(msg *nats.Msg) {
-				parsedSubject, err2 := msgs.ParseSubject(msg.Subject)
-				if err2 == nil {
-					log.Tracef("Stored  Client ID %s", clientID)
-					log.Tracef("Message Location ID %s", parsedSubject.LocationID)
-					//if the target client ID is not this client, push it to the server
-					if parsedSubject.LocationID != clientID {
-						sendMessageToCloud(msg, serverURL, clientID, pkg.Config.CloudEvents)
-					}
-				}
-
-			})
+			currentSubscription, err = subscribeToOutboundMessages(serverURL, clientID)
 			if err != nil {
-				log.Fatalf("Error subscribing to %s: %s", subj, err)
-				continue
-			} else {
-				currentSubscription = sub
-				log.Infof("Subscribed to %s", subj)
+				log.Errorf("Error subscribing to messages, will try again %s", err.Error())
 			}
 		}
 
@@ -177,7 +162,7 @@ func RunClient(test bool) {
 						return
 					}
 					echomsg.Data = cvMessage
-					sendMessageToCloud(&echomsg, serverURL, clientID, pkg.Config.CloudEvents)
+					sendMessageToCloud(serverURL, clientID, pkg.Config.CloudEvents, &echomsg)
 					endpost := time.Now()
 					metrics.RecordTimeToPushMessage(int(math.Round(endpost.Sub(startpost).Seconds())))
 				}
@@ -193,27 +178,84 @@ func RunClient(test bool) {
 		}
 	}
 }
-
-func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string, ceEnabled bool) {
-	log.Debugf("Sending Msg NB %s", msg.Subject)
-	msgFormat := msgs.GetMsgFormat()
-	status, err := msgFormat.ValidateMsgFormat(msg.Data, ceEnabled)
+func subscribeToOutboundMessages(serverURL, clientID string) (*nats.Subscription, error) {
+	nc := bridgemodel.GetNatsConnection()
+	subj := fmt.Sprintf("%s.>", msgs.NATSSYNC_MESSAGE_PREFIX)
+	sub, err := nc.SubscribeSync(subj)
 	if err != nil {
-		log.Errorf("Error validating the cloud event message: %s", err.Error())
-		return
+		return nil, err
 	}
-	if !status {
-		log.Errorf("Cloud event message validation failed, ignoring the message...")
-		return
+	go handleOutboundMessages(sub, serverURL, clientID)
+	return sub, nil
+
+}
+
+// handleOutboundMessages  This pulls messages off the queue and groups a bunch of them to push them together
+// if we have to wait more than N ms for a message, we will go ahead and send what we have
+// or if we get more than N messages, we will send them along
+func handleOutboundMessages(subscription *nats.Subscription, serverURL, clientID string) {
+	timeoutStr := pkg.GetEnvWithDefaults("NATSSYNC_CLIENT_WAIT_TIMEOUT", "5")
+	maxMsgHoldStr := pkg.GetEnvWithDefaults("NATSSYNC_CLIENT_MAX_MSG_HOLD", "512")
+	waitTimeout, numErr := strconv.ParseInt(timeoutStr, 10, 16)
+	if numErr != nil {
+		waitTimeout = 5
+	}
+	maxQueueSize, numErr := strconv.ParseInt(maxMsgHoldStr, 10, 16)
+	if numErr != nil {
+		waitTimeout = 512
+	}
+
+	msgList := make([]*nats.Msg, 0)
+	keepGoing := true
+	for keepGoing {
+		msg, err := subscription.NextMsg(time.Duration(waitTimeout) * time.Millisecond)
+		sendWhatWeHave := false
+		//if we get a timeout (or any error) send what we have
+		if err != nil {
+			keepGoing = err == nats.ErrTimeout
+			sendWhatWeHave = len(msgList) > 0
+		} else {
+			parsedSubject, err2 := msgs.ParseSubject(msg.Subject)
+			if err2 == nil {
+				log.Tracef("Stored  Client ID %s", clientID)
+				log.Tracef("Message Location ID %s", parsedSubject.LocationID)
+				//if the target client ID is not this client, push it to the server
+				if parsedSubject.LocationID != clientID {
+					msgList = append(msgList, msg)
+				}
+			}
+			sendWhatWeHave = len(msgList) > int(maxQueueSize)
+		}
+		if sendWhatWeHave {
+			sendMessageToCloud(serverURL, clientID, false, msgList...)
+			msgList = make([]*nats.Msg, 0)
+		}
+	}
+}
+func sendMessageToCloud(serverURL string, clientID string, ceEnabled bool, msgsList ...*nats.Msg) {
+	envenlopes := make([]*msgs.MessageEnvelope, 0)
+	for _, msg := range msgsList {
+		msgFormat := msgs.GetMsgFormat()
+		status, err := msgFormat.ValidateMsgFormat(msg.Data, ceEnabled)
+		if err != nil {
+			log.Errorf("Error validating the cloud event message: %s", err.Error())
+			continue
+		}
+		if !status {
+			log.Errorf("Cloud event message validation failed, ignoring the message...")
+			continue
+		}
+
+		natmsg := bridgemodel.NatsMessage{Reply: msg.Reply, Subject: msg.Subject, Data: msg.Data}
+		envelope, enverr := msgs.PutObjectInEnvelope(natmsg, clientID, msgs.CLOUD_ID)
+		if enverr != nil {
+			log.Errorf("Error putting msg in envelope %s", enverr.Error())
+			continue
+		}
+		envenlopes = append(envenlopes, envelope)
 	}
 	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
-	natmsg := bridgemodel.NatsMessage{Reply: msg.Reply, Subject: msg.Subject, Data: msg.Data}
-	envelope, enverr := msgs.PutObjectInEnvelope(natmsg, clientID, msgs.CLOUD_ID)
-	if enverr != nil {
-		log.Errorf("Error putting msg in envelope %s", enverr.Error())
-		return
-	}
-	jsonbits, jsonerr := json.Marshal(envelope)
+	jsonbits, jsonerr := json.Marshal(envenlopes)
 	if jsonerr != nil {
 		log.Errorf("Error encoding envelope to json bits %s", jsonerr.Error())
 		return
@@ -232,10 +274,10 @@ func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string, ceEnab
 	r := bytes.NewReader(postMsgBits)
 	resp, posterr := http.DefaultClient.Post(url, "application/json", r)
 	if posterr != nil {
-		log.Errorf("Error sending message to server.  Dropping the message %s  error was %s", msg.Subject, posterr.Error())
+		log.Errorf("Error sending message to server.  Dropping the message %d  error was %s", len(envenlopes), posterr.Error())
 		return
 	}
 	if resp.StatusCode >= 300 {
-		log.Errorf("Error sending message to server.  Dropping the message %s  error was %s", msg.Subject, resp.Status)
+		log.Errorf("Error sending messages to server.  Dropping the message %d  error was %s", len(envenlopes), resp.Status)
 	}
 }

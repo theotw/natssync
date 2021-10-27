@@ -174,7 +174,14 @@ allarmimages: baseimagearm cloudimagearm clientimagearm echoproxyletarm simpleau
 
 allimagesBuildAndPush:testimageBuildAndPush cloudimageBuildAndPush clientimageBuildAndPush echoproxyletBuildAndPush simpleauthBuildAndPush
 
-tagAndPushToDockerHub:
+imagelist=natssync-server natssync-client echo-proxylet simple-reg-auth natssync-tests natssync-server-debug httpproxy_server httpproxylet
+loopover:
+	@ for img in ${imagelist}; \
+ 		do \
+ 			echo $${img}; \
+ 		done
+
+tag:
 	docker tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} ${IMAGE_REPO}/natssync-server:latest
 	docker tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} ${IMAGE_REPO}/natssync-client:latest
 	docker tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} ${IMAGE_REPO}/echo-proxylet:latest
@@ -184,6 +191,7 @@ tagAndPushToDockerHub:
 	docker tag ${IMAGE_REPO}/httpproxy_server:${IMAGE_TAG} ${IMAGE_REPO}/httpproxy_server:latest
 	docker tag ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG} ${IMAGE_REPO}/httpproxylet:latest
 
+tagAndPushToDockerHub: tag
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-server:latest
 	docker push ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}

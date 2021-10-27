@@ -5,10 +5,23 @@
 package apps
 
 import (
+	"crypto/tls"
 	"github.com/theotw/natssync/pkg/cloudserver"
+	"net/http"
 	"testing"
+	"time"
 )
 
 func TestBridgeServer(t *testing.T) {
 	cloudserver.RunBridgeServerApp(true)
+}
+func makeHttpCall(url string) {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := http.Client{
+		Timeout:   5 * time.Second,
+		Transport: tr,
+	}
+	client.Head(url)
 }

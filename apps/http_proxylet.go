@@ -18,6 +18,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"runtime"
+	"time"
 )
 
 func runHttpAPI(m *nats.Msg, nc *nats.Conn, i int) {
@@ -105,8 +106,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to talk to NATS %s", err.Error())
 	}
+	httpproxy.SetMyLocationID("*")
 	nc.Publish(server.RequestForLocationID, []byte(""))
-
+	//give a little time to get a location ID, or punt back to *
+	time.Sleep(5 * time.Second)
 	ConfigureDefaultTransport()
 	err = models2.InitNats()
 	if err != nil {
