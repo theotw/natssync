@@ -69,8 +69,9 @@ func CreateLocationKeyStore(keystoreUrl string) (LocationKeyStore, error) {
 		if err == nil {
 			newReaper(mongoKeyStore).RunCleanupJob(context.TODO())
 		}
-
+		return mongoKeyStore, err
 	}
+
 	return nil, fmt.Errorf("unsupported keystore types %s", keystoreType)
 }
 
