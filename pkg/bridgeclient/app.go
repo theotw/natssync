@@ -286,6 +286,8 @@ func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string, ceEnab
 			log.Errorf("Error sending message to server.  Dropping the message %s  status %s", msg.Subject, resp.Status)
 			return
 		}
+
+		break
 	}
 
 }

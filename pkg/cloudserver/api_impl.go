@@ -61,18 +61,18 @@ func handleGetMessages(c *gin.Context) {
 			plainMsg.Subject = m.Subject
 			envelope, err2 := msgs.PutObjectInEnvelope(plainMsg, pkg.CLOUD_ID, clientID)
 			if err2 == nil {
-				jsonData, marshelError := json.Marshal(&envelope)
-				if marshelError == nil {
+				jsonData, marshalError := json.Marshal(&envelope)
+				if marshalError == nil {
 					var bridgeMsg v1.BridgeMessage
 					bridgeMsg.MessageData = string(jsonData)
 					bridgeMsg.FormatVersion = "1"
 					bridgeMsg.ClientID = clientID
 					ret = append(ret, bridgeMsg)
 				} else {
-					log.Errorf("Error marshelling message in envelope %s \n", marshelError.Error())
+					log.WithError(marshalError).Error("Error marshalling message in envelope")
 				}
 			} else {
-				log.Errorf("Error putting message in envelope %s \n", err2.Error())
+				log.WithError(err2).Error("Error putting message in envelope")
 			}
 		} else {
 			//ignore this log.Tracef("Error fetching messages from subscription for %s error %s", clientID, e.Error())
@@ -560,9 +560,11 @@ func aboutGetUnversioned(c *gin.Context) {
 	log.Tracef("About call %s", resp.ApiVersions)
 	c.JSON(http.StatusOK, resp)
 }
+
 func healthCheckGetUnversioned(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
+
 func swaggerUIGetHandler(c *gin.Context) {
 	c.Redirect(302, "/bridge-server/api/index_bridge_server_v1.html")
 }

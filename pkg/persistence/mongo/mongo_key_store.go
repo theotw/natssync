@@ -143,8 +143,9 @@ func (m *MongoKeyStore) GetExistingKeys() ([]*utils.UUIDv1, error) {
 	}
 
 	defer func() {
-		err := cur.Close(context.TODO())
-		log.WithError(err).Error("failed to close mongo cursor")
+		if err := cur.Close(context.TODO()); err != nil {
+			log.WithError(err).Error("failed to close mongo cursor")
+		}
 	}()
 
 	existingKeys := make([]*utils.UUIDv1, 0)
