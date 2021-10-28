@@ -13,11 +13,11 @@ import (
 )
 
 type CloudEventsFormat struct {
-	Source 		string		`json:"source"`
-	Type		string		`json:"type"`
-	SpecVersion	string		`json:"specversion"`
-	ID			string		`json:"id"`
-	Data		interface{}	`json:"data"`
+	Source      string      `json:"source"`
+	Type        string      `json:"types"`
+	SpecVersion string      `json:"specversion"`
+	ID          string      `json:"id"`
+	Data        interface{} `json:"data"`
 }
 
 func (f *CloudEventsFormat) GeneratePayload(message string, mType string, source string) ([]byte, error) {
@@ -36,7 +36,7 @@ func (f *CloudEventsFormat) GeneratePayload(message string, mType string, source
 	return reqBytes.Bytes(), nil
 }
 
-func (f *CloudEventsFormat) ValidateMsgFormat(msg []byte, ceEnabled bool) (bool, error){
+func (f *CloudEventsFormat) ValidateMsgFormat(msg []byte, ceEnabled bool) (bool, error) {
 	if !ceEnabled {
 		log.Info("Cloud Events disabled, skipping message validation")
 		return true, nil

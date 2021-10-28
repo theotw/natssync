@@ -5,13 +5,15 @@
 package cloudserver
 
 import (
+	"os"
+	"time"
+
 	log "github.com/sirupsen/logrus"
+
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	"github.com/theotw/natssync/pkg/metrics"
 	"github.com/theotw/natssync/pkg/msgs"
-	"os"
-	"time"
 )
 
 func RunBridgeServerApp(test bool) {

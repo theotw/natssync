@@ -14,6 +14,7 @@ import (
 
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	"github.com/theotw/natssync/pkg/msgs"
+	"github.com/theotw/natssync/pkg/persistence"
 )
 
 var mapSync sync.RWMutex
@@ -45,7 +46,7 @@ func InitSubscriptionMgr() error {
 		return err
 	}
 
-	knownClients, err := msgs.GetKeyStore().ListKnownClients()
+	knownClients, err := persistence.GetKeyStore().ListKnownClients()
 	if err != nil {
 		log.Errorf("Unable to list known client, is keystore initialized? %s \n", err)
 		return err
@@ -114,7 +115,7 @@ func handleRemoveAccount(msg *nats.Msg) {
 	clientID := string(msg.Data)
 	log.Infof("Removing account for clientID %s", clientID)
 
-	keystore := msgs.GetKeyStore()
+	keystore := persistence.GetKeyStore()
 	if err := keystore.RemoveLocation(clientID); err != nil {
 		log.Error(err)
 		return

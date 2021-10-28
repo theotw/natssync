@@ -7,19 +7,21 @@ package cloudserver
 import (
 	"bytes"
 	"context"
-	"github.com/gin-contrib/static"
-	"github.com/gin-gonic/gin"
-	"github.com/nats-io/nats.go"
-	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg"
-	"github.com/theotw/natssync/pkg/bridgemodel"
-	"github.com/theotw/natssync/pkg/metrics"
-	"github.com/theotw/natssync/pkg/msgs"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/gin-contrib/static"
+	"github.com/gin-gonic/gin"
+	"github.com/nats-io/nats.go"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/bridgemodel"
+	"github.com/theotw/natssync/pkg/metrics"
+	"github.com/theotw/natssync/pkg/persistence"
 )
 
 var quit chan os.Signal
@@ -41,11 +43,11 @@ func RunBridgeServer(test bool) {
 	}
 	connection := bridgemodel.GetNatsConnection()
 	connection.Subscribe(bridgemodel.RequestForLocationID, func(msg *nats.Msg) {
-		connection.Publish(bridgemodel.ResponseForLocationID, []byte(msgs.CLOUD_ID))
+		connection.Publish(bridgemodel.ResponseForLocationID, []byte(pkg.CLOUD_ID))
 	})
 
 	//announce the cloud ID/location ID at startup
-	connection.Publish(bridgemodel.ResponseForLocationID, []byte(msgs.CLOUD_ID))
+	connection.Publish(bridgemodel.ResponseForLocationID, []byte(pkg.CLOUD_ID))
 	go func() {
 		// service connections
 		log.Info("In goroutine list and server")
@@ -73,22 +75,26 @@ func RunBridgeServer(test bool) {
 func newRouter(test bool) *gin.Engine {
 	router := gin.Default()
 	root := router.Group("/")
-	root.Handle("GET", "/metrics", metricGetHandlers)
+	root.Handle(http.MethodGet, "/metrics", metricGetHandlers)
 	bidgeRoot := router.Group("/bridge-server/")
 	if test {
-		bidgeRoot.Handle("GET", "/kill", func(c *gin.Context) {
+		bidgeRoot.Handle(http.MethodGet, "/kill", func(c *gin.Context) {
 			quit <- os.Interrupt
 		})
 	}
+
+	certMiddleware := NewCertMiddleware(persistence.GetKeyStore())
+
 	v1 := router.Group("/bridge-server/1", routeMiddleware)
-	v1.Handle("GET", "/about", aboutGetUnversioned)
-	v1.Handle("GET", "/healthcheck", healthCheckGetUnversioned)
-	v1.Handle("POST", "/register", handlePostRegister)
-	v1.Handle("GET", "/register", handleGetRegisteredLocations)
-	v1.Handle("POST", "/unregister", handlePostUnRegister)
-	v1.Handle("POST", "/message-queue/:premid", handlePostMessage)
-	v1.Handle("GET", "/message-queue/:premid", handleGetMessages)
-	v1.Handle("POST", "/messages", natsMsgPostHandler)
+	v1.Handle(http.MethodGet, "/about", aboutGetUnversioned)
+	v1.Handle(http.MethodGet, "/healthcheck", healthCheckGetUnversioned)
+	v1.Handle(http.MethodPost, "/register", handlePostRegister)
+	v1.Handle(http.MethodGet, "/register", handleGetRegisteredLocations)
+	v1.Handle(http.MethodPost, "/register-certificate", handlePostCertRotation)
+	v1.Handle(http.MethodPost, "/unregister", handlePostUnRegister)
+	v1.Handle(http.MethodPost, "/message-queue/:premid", certMiddleware.Enforce, handlePostMessage)
+	v1.Handle(http.MethodGet, "/message-queue/:premid", certMiddleware.Enforce, handleGetMessages)
+	v1.Handle(http.MethodPost, "/messages", natsMsgPostHandler)
 
 	addUnversionedRoutes(router)
 	addOpenApiDefRoutes(router)
@@ -96,8 +102,8 @@ func newRouter(test bool) *gin.Engine {
 	return router
 }
 func addUnversionedRoutes(router *gin.Engine) {
-	router.Handle("GET", "/bridge-server/about", aboutGetUnversioned)
-	router.Handle("GET", "/bridge-server/healthcheck", healthCheckGetUnversioned)
+	router.Handle(http.MethodGet, "/bridge-server/about", aboutGetUnversioned)
+	router.Handle(http.MethodGet, "/bridge-server/healthcheck", healthCheckGetUnversioned)
 }
 
 //router middle ware
@@ -125,9 +131,9 @@ func addOpenApiDefRoutes(router *gin.Engine) {
 	router.StaticFile("/bridge-server/api/swagger.yaml", "openapi/bridge_server_v1.yaml")
 }
 func addSwaggerUIRoutes(router *gin.Engine) {
-	router.Handle("GET", "/bridge-server/api/index.html", swaggerUIGetHandler)
-	router.Handle("GET", "/bridge-server/api", swaggerUIGetHandler)
-	router.Handle("GET", "/bridge-server/api/", swaggerUIGetHandler)
+	router.Handle(http.MethodGet, "/bridge-server/api/index.html", swaggerUIGetHandler)
+	router.Handle(http.MethodGet, "/bridge-server/api", swaggerUIGetHandler)
+	router.Handle(http.MethodGet, "/bridge-server/api/", swaggerUIGetHandler)
 	swaggerUI := static.LocalFile("third_party/swaggerui/", false)
 	webHandler := static.Serve("/bridge-server/api", swaggerUI)
 	router.Use(webHandler)

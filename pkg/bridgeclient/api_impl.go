@@ -12,26 +12,29 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
+
 	"github.com/theotw/natssync/pkg"
 	v1 "github.com/theotw/natssync/pkg/bridgeclient/generated/v1"
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	serverv1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
 	"github.com/theotw/natssync/pkg/msgs"
-	"io/ioutil"
-
-	"net/http"
+	"github.com/theotw/natssync/pkg/persistence"
+	"github.com/theotw/natssync/pkg/types"
 )
 
 func handleGetRegister(c *gin.Context) {
-	store := msgs.GetKeyStore()
-	locationID := store.LoadLocationID()
+	store := persistence.GetKeyStore()
+	locationID := store.LoadLocationID("")
 	if len(locationID) > 0 {
-		c.JSON(200, "")
+		c.JSON(http.StatusOK, "")
 	} else {
-		c.JSON(400, "")
+		c.JSON(http.StatusBadRequest, "")
 	}
 }
 
@@ -45,8 +48,8 @@ func handlePostUnRegister(c *gin.Context) {
 		return
 	}
 
-	keyStore := msgs.GetKeyStore()
-	locationID := keyStore.LoadLocationID()
+	keyStore := persistence.GetKeyStore()
+	locationID := keyStore.LoadLocationID("")
 	if locationID == "" {
 		err := errors.New("Failed to load locationID")
 		code, response := bridgemodel.HandleError(c, err)
@@ -82,13 +85,13 @@ func handlePostUnRegister(c *gin.Context) {
 		c.JSON(code, response)
 		return
 	}
-	err = keyStore.RemoveKeyPair()
+	err = keyStore.RemoveKeyPair("")
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)
 		return
 	}
-	c.JSON(201, nil)
+	c.JSON(http.StatusCreated, nil)
 }
 
 func handlePostRegister(c *gin.Context) {
@@ -163,7 +166,20 @@ func handlePostRegister(c *gin.Context) {
 		c.JSON(code, response)
 		return
 	}
-	err = msgs.GetKeyStore().WriteLocation(msgs.CLOUD_ID, []byte(regResp.CloudPublicKey), regResp.MetaData)
+
+	locationData, err := types.NewLocationData(
+		pkg.CLOUD_ID,
+		[]byte(regResp.CloudPublicKey),
+		nil,
+		regResp.MetaData,
+	)
+	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+
+	err = persistence.GetKeyStore().WriteLocation(*locationData)
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)
@@ -180,28 +196,30 @@ func handlePostRegister(c *gin.Context) {
 
 	ret := new(v1.RegistrationResponse)
 	ret.LocationID = regResp.PremID
-	c.JSON(200, ret)
+	c.JSON(http.StatusCreated, ret)
 }
 
 func registrationGetHandler(c *gin.Context) {
 	ret := new(v1.RegistrationResponse)
-	ret.LocationID = msgs.GetKeyStore().LoadLocationID()
-	c.JSON(200, ret)
+	ret.LocationID = persistence.GetKeyStore().LoadLocationID("")
+	c.JSON(http.StatusOK, ret)
 }
 
 func aboutGetUnversioned(c *gin.Context) {
 	var resp v1.AboutResponse
-	resp.AppVersion = pkg.VERSION  // Run `make generate` to create version
+	resp.AppVersion = pkg.VERSION // Run `make generate` to create version
 	resp.ApiVersions = make([]string, 0)
 	resp.ApiVersions = append(resp.ApiVersions, "1")
 
 	c.JSON(http.StatusOK, resp)
 }
+
 func healthCheckGetUnversioned(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
+
 func swaggerUIGetHandler(c *gin.Context) {
-	c.Redirect(302, "/bridge-client/api/index_bridge_client_v1.html")
+	c.Redirect(http.StatusFound, "/bridge-client/api/index_bridge_client_v1.html")
 }
 
 func metricGetHandlers(c *gin.Context) {

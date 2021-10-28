@@ -61,7 +61,7 @@ func main() {
 	var locationID string
 	if err != nil {
 		log.Errorf("Unable to get location ID from sync client, using cloud master %s", err.Error())
-		locationID = msgs.CLOUD_ID
+		locationID = pkg.CLOUD_ID
 	} else {
 		locationID = string(msg.Data)
 	}
