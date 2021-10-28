@@ -23,9 +23,6 @@ import (
 const (
 	locationDataKeyFileSuffix = "_locationData.json"
 	serviceKeyFileNameSuffix  = "_serviceKeyData.json"
-
-	// this is required by the CICD pipeline to get the location IDs
-	locationIDFileName = "locationID.txt"
 )
 
 type FileKeyStore struct {
@@ -57,9 +54,6 @@ func (t *FileKeyStore) WriteKeyPair(locationID string, publicKey []byte, private
 		return err
 	}
 
-	if err = t.writeFile(locationIDFileName, []byte(locationID)); err != nil {
-		return err
-	}
 	return nil
 }
 
