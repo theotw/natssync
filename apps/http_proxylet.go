@@ -106,6 +106,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to talk to NATS %s", err.Error())
 	}
+
 	httpproxy.SetMyLocationID("*")
 	nc.Publish(server.RequestForLocationID, []byte(""))
 	//give a little time to get a location ID, or punt back to *
