@@ -194,8 +194,8 @@ func subscribeToOutboundMessages(serverURL, clientID string) (*nats.Subscription
 // if we have to wait more than N ms for a message, we will go ahead and send what we have
 // or if we get more than N messages, we will send them along
 func handleOutboundMessages(subscription *nats.Subscription, serverURL, clientID string) {
-	timeoutStr := pkg.GetEnvWithDefaults("NATSSYNC_CLIENT_WAIT_TIMEOUT", "5")
-	maxMsgHoldStr := pkg.GetEnvWithDefaults("NATSSYNC_CLIENT_MAX_MSG_HOLD", "512")
+	timeoutStr := pkg.GetEnvWithDefaults("NATSSYNC_MSG_WAIT_TIMEOUT", "5")
+	maxMsgHoldStr := pkg.GetEnvWithDefaults("NATSSYNC__MAX_MSG_HOLD", "512")
 	waitTimeout, numErr := strconv.ParseInt(timeoutStr, 10, 16)
 	if numErr != nil {
 		waitTimeout = 5

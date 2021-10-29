@@ -16,6 +16,7 @@ import (
 	"mime"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,6 +33,17 @@ import (
 )
 
 func handleGetMessages(c *gin.Context) {
+	timeoutStr := pkg.GetEnvWithDefaults("NATSSYNC_MSG_WAIT_TIMEOUT", "5")
+	maxMsgHoldStr := pkg.GetEnvWithDefaults("NATSSYNC__MAX_MSG_HOLD", "512")
+	waitTimeout, numErr := strconv.ParseInt(timeoutStr, 10, 16)
+	if numErr != nil {
+		waitTimeout = 5
+	}
+	maxQueueSize, numErr := strconv.ParseInt(maxMsgHoldStr, 10, 16)
+	if numErr != nil {
+		waitTimeout = 512
+	}
+
 	clientID := c.Param("premid")
 	log.Tracef("Handling get message request for clientID %s", clientID)
 	var in v1.AuthChallenge
@@ -49,30 +61,37 @@ func handleGetMessages(c *gin.Context) {
 	ret := make([]v1.BridgeMessage, 0)
 	metrics.IncrementTotalQueries(1)
 	sub := GetSubscriptionForClient(clientID)
+	start:=time.Now()
 	if sub != nil {
-		m, e := sub.NextMsg(3 * time.Second)
-		if e == nil {
-			plainMsg := new(bridgemodel.NatsMessage)
-			plainMsg.Data = m.Data
-			plainMsg.Reply = m.Reply
-			plainMsg.Subject = m.Subject
-			envelope, err2 := msgs.PutObjectInEnvelope(plainMsg, msgs.CLOUD_ID, clientID)
-			if err2 == nil {
-				jsonData, marshelError := json.Marshal(&envelope)
-				if marshelError == nil {
-					var bridgeMsg v1.BridgeMessage
-					bridgeMsg.MessageData = string(jsonData)
-					bridgeMsg.FormatVersion = "1"
-					bridgeMsg.ClientID = clientID
-					ret = append(ret, bridgeMsg)
+		keepWaiting:=true
+		for keepWaiting {
+			m, e := sub.NextMsg(time.Duration(waitTimeout) * time.Millisecond)
+			if e == nil {
+				plainMsg := new(bridgemodel.NatsMessage)
+				plainMsg.Data = m.Data
+				plainMsg.Reply = m.Reply
+				plainMsg.Subject = m.Subject
+				envelope, err2 := msgs.PutObjectInEnvelope(plainMsg, msgs.CLOUD_ID, clientID)
+				if err2 == nil {
+					jsonData, marshelError := json.Marshal(&envelope)
+					if marshelError == nil {
+						var bridgeMsg v1.BridgeMessage
+						bridgeMsg.MessageData = string(jsonData)
+						bridgeMsg.FormatVersion = "1"
+						bridgeMsg.ClientID = clientID
+						ret = append(ret, bridgeMsg)
+					} else {
+						log.Errorf("Error marshelling message in envelope %s \n", marshelError.Error())
+					}
 				} else {
-					log.Errorf("Error marshelling message in envelope %s \n", marshelError.Error())
+					log.Errorf("Error putting message in envelope %s \n", err2.Error())
 				}
-			} else {
-				log.Errorf("Error putting message in envelope %s \n", err2.Error())
+				keepWaiting=len(ret) <int(maxQueueSize)
+			}else{
+				keepWaiting=false
+				t:=time.Now()
+				keepWaiting=t.Sub(start) <30*time.Second && len(ret)==0
 			}
-		} else {
-			//ignore this log.Tracef("Error fetching messages from subscription for %s error %s", clientID, e.Error())
 		}
 	} else {
 		//make this trace because its really just a timeout
