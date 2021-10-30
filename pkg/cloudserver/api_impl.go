@@ -67,6 +67,19 @@ func handleGetMessages(c *gin.Context) {
 		for keepWaiting {
 			m, e := sub.NextMsg(time.Duration(waitTimeout) * time.Millisecond)
 			if e == nil {
+				if strings.HasSuffix(m.Subject, msgs.ECHO_SUBJECT_BASE) {
+					if len(m.Reply) == 0 {
+						log.Errorf("Got an echo message with no reply")
+					} else {
+						var echomsg nats.Msg
+						echomsg.Subject = fmt.Sprintf("%s.bridge-server", m.Reply)
+						startpost := time.Now()
+						tmpstring := startpost.Format("20060102-15:04:05.000")
+						echoMsg := fmt.Sprintf("%s | %s", tmpstring, "message-server")
+						echomsg.Data = []byte(echoMsg)
+						bridgemodel.GetNatsConnection().Publish(echomsg.Subject, echomsg.Data)
+					}
+				}
 				plainMsg := new(bridgemodel.NatsMessage)
 				plainMsg.Data = m.Data
 				plainMsg.Reply = m.Reply
