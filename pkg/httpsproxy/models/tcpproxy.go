@@ -169,7 +169,7 @@ func TransferTcpDataToNats(subject string, connectioID string, src io.ReadCloser
 		}
 		if readErr != nil {
 			if readErr != io.EOF {
-				log.Errorf("Error reading data %s", readErr.Error())
+				log.WithError(readErr).Errorf("Error reading data tcp -> nats %s", readErr.Error())
 			}
 			break
 		}
@@ -203,7 +203,7 @@ func TransferNatsToTcpData(queue *nats.Subscription, dest io.WriteCloser) {
 					break
 				}
 			} else {
-				log.Errorf("Error reading data %s", readErr.Error())
+				log.WithError(readErr).Errorf("Error reading data nats->tcp %s", readErr.Error())
 				break
 			}
 		}
