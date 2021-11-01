@@ -16,6 +16,6 @@ import (
 //CLOUD_BRIDGE_URL=http://somehost:port
 //PREM_ID=the location ID from a registration request
 func main() {
-	log.Info("Version %s",pkg.VERSION)
+	log.Infof("Version %s",pkg.VERSION)
 	cloudclient.RunClient(false)
 }

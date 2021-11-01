@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	log.Info("Version %s",pkg.VERSION)
+	log.Infof("Version %s",pkg.VERSION)
 	if err := server.RunHttpProxyServer(false); err != nil {
 		log.Panic(err)
 		os.Exit(1)

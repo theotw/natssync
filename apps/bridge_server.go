@@ -12,6 +12,6 @@ import (
 
 //The main app for the server that runs in the cloud
 func main() {
-	log.Info("Version %s",pkg.VERSION)
+	log.Infof("Version %s",pkg.VERSION)
 	cloudserver.RunBridgeServerApp(false)
 }

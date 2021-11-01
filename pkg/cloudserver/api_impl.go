@@ -72,7 +72,7 @@ func handleGetMessages(c *gin.Context) {
 						log.Errorf("Got an echo message with no reply")
 					} else {
 						var echomsg nats.Msg
-						echomsg.Subject = fmt.Sprintf("%s.bridge-server", m.Reply)
+						echomsg.Subject = fmt.Sprintf("%s.bridge-server-get", m.Reply)
 						startpost := time.Now()
 						tmpstring := startpost.Format("20060102-15:04:05.000")
 						echoMsg := fmt.Sprintf("%s | %s", tmpstring, "message-server")
@@ -153,7 +153,7 @@ func handlePostMessage(c *gin.Context) {
 				log.Errorf("Got an echo message with no reply")
 			} else {
 				var echomsg nats.Msg
-				echomsg.Subject = fmt.Sprintf("%s.bridge-server", natmsg.Reply)
+				echomsg.Subject = fmt.Sprintf("%s.bridge-server-post", natmsg.Reply)
 				startpost := time.Now()
 				tmpstring := startpost.Format("20060102-15:04:05.000")
 				echoMsg := fmt.Sprintf("%s | %s", tmpstring, "message-server")

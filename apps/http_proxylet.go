@@ -84,7 +84,7 @@ func ConfigureDefaultTransport() {
 	}
 }
 func main() {
-	log.Info("Version %s", pkg.VERSION)
+	log.Infof("Version %s", pkg.VERSION)
 	logLevel := httpproxy.GetEnvWithDefaults("LOG_LEVEL", "debug")
 	level, levelerr := log.ParseLevel(logLevel)
 	if levelerr != nil {

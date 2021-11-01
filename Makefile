@@ -10,12 +10,11 @@ endif
 BASE_VERSION := $(shell cat 'version.txt')
 BUILD_DATE=$(shell date '+%Y%m%d%H%M')
 
+BUILD_VERSION=${BASE_VERSION}.${BUILD_DATE}
 ifndef IMAGE_TAG
-	BUILD_VERSION=${BASE_VERSION}.${BUILD_DATE}
 	IMAGE_TAG=${BUILD_VERSION}
-else
-	BUILD_VERSION=${IMAGE_TAG}
 endif
+
 
 
 printversion:
@@ -180,7 +179,7 @@ loopover:
  		do \
  			echo $${img}; \
  		done
-
+buildAndTag: allimages tag
 tag:
 	docker tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} ${IMAGE_REPO}/natssync-server:latest
 	docker tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} ${IMAGE_REPO}/natssync-client:latest

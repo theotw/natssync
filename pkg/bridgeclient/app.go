@@ -233,7 +233,7 @@ func handleOutboundMessages(subscription *nats.Subscription, serverURL, clientID
 	}
 }
 func sendMessageToCloud(serverURL string, clientID string, ceEnabled bool, msgsList ...*nats.Msg) {
-	envenlopes := make([]*msgs.MessageEnvelope, 0)
+	messagesToSend := make([]v1.BridgeMessage, 0)
 	for _, msg := range msgsList {
 		msgFormat := msgs.GetMsgFormat()
 		status, err := msgFormat.ValidateMsgFormat(msg.Data, ceEnabled)
@@ -252,32 +252,35 @@ func sendMessageToCloud(serverURL string, clientID string, ceEnabled bool, msgsL
 			log.Errorf("Error putting msg in envelope %s", enverr.Error())
 			continue
 		}
-		envenlopes = append(envenlopes, envelope)
+		jsonbits, jsonerr := json.Marshal(&envelope)
+		if jsonerr != nil {
+			log.Errorf("Error encoding envelope to json bits, wkipping message %s", jsonerr.Error())
+			continue
+		}
+		bmsg := v1.BridgeMessage{ClientID: clientID, MessageData: string(jsonbits), FormatVersion: "1"}
+		messagesToSend=append(messagesToSend,bmsg)
+
 	}
 	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
-	jsonbits, jsonerr := json.Marshal(envenlopes)
-	if jsonerr != nil {
-		log.Errorf("Error encoding envelope to json bits %s", jsonerr.Error())
-		return
-	}
-	bmsg := v1.BridgeMessage{ClientID: clientID, MessageData: string(jsonbits), FormatVersion: "1"}
+
 	var fullPostReq v1.BridgeMessagePostReq
 	fullPostReq.AuthChallenge = *msgs.NewAuthChallenge()
-	fullPostReq.Messages = make([]v1.BridgeMessage, 1)
-	fullPostReq.Messages[0] = bmsg
+
+	fullPostReq.Messages = messagesToSend
+	fullPostReq.Messages=messagesToSend
 	postMsgBits, bmsgerr := json.Marshal(&fullPostReq)
 	if bmsgerr != nil {
-		log.Errorf("Error marshaling bridge message to json bits %s", jsonerr.Error())
+		log.Errorf("Error marshaling bridge message to json bits %s", bmsgerr.Error())
 		return
 	}
 
 	r := bytes.NewReader(postMsgBits)
 	resp, posterr := http.DefaultClient.Post(url, "application/json", r)
 	if posterr != nil {
-		log.Errorf("Error sending message to server.  Dropping the message %d  error was %s", len(envenlopes), posterr.Error())
+		log.Errorf("Error sending message to server.  Dropping the message %d  error was %s", len(messagesToSend), posterr.Error())
 		return
 	}
 	if resp.StatusCode >= 300 {
-		log.Errorf("Error sending messages to server.  Dropping the message %d  error was %s", len(envenlopes), resp.Status)
+		log.Errorf("Error sending messages to server.  Dropping the message %d  error was %s", len(messagesToSend), resp.Status)
 	}
 }
