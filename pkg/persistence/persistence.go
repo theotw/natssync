@@ -21,7 +21,7 @@ const (
 type LocationKeyStore interface {
 	// ReadKeyPair if keyID is empty read the latest key
 	ReadKeyPair(KeyID string) (*types.LocationData, error)
-	WriteKeyPair(locationID string, publicKey []byte, privateKey []byte) error
+	WriteKeyPair(locationData *types.LocationData) error
 	// RemoveKeyPair if keyID is empty remove the latest key
 	RemoveKeyPair(KeyID string) error
 	// LoadLocationID if keyID is empty load the location from latest key
@@ -31,7 +31,6 @@ type LocationKeyStore interface {
 	RemoveLocation(locationID string) error
 	RemoveCloudMasterData() error
 	ListKnownClients() ([]string, error)
-	GetLatestKeyID() (string, error)
 }
 
 var keystore LocationKeyStore

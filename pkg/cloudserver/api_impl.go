@@ -459,7 +459,15 @@ func handlePostRegister(c *gin.Context) {
 		return
 	}
 
+	if err = writeLocationData.SetKeyID(in.KeyID); err != nil {
+		code, ret := bridgemodel.HandleErrors(c, err)
+		c.JSON(code, &ret)
+		return
+	}
+
 	err = store.WriteLocation(*writeLocationData)
+
+
 	if err != nil {
 		code, ret := bridgemodel.HandleErrors(c, err)
 		c.JSON(code, &ret)

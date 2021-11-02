@@ -22,6 +22,7 @@ import (
 	"github.com/theotw/natssync/pkg"
 	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
 	"github.com/theotw/natssync/pkg/persistence"
+	"github.com/theotw/natssync/pkg/types"
 )
 
 func InitCloudKey() error {
@@ -58,19 +59,39 @@ func GenerateAndSaveKey(locationID string) error {
 
 func SaveKeyPair(locationID string, pair *rsa.PrivateKey) error {
 	log.Infof("Saving key pair for %s", locationID)
+
 	t := persistence.GetKeyStore()
+
+	locationData, err := GetKeyPairLocationData(locationID, pair)
+	if err != nil {
+		return err
+	}
+
+	if err := t.WriteKeyPair(locationData); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GetKeyPairLocationData(locationID string, pair *rsa.PrivateKey) (*types.LocationData, error) {
+
 
 	publicKey, err := encodePublicKeyAsBytes(&pair.PublicKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	privateKey, err := encodePrivateKeyAsBytes(pair)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	locationData, err := types.NewLocationData(locationID, publicKey, privateKey, nil)
+	if err != nil {
+		return nil, err
 	}
 
-	return t.WriteKeyPair(locationID, publicKey, privateKey)
+	return locationData, nil
 }
 
 func LoadPublicKey(locationID string) (*rsa.PublicKey, error) {
@@ -162,7 +183,6 @@ func PutObjectInEnvelope(ob interface{}, senderID string, recipientID string) (*
 
 func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*MessageEnvelope, error) {
 	master, err := LoadPrivateKey("")
-
 	if err != nil {
 		return nil, err
 	}
@@ -193,10 +213,11 @@ func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*Mes
 	ret.Signature = base64.StdEncoding.EncodeToString(sigBits)
 
 	t := persistence.GetKeyStore()
-	ret.KeyID, err = t.GetLatestKeyID()
+	locationData, err := t.ReadLocation(recipientID)
 	if err != nil {
 		return nil, err
 	}
+	ret.KeyID = locationData.KeyID
 
 	return ret, nil
 }
