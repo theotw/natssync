@@ -195,6 +195,12 @@ func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*Mes
 	return ret, nil
 }
 
+// NewAuthChallengeFromStoredKey Makes a new auth challenge using known stored private location ID
+func NewAuthChallengeFromStoredKey() *v1.AuthChallenge {
+	return NewAuthChallenge("")
+}
+
+// NewAuthChallenge Makes a new auth challenge, if KeyID is blank, it uses the current known key ID
 func NewAuthChallenge(KeyID string) *v1.AuthChallenge {
 	key, err := LoadPrivateKey(KeyID)
 	if err != nil {

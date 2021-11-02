@@ -5,7 +5,6 @@
 package cloudclient
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -295,39 +294,27 @@ func sendMessageToCloud(serverURL string, clientID string, ceEnabled bool, msgsL
 
 	for true {
 		fullPostReq := v1.BridgeMessagePostReq{
-			AuthChallenge: *msgs.NewAuthChallenge(""),
+			AuthChallenge: *msgs.NewAuthChallengeFromStoredKey(),
 			Messages:      messagesToSend,
 		}
 
-		postMsgBits, bmsgerr := json.Marshal(&fullPostReq)
-		if bmsgerr != nil {
-			log.WithError(bmsgerr).Errorf("Error marshaling bridge message to json bits")
-			return
-		}
-
-		r := bytes.NewReader(postMsgBits)
-		resp, postErr := http.DefaultClient.Post(url, "application/json", r)
+		httpclient := bridgemodel.NewHttpClient()
+		postErr := httpclient.SendAuthorizedRequestWithBodyAndResp(http.MethodPost, url, fullPostReq, nil)
+		//resp, postErr := http.DefaultClient.Post(url, "application/json", r)
 		if postErr != nil {
 			log.WithError(postErr).Errorf("Error sending message to server.  Dropping the messages ")
-			return
-		}
+			if isInvalidCertificateError(postErr) {
+				if certRotationErr := NewCertRotationHandler(serverURL, clientID).HandleCertRotation(); certRotationErr != nil {
+					log.Errorf("failed to rotate certificates")
+					return
+				}
 
-		if resp.StatusCode == pkg.StatusCertificateError {
-			if certRotationErr := NewCertRotationHandler(serverURL, clientID).HandleCertRotation(); certRotationErr != nil {
-				log.Errorf("failed to rotate certificates")
-				return
+				// cert rotation successful retry the original request
+				continue
 			}
 
-			// cert rotation successful retry the original request
-			continue
-		}
-
-		if resp.StatusCode >= 300 {
-			log.Errorf("Error sending message to server.  Dropping the messages because of %s", resp.Status)
-
 			return
 		}
-
 		break
 	}
 
