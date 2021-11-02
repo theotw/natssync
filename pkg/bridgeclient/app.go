@@ -212,16 +212,17 @@ func handleOutboundMessages(subscription *nats.Subscription, serverURL, clientID
 		sendWhatWeHave := false
 		//if we get a timeout (or any error) send what we have
 		if err != nil {
-			keepGoing = err == nats.ErrTimeout
 			sendWhatWeHave = len(msgList) > 0
 		} else {
 			parsedSubject, err2 := msgs.ParseSubject(msg.Subject)
 			if err2 == nil {
-				log.Tracef("Stored  Client ID %s", clientID)
-				log.Tracef("Message Location ID %s", parsedSubject.LocationID)
+				log.Tracef("Found message to send NB Stored  Client ID=%s, Message Target %s", clientID,parsedSubject.LocationID)
 				//if the target client ID is not this client, push it to the server
 				if parsedSubject.LocationID != clientID {
+					log.Tracef("Adding message to list to send NB")
 					msgList = append(msgList, msg)
+				}else{
+					log.Tracef("Message not meant for NB, dropping")
 				}
 			}
 			sendWhatWeHave = len(msgList) > int(maxQueueSize)
@@ -231,6 +232,7 @@ func handleOutboundMessages(subscription *nats.Subscription, serverURL, clientID
 			msgList = make([]*nats.Msg, 0)
 		}
 	}
+	log.Infof("Leaving Handle Outbound Messages ")
 }
 func sendMessageToCloud(serverURL string, clientID string, ceEnabled bool, msgsList ...*nats.Msg) {
 	messagesToSend := make([]v1.BridgeMessage, 0)

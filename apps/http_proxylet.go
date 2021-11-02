@@ -18,7 +18,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"runtime"
-	"time"
+	"sync"
 )
 
 func runHttpAPI(m *nats.Msg, nc *nats.Conn, i int) {
@@ -92,34 +92,61 @@ func main() {
 		level = log.DebugLevel
 	}
 	log.SetLevel(level)
+	ConfigureDefaultTransport()
 	err := models2.InitNats()
 	if err != nil {
 		log.Fatalf("Unable to init NATS %s", err.Error())
 	}
 	nc := models2.GetNatsClient()
+	//default to listen for everything
+	httpproxy.SetMyLocationID("*")
+	setupQueueSubscriptions()
 	_, err = nc.Subscribe(server.ResponseForLocationID, func(msg *nats.Msg) {
 		locationID := string(msg.Data)
+		if len(locationID)==0{
+			locationID="*"
+		}
 		httpproxy.SetMyLocationID(locationID)
 		log.Infof("Using location ID %s", locationID)
+		setupQueueSubscriptions()
 
 	})
 	if err != nil {
 		log.Fatalf("Unable to talk to NATS %s", err.Error())
 	}
 
-	httpproxy.SetMyLocationID("*")
+
 	nc.Publish(server.RequestForLocationID, []byte(""))
-	//give a little time to get a location ID, or punt back to *
-	time.Sleep(5 * time.Second)
-	ConfigureDefaultTransport()
-	err = models2.InitNats()
-	if err != nil {
-		log.Fatalf("Unable to connect to NATS %s", err.Error())
+
+
+
+	//if *showTime {
+	//	log.SetFlags(log.LstdFlags)
+	//}
+
+	runtime.Goexit()
+}
+var httpSub *nats.Subscription
+var httpsSub *nats.Subscription
+var subMutex sync.Mutex
+func setupQueueSubscriptions() {
+	subMutex.Lock()
+	defer subMutex.Unlock()
+	if httpSub != nil{
+		httpSub.Unsubscribe()
+		httpSub=nil
 	}
+	if httpsSub != nil{
+		httpsSub.Unsubscribe()
+		httpsSub=nil
+	}
+
+	nc := models2.GetNatsClient()
 	locationID := httpproxy.GetMyLocationID()
+	log.Infof("Setting up subscriptions on location ID %s ",locationID)
 	subj := httpproxy.MakeMessageSubject(locationID, httpproxy.HTTP_PROXY_API_ID)
 	i := 0
-	nc.Subscribe(subj, func(msg *nats.Msg) {
+	httpSub,_=nc.Subscribe(subj, func(msg *nats.Msg) {
 		if string(msg.Data) != "" {
 			i += 1
 			runHttpAPI(msg, nc, i)
@@ -128,7 +155,7 @@ func main() {
 	log.Printf("Listening on [%s]", subj)
 
 	conReqSubject := httpproxy.MakeMessageSubject(locationID, httpproxy.HTTPS_PROXY_CONNECTION_REQUEST)
-	nc.Subscribe(conReqSubject, func(msg *nats.Msg) {
+	httpsSub,_=nc.Subscribe(conReqSubject, func(msg *nats.Msg) {
 		models2.HandleConnectionRequest(msg, locationID)
 	})
 
@@ -137,10 +164,4 @@ func main() {
 	}
 	log.Printf("Listening on [%s]", conReqSubject)
 	nc.Flush()
-
-	//if *showTime {
-	//	log.SetFlags(log.LstdFlags)
-	//}
-
-	runtime.Goexit()
 }

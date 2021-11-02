@@ -126,6 +126,7 @@ func handlePostMessage(c *gin.Context) {
 	}
 	if !msgs.ValidateAuthChallenge(clientID, &in.AuthChallenge) {
 		c.JSON(401, "")
+		log.Errorf("Got invalid message auth request in post messages %s",clientID)
 		return
 	}
 	nc := bridgemodel.GetNatsConnection()
