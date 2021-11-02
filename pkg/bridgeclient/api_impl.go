@@ -131,9 +131,17 @@ func handlePostRegister(c *gin.Context) {
 		return
 	}
 
+	selfLocationData, err := msgs.GetKeyPairLocationData("", pair)
+	if err != nil {
+		code, response := bridgemodel.HandleError(c, err)
+		c.JSON(code, response)
+		return
+	}
+
 	req.PublicKey = base64.StdEncoding.EncodeToString(buf.Bytes())
 	req.AuthToken = in.AuthToken
 	req.MetaData = in.MetaData
+	req.KeyID = selfLocationData.GetKeyID()
 	jsonBits, _ := json.Marshal(&req)
 	url := fmt.Sprintf("%s/bridge-server/1/register/", pkg.Config.CloudBridgeUrl)
 
@@ -173,11 +181,15 @@ func handlePostRegister(c *gin.Context) {
 		nil,
 		regResp.MetaData,
 	)
+
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)
 		return
 	}
+
+	// the servers key is always the current key. Must be explicitly unset
+	locationData.UnsetKeyID()
 
 	err = persistence.GetKeyStore().WriteLocation(*locationData)
 	if err != nil {
@@ -187,7 +199,8 @@ func handlePostRegister(c *gin.Context) {
 	}
 
 	//this step must be last, other parts of the code watch for this key
-	err = msgs.SaveKeyPair(regResp.PremID, pair)
+	selfLocationData.SetLocationID(regResp.PremID)
+	err = persistence.GetKeyStore().WriteKeyPair(selfLocationData)
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)

@@ -43,6 +43,8 @@ func TestEncryption(t *testing.T) {
 
 	writeLocationData, err := types.NewLocationData(pkg.CLOUD_ID, locationData.GetPublicKey(), nil, metadata)
 	assert.Nil(t, err)
+	writeLocationData.UnsetKeyID()
+
 	if err = store.WriteLocation(*writeLocationData); err != nil {
 		t.Fatal(err)
 	}
@@ -90,10 +92,10 @@ func doTestObjectEnvelopeWithEncrypt(t *testing.T) {
 	if msg == nil {
 		t.Fatalf("Error with put in envelope %s", err)
 	}
-	assert.NotEqual(t, envelope.MsgKey,BLANK_KEY)
+	assert.NotEqual(t, envelope.MsgKey, BLANK_KEY)
 
 	var msg2 []byte
-	err = PullObjectFromEnvelope(&msg2,envelope)
+	err = PullObjectFromEnvelope(&msg2, envelope)
 	if err != nil {
 		t.Fatalf("Error with put in envelope %s", err)
 	}
@@ -101,9 +103,9 @@ func doTestObjectEnvelopeWithEncrypt(t *testing.T) {
 	assert.Equal(t, msg, msg2)
 }
 func doTestObjectEnvelopeWithoutEncrypt(t *testing.T) {
-	msg:=new (bridgemodel.NatsMessage)
-	msg.Data=[]byte("hello")
-	msg.Subject=fmt.Sprintf("%s.1.%s",NATSSYNC_MESSAGE_PREFIX,SKIP_ENCRYPTION_FLAG)
+	msg := new(bridgemodel.NatsMessage)
+	msg.Data = []byte("hello")
+	msg.Subject = fmt.Sprintf("%s.1.%s", NATSSYNC_MESSAGE_PREFIX, SKIP_ENCRYPTION_FLAG)
 
 	envelope, err := PutObjectInEnvelope(msg, pkg.CLOUD_ID, pkg.CLOUD_ID)
 
@@ -112,12 +114,12 @@ func doTestObjectEnvelopeWithoutEncrypt(t *testing.T) {
 			t.Fail()
 		}
 	}
-	assert.Equal(t, envelope.MsgKey,BLANK_KEY)
+	assert.Equal(t, envelope.MsgKey, BLANK_KEY)
 	if envelope == nil {
 		t.Fatalf("Error with put in envelope %s", err)
 	}
-	msg2:=new (bridgemodel.NatsMessage)
-	err = PullObjectFromEnvelope(msg2,envelope)
+	msg2 := new(bridgemodel.NatsMessage)
+	err = PullObjectFromEnvelope(msg2, envelope)
 	if err != nil {
 		t.Fatalf("Error with put in envelope %s", err)
 	}
@@ -194,7 +196,9 @@ func doTest_encrpt(t *testing.T) {
 func doTestLocationID(t *testing.T) {
 	unitTestLocation := "unittestlocationID"
 	store := persistence.GetKeyStore()
-	err := store.WriteKeyPair(unitTestLocation, nil, nil)
+	locationData, err := types.NewLocationData(unitTestLocation, nil, nil, nil)
+	assert.Nil(t, err)
+	err = store.WriteKeyPair(locationData)
 	assert.Nil(t, err)
 	assert.Nil(t, err, "Not expecting an error for location ID save")
 	id := store.LoadLocationID("")
