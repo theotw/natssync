@@ -7,6 +7,7 @@ package httpproxy
 import (
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/theotw/natssync/pkg/msgs"
 	"os"
 )
 
@@ -45,7 +46,7 @@ func MakeMessageSubject(targetLocationID string, appID string) string {
 	return sub
 }
 
-func MakeHttpsMessageSubject(direction, targetLocationID string, connectionID string) string {
-	sub := fmt.Sprintf("%s.%s.%s,%s", direction, targetLocationID, HTTPS_PROXY_API_ID, connectionID)
+func MakeHttpsMessageSubject( targetLocationID string, connectionID string) string {
+	sub := fmt.Sprintf("%s.%s.%s.%s,%s", NATS_MSG_PREFIX, targetLocationID,msgs.SKIP_ENCRYPTION_FLAG, HTTPS_PROXY_API_ID, connectionID)
 	return sub
 }

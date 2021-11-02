@@ -21,7 +21,7 @@ const ECHOLET_SUFFIX = "echolet"
 const ECHO_SUBJECT_BASE = "echo"
 const NATSSYNC_MESSAGE_PREFIX = "natssyncmsg"
 const SKIP_ENCRYPTION_FLAG="noencrypt"  // used in third position of a subject (aka, first app usage position) then encryption is skipped.  Handy for SSL or other encrypted messages
-
+const BLANK_KEY="this key was intentionally left blank"
 type MessageEnvelope struct {
 	EnvelopeVersion int
 	RecipientID     string

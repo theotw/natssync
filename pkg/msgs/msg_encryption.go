@@ -16,7 +16,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"github.com/theotw/natssync/pkg/bridgemodel"
-	"github.com/theotw/natssync/pkg/msgs"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -162,9 +161,10 @@ func PutObjectInEnvelope(ob interface{}, senderID string, recipientID string) (*
 	msg,ok:=ob.(*bridgemodel.NatsMessage)
 	skipEncrpt:=false
 	if ok{
-		parsedMsgSubject,_ := msgs.ParseSubject(msg.Subject)
+		parsedMsgSubject,_ := ParseSubject(msg.Subject)
 		skipEncrpt=parsedMsgSubject.SkipEncryption
 	}
+	log.Tracef("Puting message in Envelope with Encryption=%v",!skipEncrpt)
 	if skipEncrpt{
 		return PutMessageInEnvelopev4(bits, senderID, recipientID)
 	}else{
@@ -206,13 +206,6 @@ func PutMessageInEnvelopeV3(msg []byte, senderID string, recipientID string) (*M
 
 	return ret, nil
 }
-func PutObjectInPlainEnvelope(ob interface{}, senderID string, recipientID string) (*MessageEnvelope, error) {
-	bits, err := json.Marshal(ob)
-	if err != nil {
-		return nil, err
-	}
-	return PutMessageInEnvelopev4(bits, senderID, recipientID)
-}
 func PutMessageInEnvelopev4(msg []byte, senderID string, recipientID string) (*MessageEnvelope, error) {
 	master, err := LoadPrivateKey("")
 
@@ -221,7 +214,7 @@ func PutMessageInEnvelopev4(msg []byte, senderID string, recipientID string) (*M
 	}
 
 	ret := new(MessageEnvelope)
-	ret.MsgKey="intentionally left blank"
+	ret.MsgKey=BLANK_KEY
 
 	sigBits, err := SignData(msg, master)
 	if err != nil {

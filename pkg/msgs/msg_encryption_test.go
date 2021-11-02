@@ -5,6 +5,8 @@
 package msgs
 
 import (
+	"fmt"
+	"github.com/theotw/natssync/pkg/bridgemodel"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -70,10 +72,59 @@ func TestEncryption(t *testing.T) {
 	t.Run("Test Encrypt", doTest_encrpt)
 	t.Run("Test Envelope", doTestMessageEnvelope)
 	t.Run("Test v4 Envelope ID", doTestMessageEnvelopev4)
+	t.Run("Test Encrypt Enveloper", doTestObjectEnvelopeWithEncrypt)
+	t.Run("Test Plain Text Enveloper", doTestObjectEnvelopeWithoutEncrypt)
+
 	t.Run("Auth Challenge", doTestAuthChallenge)
 	t.Run("Location ID", doTestLocationID)
 
 }
+func doTestObjectEnvelopeWithEncrypt(t *testing.T) {
+	msg := []byte("Hello World")
+	envelope, err := PutObjectInEnvelope(msg, pkg.CLOUD_ID, pkg.CLOUD_ID)
+	if err != nil {
+		if !assert.Nil(t, err, "Error with put in envelope") {
+			t.Fail()
+		}
+	}
+	if msg == nil {
+		t.Fatalf("Error with put in envelope %s", err)
+	}
+	assert.NotEqual(t, envelope.MsgKey,BLANK_KEY)
+
+	var msg2 []byte
+	err = PullObjectFromEnvelope(&msg2,envelope)
+	if err != nil {
+		t.Fatalf("Error with put in envelope %s", err)
+	}
+
+	assert.Equal(t, msg, msg2)
+}
+func doTestObjectEnvelopeWithoutEncrypt(t *testing.T) {
+	msg:=new (bridgemodel.NatsMessage)
+	msg.Data=[]byte("hello")
+	msg.Subject=fmt.Sprintf("%s.1.%s",NATSSYNC_MESSAGE_PREFIX,SKIP_ENCRYPTION_FLAG)
+
+	envelope, err := PutObjectInEnvelope(msg, pkg.CLOUD_ID, pkg.CLOUD_ID)
+
+	if err != nil {
+		if !assert.Nil(t, err, "Error with put in envelope") {
+			t.Fail()
+		}
+	}
+	assert.Equal(t, envelope.MsgKey,BLANK_KEY)
+	if envelope == nil {
+		t.Fatalf("Error with put in envelope %s", err)
+	}
+	msg2:=new (bridgemodel.NatsMessage)
+	err = PullObjectFromEnvelope(msg2,envelope)
+	if err != nil {
+		t.Fatalf("Error with put in envelope %s", err)
+	}
+
+	assert.Equal(t, msg.Data, msg2.Data)
+}
+
 func doTestMessageEnvelope(t *testing.T) {
 	msg := []byte("Hello World")
 	envelope, err := PutMessageInEnvelopeV3(msg, pkg.CLOUD_ID, pkg.CLOUD_ID)
@@ -82,7 +133,7 @@ func doTestMessageEnvelope(t *testing.T) {
 			t.Fail()
 		}
 	}
-	if msg == nil {
+	if envelope == nil {
 		t.Fatalf("Error with put in envelope %s", err)
 	}
 
@@ -101,7 +152,7 @@ func doTestMessageEnvelopev4(t *testing.T) {
 			t.Fail()
 		}
 	}
-	if msg == nil {
+	if envelope == nil {
 		t.Fatalf("Error with put in envelope %s", err)
 	}
 
