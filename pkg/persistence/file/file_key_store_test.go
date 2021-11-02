@@ -64,7 +64,9 @@ func testFileKeystoreWriteKeyPair(t *testing.T, keystore *file.FileKeyStore) {
 		id := fmt.Sprintf("id-%d", i)
 		pubkey := fmt.Sprintf("pubkey%d", i)
 		privkey := fmt.Sprintf("privkey%d", i)
-		err := keystore.WriteKeyPair(id, []byte(pubkey), []byte(privkey))
+		locationData, err := types.NewLocationData(id,[]byte(pubkey), []byte(privkey), nil)
+		assert.Nil(t, err)
+		err = keystore.WriteKeyPair(locationData)
 		assert.Nil(t, err)
 	}
 }
