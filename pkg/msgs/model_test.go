@@ -24,7 +24,7 @@ func TestParseSubject(t *testing.T) {
 	}{
 		{"happy no args", happyNoParam, &msgs.ParsedSubject{AppData: []string{}, OriginalSubject: happyNoParam, LocationID: "1"}, false},
 		{"happy no args", happyParam, &msgs.ParsedSubject{AppData: []string{"test"}, OriginalSubject: happyParam, LocationID: "1"}, false},
-		{"bad subject", badSub, nil, true},
+		{"bad subject", badSub, &msgs.ParsedSubject{}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
