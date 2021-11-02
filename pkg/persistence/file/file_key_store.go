@@ -38,18 +38,13 @@ func NewFileKeyStore(basePath string) (*FileKeyStore, error) {
 	return ret, nil
 }
 
-func (t *FileKeyStore) WriteKeyPair(locationID string, publicKey []byte, privateKey []byte) error {
+func (t *FileKeyStore) WriteKeyPair(locationData *types.LocationData) error {
 
-	LocationData, err := types.NewLocationData(locationID, publicKey, privateKey, nil)
+	locationDataBytes, err := json.Marshal(locationData)
 	if err != nil {
 		return err
 	}
-
-	locationDataBytes, err := json.Marshal(LocationData)
-	if err != nil {
-		return err
-	}
-	serviceKeyFileName := t.makeServiceKeyFileName(LocationData.KeyID)
+	serviceKeyFileName := t.makeServiceKeyFileName(locationData.KeyID)
 	if err = t.writeFile(serviceKeyFileName, locationDataBytes); err != nil {
 		return err
 	}

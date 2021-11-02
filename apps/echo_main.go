@@ -23,7 +23,7 @@ var clientID string
 var activeSub *nats.Subscription
 
 func main() {
-	log.Info("Version %s",pkg.VERSION)
+	log.Infof("Version %s",pkg.VERSION)
 	level, levelerr := log.ParseLevel(os.Getenv("LOG_LEVEL"))
 	if levelerr != nil {
 		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)

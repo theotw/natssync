@@ -300,6 +300,10 @@ components:
         publicKey:
           type: string
           description: Public key for the On Prem region
+        keyID:
+          type: string
+          description: Public keyID for the On Prem region
+
     RegisterOnPremResponse:
       type: object
       properties:

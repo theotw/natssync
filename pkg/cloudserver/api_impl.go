@@ -15,6 +15,7 @@ import (
 	"mime"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -35,6 +36,17 @@ import (
 )
 
 func handleGetMessages(c *gin.Context) {
+	timeoutStr := pkg.GetEnvWithDefaults("NATSSYNC_MSG_WAIT_TIMEOUT", "5")
+	maxMsgHoldStr := pkg.GetEnvWithDefaults("NATSSYNC__MAX_MSG_HOLD", "512")
+	waitTimeout, numErr := strconv.ParseInt(timeoutStr, 10, 16)
+	if numErr != nil {
+		waitTimeout = 5
+	}
+	maxQueueSize, numErr := strconv.ParseInt(maxMsgHoldStr, 10, 16)
+	if numErr != nil {
+		waitTimeout = 512
+	}
+
 	clientID := c.Param("premid")
 	log.Tracef("Handling get message request for clientID %s", clientID)
 	var in v1.AuthChallenge
@@ -52,30 +64,50 @@ func handleGetMessages(c *gin.Context) {
 	ret := make([]v1.BridgeMessage, 0)
 	metrics.IncrementTotalQueries(1)
 	sub := GetSubscriptionForClient(clientID)
+	start := time.Now()
 	if sub != nil {
-		m, e := sub.NextMsg(3 * time.Second)
-		if e == nil {
-			plainMsg := new(bridgemodel.NatsMessage)
-			plainMsg.Data = m.Data
-			plainMsg.Reply = m.Reply
-			plainMsg.Subject = m.Subject
-			envelope, err2 := msgs.PutObjectInEnvelope(plainMsg, pkg.CLOUD_ID, clientID)
-			if err2 == nil {
-				jsonData, marshalError := json.Marshal(&envelope)
-				if marshalError == nil {
-					var bridgeMsg v1.BridgeMessage
-					bridgeMsg.MessageData = string(jsonData)
-					bridgeMsg.FormatVersion = "1"
-					bridgeMsg.ClientID = clientID
-					ret = append(ret, bridgeMsg)
-				} else {
-					log.WithError(marshalError).Error("Error marshalling message in envelope")
+		keepWaiting := true
+		for keepWaiting {
+			m, e := sub.NextMsg(time.Duration(waitTimeout) * time.Millisecond)
+			if e == nil {
+				if strings.HasSuffix(m.Subject, msgs.ECHO_SUBJECT_BASE) {
+					if len(m.Reply) == 0 {
+						log.Errorf("Got an echo message with no reply")
+					} else {
+						var echomsg nats.Msg
+						echomsg.Subject = fmt.Sprintf("%s.bridge-server-get", m.Reply)
+						startpost := time.Now()
+						tmpstring := startpost.Format("20060102-15:04:05.000")
+						echoMsg := fmt.Sprintf("%s | %s", tmpstring, "message-server")
+						echomsg.Data = []byte(echoMsg)
+						bridgemodel.GetNatsConnection().Publish(echomsg.Subject, echomsg.Data)
+					}
 				}
+				plainMsg := new(bridgemodel.NatsMessage)
+				plainMsg.Data = m.Data
+				plainMsg.Reply = m.Reply
+				plainMsg.Subject = m.Subject
+				envelope, err2 := msgs.PutObjectInEnvelope(plainMsg, pkg.CLOUD_ID, clientID)
+				if err2 == nil {
+					jsonData, marshelError := json.Marshal(&envelope)
+					if marshelError == nil {
+						var bridgeMsg v1.BridgeMessage
+						bridgeMsg.MessageData = string(jsonData)
+						bridgeMsg.FormatVersion = "1"
+						bridgeMsg.ClientID = clientID
+						ret = append(ret, bridgeMsg)
+					} else {
+						log.Errorf("Error marshelling message in envelope %s \n", marshelError.Error())
+					}
+				} else {
+					log.Errorf("Error putting message in envelope %s \n", err2.Error())
+				}
+				keepWaiting = len(ret) < int(maxQueueSize)
 			} else {
-				log.WithError(err2).Error("Error putting message in envelope")
+				keepWaiting = false
+				t := time.Now()
+				keepWaiting = t.Sub(start) < 30*time.Second && len(ret) == 0
 			}
-		} else {
-			//ignore this log.Tracef("Error fetching messages from subscription for %s error %s", clientID, e.Error())
 		}
 	} else {
 		//make this trace because its really just a timeout
@@ -97,6 +129,7 @@ func handlePostMessage(c *gin.Context) {
 		return
 	}
 	if !msgs.ValidateAuthChallenge(clientID, &in.AuthChallenge) {
+		log.Errorf("Got invalid message auth request in post messages %s", clientID)
 		c.JSON(http.StatusUnauthorized, "")
 		return
 	}
@@ -125,7 +158,7 @@ func handlePostMessage(c *gin.Context) {
 				log.Errorf("Got an echo message with no reply")
 			} else {
 				var echomsg nats.Msg
-				echomsg.Subject = fmt.Sprintf("%s.bridge-server", natmsg.Reply)
+				echomsg.Subject = fmt.Sprintf("%s.bridge-server-post", natmsg.Reply)
 				startpost := time.Now()
 				tmpstring := startpost.Format("20060102-15:04:05.000")
 				echoMsg := fmt.Sprintf("%s | %s", tmpstring, "message-server")
@@ -426,7 +459,15 @@ func handlePostRegister(c *gin.Context) {
 		return
 	}
 
+	if err = writeLocationData.SetKeyID(in.KeyID); err != nil {
+		code, ret := bridgemodel.HandleErrors(c, err)
+		c.JSON(code, &ret)
+		return
+	}
+
 	err = store.WriteLocation(*writeLocationData)
+
+
 	if err != nil {
 		code, ret := bridgemodel.HandleErrors(c, err)
 		c.JSON(code, &ret)

@@ -43,7 +43,7 @@ func getECArguments() Arguments {
 //that indicates which part of the journey has been hit.
 //the loop ends when it sees echolet.
 func main() {
-	log.Info("Version %s",pkg.VERSION)
+	log.Infof("Version %s", pkg.VERSION)
 	args := getECArguments()
 
 	log.Printf("Connecting to NATS Server %s", *args.natsURL)

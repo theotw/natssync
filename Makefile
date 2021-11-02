@@ -10,12 +10,11 @@ endif
 BASE_VERSION := $(shell cat 'version.txt')
 BUILD_DATE=$(shell date '+%Y%m%d%H%M')
 
+BUILD_VERSION=${BASE_VERSION}.${BUILD_DATE}
 ifndef IMAGE_TAG
-	BUILD_VERSION=${BASE_VERSION}.${BUILD_DATE}
 	IMAGE_TAG=${BUILD_VERSION}
-else
-	BUILD_VERSION=${IMAGE_TAG}
 endif
+
 
 
 printversion:
@@ -174,7 +173,14 @@ allarmimages: baseimagearm cloudimagearm clientimagearm echoproxyletarm simpleau
 
 allimagesBuildAndPush:testimageBuildAndPush cloudimageBuildAndPush clientimageBuildAndPush echoproxyletBuildAndPush simpleauthBuildAndPush
 
-tagAndPushToDockerHub:
+imagelist=natssync-server natssync-client echo-proxylet simple-reg-auth natssync-tests natssync-server-debug httpproxy_server httpproxylet
+loopover:
+	@ for img in ${imagelist}; \
+ 		do \
+ 			echo $${img}; \
+ 		done
+buildAndTag: allimages tag
+tag:
 	docker tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} ${IMAGE_REPO}/natssync-server:latest
 	docker tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} ${IMAGE_REPO}/natssync-client:latest
 	docker tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} ${IMAGE_REPO}/echo-proxylet:latest
@@ -184,6 +190,7 @@ tagAndPushToDockerHub:
 	docker tag ${IMAGE_REPO}/httpproxy_server:${IMAGE_TAG} ${IMAGE_REPO}/httpproxy_server:latest
 	docker tag ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG} ${IMAGE_REPO}/httpproxylet:latest
 
+tagAndPushToDockerHub: tag
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-server:latest
 	docker push ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}

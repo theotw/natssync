@@ -71,16 +71,15 @@ func (m *MongoKeyStore) getLocationsCollection() *mongo.Collection {
 	return m.conn.Database(m.databaseName).Collection(m.locationsCollectionName)
 }
 
-func (m *MongoKeyStore) WriteKeyPair(locationID string, publicKey []byte, privateKey []byte) error {
+func (m *MongoKeyStore) WriteKeyPair(locationData *types.LocationData) error {
 
-	log.Tracef("Saving key pair for %s", locationID)
-	keys, err := types.NewLocationData(locationID, publicKey, privateKey, nil)
-	if err != nil {
-		return err
-	}
+	log.WithFields(log.Fields{
+		"locationID": locationData.LocationID,
+		"keyID": locationData.KeyID,
+	}).Tracef("Saving key pair")
 
 	collection := m.getKeyPairCollection()
-	_, err = collection.InsertOne(context.TODO(), keys)
+	_, err := collection.InsertOne(context.TODO(), locationData)
 	return err
 }
 
@@ -97,7 +96,7 @@ func (m *MongoKeyStore) ReadKeyPair(keyID string) (*types.LocationData, error) {
 	collection := m.getKeyPairCollection()
 	cur := collection.FindOne(context.TODO(), bson.M{"keyID": keyID})
 	if err := cur.Decode(&keypair); err != nil {
-		return nil, fmt.Errorf("unable to get locationID from mongo: %s", err)
+		return nil, fmt.Errorf("unable to get location for keyID %s from mongo: %s", keyID, err)
 	}
 	return &keypair, nil
 }

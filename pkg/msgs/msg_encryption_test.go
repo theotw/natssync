@@ -41,6 +41,8 @@ func TestEncryption(t *testing.T) {
 
 	writeLocationData, err := types.NewLocationData(pkg.CLOUD_ID, locationData.GetPublicKey(), nil, metadata)
 	assert.Nil(t, err)
+	writeLocationData.UnsetKeyID()
+	
 	if err = store.WriteLocation(*writeLocationData); err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +124,9 @@ func doTest_encrpt(t *testing.T) {
 func doTestLocationID(t *testing.T) {
 	unitTestLocation := "unittestlocationID"
 	store := persistence.GetKeyStore()
-	err := store.WriteKeyPair(unitTestLocation, nil, nil)
+	locationData, err := types.NewLocationData(unitTestLocation, nil, nil, nil)
+	assert.Nil(t, err)
+	err = store.WriteKeyPair(locationData)
 	assert.Nil(t, err)
 	assert.Nil(t, err, "Not expecting an error for location ID save")
 	id := store.LoadLocationID("")

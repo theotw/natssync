@@ -5,13 +5,13 @@
 package cloudclient
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"math"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -107,25 +107,9 @@ func RunClient(test bool) {
 
 		//same as above, if we re-register, we drop the subscibe and need to resubscribe
 		if currentSubscription == nil {
-			subj := fmt.Sprintf("%s.>", msgs.NATSSYNC_MESSAGE_PREFIX)
-			sub, err := nc.Subscribe(subj, func(msg *nats.Msg) {
-				parsedSubject, err2 := msgs.ParseSubject(msg.Subject)
-				if err2 == nil {
-					log.Tracef("Stored  Client ID %s", clientID)
-					log.Tracef("Message Location ID %s", parsedSubject.LocationID)
-					//if the target client ID is not this client, push it to the server
-					if parsedSubject.LocationID != clientID {
-						sendMessageToCloud(msg, serverURL, clientID, pkg.Config.CloudEvents)
-					}
-				}
-
-			})
+			currentSubscription, err = subscribeToOutboundMessages(serverURL, clientID)
 			if err != nil {
-				log.Fatalf("Error subscribing to %s: %s", subj, err)
-				continue
-			} else {
-				currentSubscription = sub
-				log.Infof("Subscribed to %s", subj)
+				log.Errorf("Error subscribing to messages, will try again %s", err.Error())
 			}
 		}
 
@@ -178,7 +162,7 @@ func RunClient(test bool) {
 						return
 					}
 					echomsg.Data = cvMessage
-					sendMessageToCloud(&echomsg, serverURL, clientID, pkg.Config.CloudEvents)
+					sendMessageToCloud(serverURL, clientID, pkg.Config.CloudEvents, &echomsg)
 					endpost := time.Now()
 					metrics.RecordTimeToPushMessage(int(math.Round(endpost.Sub(startpost).Seconds())))
 				}
@@ -194,11 +178,9 @@ func RunClient(test bool) {
 		}
 	}
 }
-
 func isInvalidCertificateError(err error) bool {
 	return strings.Contains(err.Error(), fmt.Sprintf("status code %v", pkg.StatusCertificateError))
 }
-
 func getMessagesFromCloud(serverURL, clientID string) ([]v1.BridgeMessage, error) {
 	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
 
@@ -224,69 +206,117 @@ func getMessagesFromCloud(serverURL, clientID string) ([]v1.BridgeMessage, error
 	return msglist, nil
 }
 
-func sendMessageToCloud(msg *nats.Msg, serverURL string, clientID string, ceEnabled bool) {
-	log.Debugf("Sending Msg NB %s", msg.Subject)
-
-	msgFormat := msgs.GetMsgFormat()
-	status, err := msgFormat.ValidateMsgFormat(msg.Data, ceEnabled)
+func subscribeToOutboundMessages(serverURL, clientID string) (*nats.Subscription, error) {
+	nc := bridgemodel.GetNatsConnection()
+	subj := fmt.Sprintf("%s.>", msgs.NATSSYNC_MESSAGE_PREFIX)
+	sub, err := nc.SubscribeSync(subj)
 	if err != nil {
-		log.Errorf("Error validating the cloud event message: %s", err.Error())
-		return
+		return nil, err
 	}
-	if !status {
-		log.Errorf("Cloud event message validation failed, ignoring the message...")
-		return
+	go handleOutboundMessages(sub, serverURL, clientID)
+	return sub, nil
+}
+
+// handleOutboundMessages  This pulls messages off the queue and groups a bunch of them to push them together
+// if we have to wait more than N ms for a message, we will go ahead and send what we have
+// or if we get more than N messages, we will send them along
+func handleOutboundMessages(subscription *nats.Subscription, serverURL, clientID string) {
+	timeoutStr := pkg.GetEnvWithDefaults("NATSSYNC_MSG_WAIT_TIMEOUT", "5")
+	maxMsgHoldStr := pkg.GetEnvWithDefaults("NATSSYNC__MAX_MSG_HOLD", "512")
+	waitTimeout, numErr := strconv.ParseInt(timeoutStr, 10, 16)
+	if numErr != nil {
+		waitTimeout = 5
+	}
+	maxQueueSize, numErr := strconv.ParseInt(maxMsgHoldStr, 10, 16)
+	if numErr != nil {
+		waitTimeout = 512
 	}
 
-	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
-	natmsg := bridgemodel.NatsMessage{Reply: msg.Reply, Subject: msg.Subject, Data: msg.Data}
-	envelope, enverr := msgs.PutObjectInEnvelope(natmsg, clientID, pkg.CLOUD_ID)
-	if enverr != nil {
-		log.Errorf("Error putting msg in envelope %s", enverr.Error())
-		return
-	}
-
-	jsonbits, jsonerr := json.Marshal(envelope)
-	if jsonerr != nil {
-		log.WithError(err).Errorf("Error encoding envelope to json bits")
-		return
-	}
-	bmsg := v1.BridgeMessage{ClientID: clientID, MessageData: string(jsonbits), FormatVersion: "1"}
-
-	for true {
-		fullPostReq := v1.BridgeMessagePostReq{
-			AuthChallenge: *msgs.NewAuthChallenge(""),
-			Messages:      []v1.BridgeMessage{bmsg},
-		}
-
-		postMsgBits, bmsgerr := json.Marshal(&fullPostReq)
-		if bmsgerr != nil {
-			log.WithError(bmsgerr).Errorf("Error marshaling bridge message to json bits")
-			return
-		}
-
-		r := bytes.NewReader(postMsgBits)
-		resp, postErr := http.DefaultClient.Post(url, "application/json", r)
-		if postErr != nil {
-			log.WithError(postErr).Errorf("Error sending message to server.  Dropping the message %s", msg.Subject)
-			return
-		}
-
-		if resp.StatusCode == pkg.StatusCertificateError {
-			if certRotationErr := NewCertRotationHandler(serverURL, clientID).HandleCertRotation(); certRotationErr != nil {
-				log.Errorf("failed to rotate certificates")
-				return
+	msgList := make([]*nats.Msg, 0)
+	keepGoing := true
+	for keepGoing {
+		msg, err := subscription.NextMsg(time.Duration(waitTimeout) * time.Millisecond)
+		sendWhatWeHave := false
+		//if we get a timeout (or any error) send what we have
+		if err != nil {
+			sendWhatWeHave = len(msgList) > 0
+			// bail if it was not a timeout error
+			keepGoing = err == nats.ErrTimeout
+		} else {
+			parsedSubject, err2 := msgs.ParseSubject(msg.Subject)
+			if err2 == nil {
+				log.Tracef("Found message to send NB Stored  Client ID=%s, Message Target %s", clientID, parsedSubject.LocationID)
+				//if the target client ID is not this client, push it to the server
+				if parsedSubject.LocationID != clientID {
+					log.Tracef("Adding message to list to send NB")
+					msgList = append(msgList, msg)
+				} else {
+					log.Tracef("Message not meant for NB, dropping")
+				}
 			}
-
-			// cert rotation successful retry the original request
+			sendWhatWeHave = len(msgList) > int(maxQueueSize)
+		}
+		if sendWhatWeHave {
+			sendMessageToCloud(serverURL, clientID, false, msgList...)
+			msgList = make([]*nats.Msg, 0)
+		}
+	}
+	log.Infof("Leaving Handle Outbound Messages ")
+}
+func sendMessageToCloud(serverURL string, clientID string, ceEnabled bool, msgsList ...*nats.Msg) {
+	messagesToSend := make([]v1.BridgeMessage, 0)
+	for _, msg := range msgsList {
+		msgFormat := msgs.GetMsgFormat()
+		status, err := msgFormat.ValidateMsgFormat(msg.Data, ceEnabled)
+		if err != nil {
+			log.Errorf("Error validating the cloud event message: %s", err.Error())
+			continue
+		}
+		if !status {
+			log.Errorf("Cloud event message validation failed, ignoring the message...")
 			continue
 		}
 
-		if resp.StatusCode >= 300 {
-			log.Errorf("Error sending message to server.  Dropping the message %s  status %s", msg.Subject, resp.Status)
-			return
+		natmsg := bridgemodel.NatsMessage{Reply: msg.Reply, Subject: msg.Subject, Data: msg.Data}
+		envelope, enverr := msgs.PutObjectInEnvelope(natmsg, clientID, pkg.CLOUD_ID)
+		if enverr != nil {
+			log.Errorf("Error putting msg in envelope %s", enverr.Error())
+			continue
+		}
+		jsonbits, jsonerr := json.Marshal(&envelope)
+		if jsonerr != nil {
+			log.Errorf("Error encoding envelope to json bits, wkipping message %s", jsonerr.Error())
+			continue
+		}
+		bmsg := v1.BridgeMessage{ClientID: clientID, MessageData: string(jsonbits), FormatVersion: "1"}
+		messagesToSend = append(messagesToSend, bmsg)
+
+	}
+	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
+
+	for true {
+		fullPostReq := v1.BridgeMessagePostReq{
+			AuthChallenge: *msgs.NewAuthChallengeFromStoredKey(),
+			Messages:      messagesToSend,
 		}
 
+		httpclient := bridgemodel.NewHttpClient()
+		postErr := httpclient.SendAuthorizedRequestWithBodyAndResp(http.MethodPost, url, fullPostReq, nil)
+		//resp, postErr := http.DefaultClient.Post(url, "application/json", r)
+		if postErr != nil {
+			log.WithError(postErr).Errorf("Error sending message to server.  Dropping the messages ")
+			if isInvalidCertificateError(postErr) {
+				if certRotationErr := NewCertRotationHandler(serverURL, clientID).HandleCertRotation(); certRotationErr != nil {
+					log.Errorf("failed to rotate certificates")
+					return
+				}
+
+				// cert rotation successful retry the original request
+				continue
+			}
+
+			return
+		}
 		break
 	}
 

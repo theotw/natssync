@@ -123,3 +123,20 @@ func (l *LocationData) SetMetadata(metadata map[string]string) *LocationData {
 	l.Metadata = metadata
 	return l.UpdateLastModified()
 }
+
+func (l *LocationData) GetKeyID() string  {
+	return l.KeyID
+}
+
+func (l *LocationData) SetKeyID(keyID string) error {
+	if _,err := utils.ParseUUIDv1(keyID); err != nil {
+		return err
+	}
+	l.KeyID = keyID
+	return nil
+}
+
+func (l *LocationData) UnsetKeyID() *LocationData{
+	l.KeyID = ""
+	return l
+}
