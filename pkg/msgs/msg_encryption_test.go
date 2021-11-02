@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/persistence"
+	"github.com/theotw/natssync/pkg/types"
 
 	"github.com/stretchr/testify/assert"
 
@@ -19,32 +21,49 @@ import (
 func TestEncryption(t *testing.T) {
 	parentDir := os.TempDir()
 	keystoreDir, _ := ioutil.TempDir(parentDir, "keystoretest")
-	pkg.Config.KeystoreUrl = "file://"+keystoreDir
+	pkg.Config.KeystoreUrl = "file://" + keystoreDir
 	metadata := map[string]string{"foo": "bar"}
 
 	if err := InitCloudKey(); err != nil {
 		t.Fatal(err)
 	}
-	store := GetKeyStore()
-	defer store.RemoveKeyPair()
-	pubKey, _, err := store.ReadKeyPair()
+
+	store := persistence.GetKeyStore()
+	defer func() {
+		err := store.RemoveKeyPair("")
+		assert.Nil(t, err, "failed to remove key pair: %v", err)
+	}()
+
+	locationData, err := store.ReadKeyPair("")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = store.WriteLocation(CLOUD_ID, pubKey, metadata); err != nil {
+
+	writeLocationData, err := types.NewLocationData(pkg.CLOUD_ID, locationData.GetPublicKey(), nil, metadata)
+	assert.Nil(t, err)
+	if err = store.WriteLocation(*writeLocationData); err != nil {
 		t.Fatal(err)
 	}
-	defer store.RemoveCloudMasterData()
+	defer func() {
+		err = store.RemoveCloudMasterData()
+		assert.Nil(t, err, "failed to remove cloud master data: %v", err)
+	}()
 
 	pair, err := GenerateNewKeyPair()
 	if err != nil {
 		t.Fatalf("Unable to generate new key pair %s", err)
 	}
 	key, err := encodePublicKeyAsBytes(&pair.PublicKey)
-	if err = store.WriteLocation("client1", key, metadata); err != nil {
+	clientLocationData, err := types.NewLocationData("client1", key, nil, metadata)
+	assert.Nil(t, err)
+	if err = store.WriteLocation(*clientLocationData); err != nil {
 		t.Fatal(err)
 	}
-	defer store.RemoveLocation("client1")
+
+	defer func() {
+		err := store.RemoveLocation("client1")
+		assert.Nil(t, err, "failed to remove location data for 'client1': %v", err)
+	}()
 
 	t.Run("Load master private", doTest_loadMasterPrivate)
 	t.Run("Load location public", doTest_loadClientPublic)
@@ -55,7 +74,7 @@ func TestEncryption(t *testing.T) {
 }
 func doTestMessageEnvelope(t *testing.T) {
 	msg := []byte("Hello World")
-	envelope, err := PutMessageInEnvelope(msg, CLOUD_ID, CLOUD_ID)
+	envelope, err := PutMessageInEnvelope(msg, pkg.CLOUD_ID, pkg.CLOUD_ID)
 	if err != nil {
 		if !assert.Nil(t, err, "Error with put in envelope") {
 			t.Fail()
@@ -74,7 +93,7 @@ func doTestMessageEnvelope(t *testing.T) {
 }
 
 func doTest_loadMasterPrivate(t *testing.T) {
-	master, err := LoadPrivateKey()
+	master, err := LoadPrivateKey("")
 	assert.Nil(t, err)
 	assert.NotNil(t, master)
 }
@@ -87,11 +106,11 @@ func doTest_loadClientPublic(t *testing.T) {
 
 func doTest_encrpt(t *testing.T) {
 	plainText := "hello async enc"
-	cipher, err := rsaEncrypt([]byte(plainText), CLOUD_ID)
+	cipher, err := rsaEncrypt([]byte(plainText), pkg.CLOUD_ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	plain2, err := rsaDecrypt(cipher)
+	plain2, err := rsaDecrypt(cipher, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,21 +121,22 @@ func doTest_encrpt(t *testing.T) {
 //test may seem out of place, but we need to know this works for challenge tests
 func doTestLocationID(t *testing.T) {
 	unitTestLocation := "unittestlocationID"
-	store := GetKeyStore()
+	store := persistence.GetKeyStore()
 	err := store.WriteKeyPair(unitTestLocation, nil, nil)
+	assert.Nil(t, err)
 	assert.Nil(t, err, "Not expecting an error for location ID save")
-	id := store.LoadLocationID()
+	id := store.LoadLocationID("")
 	assert.Equal(t, "unittestlocationID", id)
 }
 
 func doTestAuthChallenge(t *testing.T) {
-	challenge := NewAuthChallenge()
+	challenge := NewAuthChallenge("")
 	if !assert.NotNil(t, challenge) {
 		t.Fatal("Unable to create auth challenge")
 	}
-	valid := ValidateAuthChallenge(CLOUD_ID, challenge)
+	valid := ValidateAuthChallenge(pkg.CLOUD_ID, challenge)
 	assert.True(t, valid, "Auth Challenge should be true")
 	challenge.AuthChallengeA = "not what we think it should be"
-	valid = ValidateAuthChallenge(CLOUD_ID, challenge)
+	valid = ValidateAuthChallenge(pkg.CLOUD_ID, challenge)
 	assert.False(t, valid, "Auth Challenge should be false")
 }

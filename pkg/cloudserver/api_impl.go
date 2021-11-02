@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/nats-io/nats.go"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -18,6 +17,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/nats-io/nats.go"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -29,6 +30,8 @@ import (
 	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
 	"github.com/theotw/natssync/pkg/metrics"
 	"github.com/theotw/natssync/pkg/msgs"
+	"github.com/theotw/natssync/pkg/persistence"
+	"github.com/theotw/natssync/pkg/types"
 )
 
 func handleGetMessages(c *gin.Context) {
@@ -38,11 +41,11 @@ func handleGetMessages(c *gin.Context) {
 	e := c.ShouldBindJSON(&in)
 	if e != nil {
 		_, ret := bridgemodel.HandleErrors(c, e)
-		c.JSON(400, ret)
+		c.JSON(http.StatusBadRequest, ret)
 		return
 	}
 	if !msgs.ValidateAuthChallenge(clientID, &in) {
-		c.JSON(401, "")
+		c.JSON(http.StatusUnauthorized, "")
 		return
 	}
 
@@ -56,20 +59,20 @@ func handleGetMessages(c *gin.Context) {
 			plainMsg.Data = m.Data
 			plainMsg.Reply = m.Reply
 			plainMsg.Subject = m.Subject
-			envelope, err2 := msgs.PutObjectInEnvelope(plainMsg, msgs.CLOUD_ID, clientID)
+			envelope, err2 := msgs.PutObjectInEnvelope(plainMsg, pkg.CLOUD_ID, clientID)
 			if err2 == nil {
-				jsonData, marshelError := json.Marshal(&envelope)
-				if marshelError == nil {
+				jsonData, marshalError := json.Marshal(&envelope)
+				if marshalError == nil {
 					var bridgeMsg v1.BridgeMessage
 					bridgeMsg.MessageData = string(jsonData)
 					bridgeMsg.FormatVersion = "1"
 					bridgeMsg.ClientID = clientID
 					ret = append(ret, bridgeMsg)
 				} else {
-					log.Errorf("Error marshelling message in envelope %s \n", marshelError.Error())
+					log.WithError(marshalError).Error("Error marshalling message in envelope")
 				}
 			} else {
-				log.Errorf("Error putting message in envelope %s \n", err2.Error())
+				log.WithError(err2).Error("Error putting message in envelope")
 			}
 		} else {
 			//ignore this log.Tracef("Error fetching messages from subscription for %s error %s", clientID, e.Error())
@@ -79,8 +82,9 @@ func handleGetMessages(c *gin.Context) {
 		log.Errorf("Got a request for messages for a client ID that has no subscription %s \n", clientID)
 	}
 
-	c.JSON(200, ret)
+	c.JSON(http.StatusOK, ret)
 }
+
 func handlePostMessage(c *gin.Context) {
 	clientID := c.Param("premid")
 	log.Debug(clientID)
@@ -89,11 +93,11 @@ func handlePostMessage(c *gin.Context) {
 
 	if e != nil {
 		_, ret := bridgemodel.HandleErrors(c, e)
-		c.JSON(400, ret)
+		c.JSON(http.StatusBadRequest, ret)
 		return
 	}
 	if !msgs.ValidateAuthChallenge(clientID, &in.AuthChallenge) {
-		c.JSON(401, "")
+		c.JSON(http.StatusUnauthorized, "")
 		return
 	}
 	nc := bridgemodel.GetNatsConnection()
@@ -137,9 +141,9 @@ func handlePostMessage(c *gin.Context) {
 		nc.Flush()
 	}
 	if len(errors) > 1 {
-		c.JSON(400, errors)
+		c.JSON(http.StatusBadRequest, errors)
 	} else {
-		c.JSON(202, "")
+		c.JSON(http.StatusAccepted, "")
 	}
 
 }
@@ -237,6 +241,7 @@ func handleMultipartFormRegistration(c *gin.Context) (ret *v1.RegisterOnPremReq,
 
 	return
 }
+
 func handleGetRegisteredLocations(c *gin.Context) {
 	authHeader := c.Request.Header.Get("x-Authorization")
 	response, e := sendGenericAuthRequest(bridgemodel.REGISTRATION_QUERY_AUTH_SUBJECT, authHeader)
@@ -246,7 +251,7 @@ func handleGetRegisteredLocations(c *gin.Context) {
 		return
 	}
 	if !response.Success {
-		c.JSON(401, "")
+		c.JSON(http.StatusUnauthorized, "")
 		return
 	}
 	type filterKV struct {
@@ -265,7 +270,7 @@ func handleGetRegisteredLocations(c *gin.Context) {
 			filterKeys = append(filterKeys, kv)
 		}
 	}
-	store := msgs.GetKeyStore()
+	store := persistence.GetKeyStore()
 	clients, e := store.ListKnownClients()
 	if e != nil {
 		code, ret := bridgemodel.HandleErrors(c, e)
@@ -275,11 +280,11 @@ func handleGetRegisteredLocations(c *gin.Context) {
 	ret := make([]v1.RegisteredClientLocation, 0)
 	for _, client := range clients {
 		var x v1.RegisteredClientLocation
-		_, metaData, e := store.ReadLocation(client)
+		locationData, e := store.ReadLocation(client)
 		if e == nil {
 			keymatch := false
 			for _, kv := range filterKeys {
-				actualValue := metaData[kv.k]
+				actualValue := locationData.Metadata[kv.k]
 				keymatch = (actualValue == value)
 				if !keymatch {
 					break
@@ -287,14 +292,14 @@ func handleGetRegisteredLocations(c *gin.Context) {
 			}
 			if keymatch {
 				x.PremID = client
-				x.MetaData = metaData
+				x.MetaData = locationData.Metadata
 				ret = append(ret, x)
 			}
 		} else {
 			log.Errorf("Unable to read location info for location ID %s", client)
 		}
 	}
-	c.JSON(200, ret)
+	c.JSON(http.StatusOK, ret)
 }
 
 func handlePostUnRegister(c *gin.Context) {
@@ -333,7 +338,7 @@ func handlePostUnRegister(c *gin.Context) {
 	}
 
 	clientID := in.MetaData
-	err := msgs.GetKeyStore().RemoveLocation(clientID)
+	err := persistence.GetKeyStore().RemoveLocation(clientID)
 	if err != nil {
 		code, response := bridgemodel.HandleError(c, err)
 		c.JSON(code, response)
@@ -347,7 +352,7 @@ func handlePostUnRegister(c *gin.Context) {
 		c.JSON(code, response)
 		return
 	}
-	c.JSON(201, nil)
+	c.JSON(http.StatusCreated, nil)
 }
 
 func handlePostRegister(c *gin.Context) {
@@ -404,26 +409,88 @@ func handlePostRegister(c *gin.Context) {
 		return
 	}
 	locationID := bridgemodel.GenerateUUID()
-	store := msgs.GetKeyStore()
+	store := persistence.GetKeyStore()
 
 	var resp v1.RegisterOnPremResponse
-	pkBits, _, err := store.ReadKeyPair()
+	locationData, err := store.ReadKeyPair("")
 	if err != nil {
 		code, ret := bridgemodel.HandleErrors(c, err)
 		c.JSON(code, &ret)
 		return
 	}
-	err = store.WriteLocation(locationID, pubKeyBits, in.MetaData)
+
+	writeLocationData, err := types.NewLocationData(locationID, pubKeyBits, nil, in.MetaData)
 	if err != nil {
 		code, ret := bridgemodel.HandleErrors(c, err)
 		c.JSON(code, &ret)
 		return
 	}
-	resp.CloudPublicKey = string(pkBits)
+
+	err = store.WriteLocation(*writeLocationData)
+	if err != nil {
+		code, ret := bridgemodel.HandleErrors(c, err)
+		c.JSON(code, &ret)
+		return
+	}
+	resp.CloudPublicKey = string(locationData.PublicKey)
 	resp.PremID = locationID
 	nc := bridgemodel.GetNatsConnection()
 	nc.Publish(bridgemodel.REGISTRATION_LIFECYCLE_ADDED, []byte(locationID))
-	c.JSON(201, &resp)
+	c.JSON(http.StatusCreated, &resp)
+}
+
+func handlePostCertRotation(c *gin.Context) {
+	log.Tracef("POST Cert Rotation Handler")
+
+	in := new(msgs.CertRotationRequest)
+	if e := c.ShouldBindJSON(in); e != nil {
+		code, ret := bridgemodel.HandleErrors(c, e)
+		c.JSON(code, &ret)
+		return
+	}
+
+	if !msgs.ValidateAuthChallenge(in.PremID, &in.AuthChallenge) {
+		c.JSON(http.StatusUnauthorized, "")
+		return
+	}
+
+	pubKeyBits, err := msgs.PullMessageFromEnvelope(&in.PublicKeyPackage)
+
+	if err != nil {
+		log.Errorf("Error decoding envelope %s", err.Error())
+		c.JSON(bridgemodel.HandleError(c, err))
+		return
+	}
+
+	validPubKey := false
+	pubKeyBlock, _ := pem.Decode(pubKeyBits)
+	if pubKeyBlock != nil {
+		pubKey, perr := x509.ParsePKIXPublicKey(pubKeyBlock.Bytes)
+		validPubKey = pubKey != nil && perr == nil
+	}
+	if !validPubKey {
+		internalError := errors.NewInternalError(errors.BRIDGE_ERROR, errors.INVALID_PUB_KEY, nil)
+		c.JSON(bridgemodel.HandleError(c, internalError))
+		return
+	}
+
+	store := persistence.GetKeyStore()
+	existingLocationData, err := store.ReadLocation(in.PremID)
+	if err != nil {
+		code, ret := bridgemodel.HandleErrors(c, err)
+		c.JSON(code, &ret)
+		return
+	}
+
+	existingLocationData.SetKeyPair(pubKeyBits, nil).UpdateLastKeyPairRotation()
+
+	err = store.WriteLocation(*existingLocationData)
+	if err != nil {
+		code, ret := bridgemodel.HandleErrors(c, err)
+		c.JSON(code, &ret)
+		return
+	}
+	c.JSON(http.StatusNoContent, "")
 }
 
 func sendRegRequestToAuthServer(in *v1.RegisterOnPremReq) (*bridgemodel.RegistrationResponse, error) {
@@ -445,6 +512,7 @@ func sendRegRequestToAuthServer(in *v1.RegisterOnPremReq) (*bridgemodel.Registra
 	}
 	return ret, nil
 }
+
 func sendGenericAuthRequest(subject string, authToken string) (*bridgemodel.GenericAuthResponse, error) {
 	timeout := time.Second * 30
 	nc := bridgemodel.GetNatsConnection()
@@ -492,9 +560,11 @@ func aboutGetUnversioned(c *gin.Context) {
 	log.Tracef("About call %s", resp.ApiVersions)
 	c.JSON(http.StatusOK, resp)
 }
+
 func healthCheckGetUnversioned(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
+
 func swaggerUIGetHandler(c *gin.Context) {
 	c.Redirect(302, "/bridge-server/api/index_bridge_server_v1.html")
 }
@@ -530,7 +600,7 @@ func natsMsgPostHandler(c *gin.Context) {
 	var sub *nats.Subscription
 	if len(msg.Reply) > 0 {
 		var replySub string
-		echoReplyPrefix := fmt.Sprintf("%s.%s", msgs.NATSSYNC_MESSAGE_PREFIX, msgs.CLOUD_ID)
+		echoReplyPrefix := fmt.Sprintf("%s.%s", msgs.NATSSYNC_MESSAGE_PREFIX, pkg.CLOUD_ID)
 		if strings.HasPrefix(msg.Reply, echoReplyPrefix) {
 			replySub = msg.Reply + ".echolet"
 		} else {
@@ -552,6 +622,6 @@ func natsMsgPostHandler(c *gin.Context) {
 			retData = string(replyMsg.Data)
 		}
 	}
-	c.Status(202)
+	c.Status(http.StatusAccepted)
 	c.Writer.Write([]byte(retData))
 }

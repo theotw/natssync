@@ -19,21 +19,23 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/theotw/natssync/pkg"
 	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
+	"github.com/theotw/natssync/pkg/persistence"
 )
 
 func InitCloudKey() error {
-	err := InitLocationKeyStore()
+	err := persistence.InitLocationKeyStore()
 	if err != nil {
 		return err
 	}
-	t := GetKeyStore()
+	t := persistence.GetKeyStore()
 
 	//first checkout the keys
-	_, _, keyErr := t.ReadKeyPair()
-	if keyErr != nil {
-		log.Debugf("Unable to find cloud master keys %s", keyErr.Error())
-		err = GenerateAndSaveKey(CLOUD_ID)
+	_, locationDataErr := t.ReadKeyPair("")
+	if locationDataErr != nil {
+		log.WithError(err).Debugf("Unable to find cloud master keys")
+		err = GenerateAndSaveKey(pkg.CLOUD_ID)
 	}
 
 	return err
@@ -56,7 +58,7 @@ func GenerateAndSaveKey(locationID string) error {
 
 func SaveKeyPair(locationID string, pair *rsa.PrivateKey) error {
 	log.Infof("Saving key pair for %s", locationID)
-	t := GetKeyStore()
+	t := persistence.GetKeyStore()
 
 	publicKey, err := encodePublicKeyAsBytes(&pair.PublicKey)
 	if err != nil {
@@ -72,12 +74,12 @@ func SaveKeyPair(locationID string, pair *rsa.PrivateKey) error {
 }
 
 func LoadPublicKey(locationID string) (*rsa.PublicKey, error) {
-	t := GetKeyStore()
-	key, _, err := t.ReadLocation(locationID)
+	t := persistence.GetKeyStore()
+	locationData, err := t.ReadLocation(locationID)
 	if err != nil {
 		return nil, err
 	}
-	data, _ := pem.Decode(key)
+	data, _ := pem.Decode(locationData.GetPublicKey())
 	var ret *rsa.PublicKey
 	pubKey, err := x509.ParsePKIXPublicKey(data.Bytes)
 	if pubKey != nil && err == nil {
@@ -87,14 +89,14 @@ func LoadPublicKey(locationID string) (*rsa.PublicKey, error) {
 	return ret, err
 }
 
-func LoadPrivateKey() (*rsa.PrivateKey, error) {
-	t := GetKeyStore()
-	_, key, err := t.ReadKeyPair()
+func LoadPrivateKey(keyID string) (*rsa.PrivateKey, error) {
+	t := persistence.GetKeyStore()
+	locationData, err := t.ReadKeyPair(keyID)
 	if err != nil {
 		return nil, err
 	}
 
-	data, _ := pem.Decode(key)
+	data, _ := pem.Decode(locationData.GetPrivateKey())
 	privateKeyImported, err := x509.ParsePKCS1PrivateKey(data.Bytes)
 	return privateKeyImported, err
 }
@@ -147,6 +149,7 @@ func GenerateNewKeyPair() (*rsa.PrivateKey, error) {
 	}
 
 	return privateKey, nil
+
 }
 
 func PutObjectInEnvelope(ob interface{}, senderID string, recipientID string) (*MessageEnvelope, error) {
@@ -156,8 +159,9 @@ func PutObjectInEnvelope(ob interface{}, senderID string, recipientID string) (*
 	}
 	return PutMessageInEnvelope(bits, senderID, recipientID)
 }
+
 func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*MessageEnvelope, error) {
-	master, err := LoadPrivateKey()
+	master, err := LoadPrivateKey("")
 
 	if err != nil {
 		return nil, err
@@ -183,7 +187,7 @@ func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*Mes
 	}
 
 	ret.Message = base64.StdEncoding.EncodeToString(cipherMsg)
-	ret.EnvelopeVersion = ENVELOPE_VERSION_2
+	ret.EnvelopeVersion = ENVELOPE_VERSION_3
 	ret.SenderID = senderID
 	ret.RecipientID = recipientID
 	ret.Signature = base64.StdEncoding.EncodeToString(sigBits)
@@ -191,8 +195,8 @@ func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*Mes
 	return ret, nil
 }
 
-func NewAuthChallenge() *v1.AuthChallenge {
-	key, err := LoadPrivateKey()
+func NewAuthChallenge(KeyID string) *v1.AuthChallenge {
+	key, err := LoadPrivateKey(KeyID)
 	if err != nil {
 		log.Errorf("Unable to load private Key: %s", err.Error())
 		return nil
@@ -225,11 +229,13 @@ func ValidateAuthChallenge(locationID string, challenge *v1.AuthChallenge) bool 
 	}
 	return true
 }
+
 func SignData(dataToSigh []byte, master *rsa.PrivateKey) ([]byte, error) {
 	hash := sha256.Sum256(dataToSigh)
 	sigBits, err := rsa.SignPKCS1v15(rand.Reader, master, crypto.SHA256, hash[:])
 	return sigBits, err
 }
+
 func PullObjectFromEnvelope(ob interface{}, envelope *MessageEnvelope) error {
 	bits, err := PullMessageFromEnvelope(envelope)
 	if err == nil {
@@ -237,16 +243,17 @@ func PullObjectFromEnvelope(ob interface{}, envelope *MessageEnvelope) error {
 	}
 	return err
 }
+
 func PullMessageFromEnvelope(envelope *MessageEnvelope) ([]byte, error) {
 	switch envelope.EnvelopeVersion {
 	case ENVELOPE_VERSION_1:
-		{
-			return pullMessageFromEnvelopev1(envelope)
-		}
+		return pullMessageFromEnvelopev1(envelope)
+
 	case ENVELOPE_VERSION_2:
-		{
-			return pullMessageFromEnvelopev2(envelope)
-		}
+		return pullMessageFromEnvelopev2(envelope)
+
+	case ENVELOPE_VERSION_3:
+		return pullMessageFromEnvelopev3(envelope)
 	}
 	return nil, errors.New("invalid envelope")
 }
@@ -262,7 +269,8 @@ func pullMessageFromEnvelopev1(envelope *MessageEnvelope) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	msgKey, err := rsaDecrypt(envelope.MsgKey)
+
+	msgKey, err := rsaDecrypt(envelope.MsgKey, envelope.KeyID)
 	if err != nil {
 		return nil, err
 	}
@@ -277,6 +285,7 @@ func pullMessageFromEnvelopev1(envelope *MessageEnvelope) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	plainMsgBits, err := DoAesECBDecrypt(cipherMsgBits, msgKey)
 	return plainMsgBits, err
 }
@@ -291,7 +300,8 @@ func pullMessageFromEnvelopev2(envelope *MessageEnvelope) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	msgKey, err := rsaDecrypt(envelope.MsgKey)
+
+	msgKey, err := rsaDecrypt(envelope.MsgKey, envelope.KeyID)
 	if err != nil {
 		return nil, err
 	}
@@ -306,8 +316,13 @@ func pullMessageFromEnvelopev2(envelope *MessageEnvelope) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	plainMsgBits, err := DoAesCBCDecrypt(cipherMsgBits, msgKey)
 	return plainMsgBits, err
+}
+
+func pullMessageFromEnvelopev3(envelope *MessageEnvelope) ([]byte, error) {
+	return pullMessageFromEnvelopev2(envelope)
 }
 
 func rsaEncrypt(plain []byte, clientID string) (string, error) {
@@ -323,8 +338,8 @@ func rsaEncrypt(plain []byte, clientID string) (string, error) {
 	return cipherText, nil
 }
 
-func rsaDecrypt(cipherText string) ([]byte, error) {
-	privkey, err := LoadPrivateKey()
+func rsaDecrypt(cipherText, keyID string) ([]byte, error) {
+	privkey, err := LoadPrivateKey(keyID)
 	if err != nil {
 		return nil, err
 	}

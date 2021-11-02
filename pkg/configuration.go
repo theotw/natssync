@@ -12,6 +12,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	CLOUD_ID               = "cloud-master"
+	StatusCertificateError = 495
+)
+
 var Config Configuration
 
 type Configuration struct {
