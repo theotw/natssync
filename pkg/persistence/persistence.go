@@ -31,6 +31,7 @@ type LocationKeyStore interface {
 	RemoveLocation(locationID string) error
 	RemoveCloudMasterData() error
 	ListKnownClients() ([]string, error)
+	GetLatestKeyID() (string, error)
 }
 
 var keystore LocationKeyStore

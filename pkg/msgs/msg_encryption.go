@@ -192,6 +192,12 @@ func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*Mes
 	ret.RecipientID = recipientID
 	ret.Signature = base64.StdEncoding.EncodeToString(sigBits)
 
+	t := persistence.GetKeyStore()
+	ret.KeyID, err = t.GetLatestKeyID()
+	if err != nil {
+		return nil, err
+	}
+
 	return ret, nil
 }
 
