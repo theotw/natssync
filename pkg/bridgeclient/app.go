@@ -240,6 +240,8 @@ func handleOutboundMessages(subscription *nats.Subscription, serverURL, clientID
 		//if we get a timeout (or any error) send what we have
 		if err != nil {
 			sendWhatWeHave = len(msgList) > 0
+			// bail if it was not a timeout error
+			keepGoing=err == nats.ErrTimeout
 		} else {
 			parsedSubject, err2 := msgs.ParseSubject(msg.Subject)
 			if err2 == nil {

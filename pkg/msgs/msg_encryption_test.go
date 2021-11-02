@@ -69,12 +69,33 @@ func TestEncryption(t *testing.T) {
 	t.Run("Load location public", doTest_loadClientPublic)
 	t.Run("Test Encrypt", doTest_encrpt)
 	t.Run("Test Envelope", doTestMessageEnvelope)
+	t.Run("Test v4 Envelope ID", doTestMessageEnvelopev4)
 	t.Run("Auth Challenge", doTestAuthChallenge)
 	t.Run("Location ID", doTestLocationID)
+
 }
 func doTestMessageEnvelope(t *testing.T) {
 	msg := []byte("Hello World")
-	envelope, err := PutMessageInEnvelope(msg, pkg.CLOUD_ID, pkg.CLOUD_ID)
+	envelope, err := PutMessageInEnvelopeV3(msg, pkg.CLOUD_ID, pkg.CLOUD_ID)
+	if err != nil {
+		if !assert.Nil(t, err, "Error with put in envelope") {
+			t.Fail()
+		}
+	}
+	if msg == nil {
+		t.Fatalf("Error with put in envelope %s", err)
+	}
+
+	msg2, err := PullMessageFromEnvelope(envelope)
+	if err != nil {
+		t.Fatalf("Error with put in envelope %s", err)
+	}
+
+	assert.Equal(t, msg, msg2)
+}
+func doTestMessageEnvelopev4(t *testing.T) {
+	msg := []byte("Hello World")
+	envelope, err := PutMessageInEnvelopev4(msg, pkg.CLOUD_ID, pkg.CLOUD_ID)
 	if err != nil {
 		if !assert.Nil(t, err, "Error with put in envelope") {
 			t.Fail()

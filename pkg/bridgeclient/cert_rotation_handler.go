@@ -77,7 +77,7 @@ func (crh *certRotationHandler) HandleCertRotation() error {
 		return err
 	}
 
-	envelope, enverr := msgs.PutMessageInEnvelope(buf.Bytes(), crh.clientID, pkg.CLOUD_ID)
+	envelope, enverr := msgs.PutMessageInEnvelopeV3(buf.Bytes(), crh.clientID, pkg.CLOUD_ID)
 	if enverr != nil {
 		return err
 	}
