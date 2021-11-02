@@ -9,19 +9,22 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/nats-io/nats.go"
-	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg"
-	"github.com/theotw/natssync/pkg/bridgemodel"
-	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
-	"github.com/theotw/natssync/pkg/metrics"
-	"github.com/theotw/natssync/pkg/msgs"
 	"math"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/nats-io/nats.go"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/bridgemodel"
+	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
+	"github.com/theotw/natssync/pkg/metrics"
+	"github.com/theotw/natssync/pkg/msgs"
+	"github.com/theotw/natssync/pkg/persistence"
 )
 
 type Arguments struct {
@@ -39,6 +42,7 @@ func getClientArguments() Arguments {
 	flag.Parse()
 	return args
 }
+
 func RunClient(test bool) {
 	log.Info("Starting NATSSync Client")
 	args := getClientArguments()
@@ -54,10 +58,10 @@ func RunClient(test bool) {
 		level = log.DebugLevel
 	}
 	log.SetLevel(level)
-	if err := msgs.InitLocationKeyStore(); err != nil {
+	if err := persistence.InitLocationKeyStore(); err != nil {
 		log.Fatalf("Error initalizing key store: %s", err)
 	}
-	store := msgs.GetKeyStore()
+	store := persistence.GetKeyStore()
 	if store == nil {
 		log.Fatalf("Unable to get keystore")
 	}
@@ -77,7 +81,7 @@ func RunClient(test bool) {
 
 	connection := bridgemodel.GetNatsConnection()
 	connection.Subscribe(bridgemodel.RequestForLocationID, func(msg *nats.Msg) {
-		clientID := store.LoadLocationID()
+		clientID := store.LoadLocationID("")
 		connection.Publish(bridgemodel.ResponseForLocationID, []byte(clientID))
 	})
 
@@ -85,7 +89,7 @@ func RunClient(test bool) {
 	var currentSubscription *nats.Subscription
 	for true {
 		nc := bridgemodel.GetNatsConnection()
-		clientID := store.LoadLocationID()
+		clientID := store.LoadLocationID("")
 		if len(clientID) == 0 {
 			log.Infof("No client ID, sleeping and retrying")
 			time.Sleep(5 * time.Second)
@@ -101,6 +105,7 @@ func RunClient(test bool) {
 			//announce the cloud ID/location ID at startup
 			connection.Publish(bridgemodel.ResponseForLocationID, []byte(clientID))
 		}
+
 		//same as above, if we re-register, we drop the subscibe and need to resubscribe
 		if currentSubscription == nil {
 			currentSubscription, err = subscribeToOutboundMessages(serverURL, clientID)
@@ -109,18 +114,14 @@ func RunClient(test bool) {
 			}
 		}
 
-		url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
-
-		ac := msgs.NewAuthChallenge()
-		httpclient := bridgemodel.NewHttpClient()
-		var msglist []v1.BridgeMessage
-		err := httpclient.SendAuthorizedRequestWithBodyAndResp("GET", url, ac, &msglist)
+		msglist, err := getMessagesFromCloud(serverURL, clientID)
 		if err != nil {
 			log.Errorf("Error fetching messages %s", err.Error())
 			time.Sleep(2 * time.Second)
 			continue
 		}
 		log.Infof("Received %d messages from server", len(msglist))
+
 		for _, m := range msglist {
 			var env msgs.MessageEnvelope
 			err = json.Unmarshal([]byte(m.MessageData), &env)
@@ -178,6 +179,34 @@ func RunClient(test bool) {
 		}
 	}
 }
+func isInvalidCertificateError(err error) bool {
+	return strings.Contains(err.Error(), fmt.Sprintf("status code %v", pkg.StatusCertificateError))
+}
+func getMessagesFromCloud(serverURL, clientID string) ([]v1.BridgeMessage, error) {
+	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
+
+	httpclient := bridgemodel.NewHttpClient()
+	var msglist []v1.BridgeMessage
+
+	for true {
+		ac := msgs.NewAuthChallenge("")
+		err := httpclient.SendAuthorizedRequestWithBodyAndResp(http.MethodGet, url, ac, &msglist)
+		if err != nil {
+			if isInvalidCertificateError(err) {
+				if certRotationErr := NewCertRotationHandler(serverURL, clientID).HandleCertRotation(); certRotationErr != nil {
+					return nil, fmt.Errorf("failed to rotate certificates: %v : %v", certRotationErr, err)
+				}
+				// certificates rotated successfully, retry the original request
+				continue
+			}
+			return nil, err
+		}
+		break
+	}
+
+	return msglist, nil
+}
+
 func subscribeToOutboundMessages(serverURL, clientID string) (*nats.Subscription, error) {
 	nc := bridgemodel.GetNatsConnection()
 	subj := fmt.Sprintf("%s.>", msgs.NATSSYNC_MESSAGE_PREFIX)
@@ -187,7 +216,6 @@ func subscribeToOutboundMessages(serverURL, clientID string) (*nats.Subscription
 	}
 	go handleOutboundMessages(sub, serverURL, clientID)
 	return sub, nil
-
 }
 
 // handleOutboundMessages  This pulls messages off the queue and groups a bunch of them to push them together
@@ -216,12 +244,12 @@ func handleOutboundMessages(subscription *nats.Subscription, serverURL, clientID
 		} else {
 			parsedSubject, err2 := msgs.ParseSubject(msg.Subject)
 			if err2 == nil {
-				log.Tracef("Found message to send NB Stored  Client ID=%s, Message Target %s", clientID,parsedSubject.LocationID)
+				log.Tracef("Found message to send NB Stored  Client ID=%s, Message Target %s", clientID, parsedSubject.LocationID)
 				//if the target client ID is not this client, push it to the server
 				if parsedSubject.LocationID != clientID {
 					log.Tracef("Adding message to list to send NB")
 					msgList = append(msgList, msg)
-				}else{
+				} else {
 					log.Tracef("Message not meant for NB, dropping")
 				}
 			}
@@ -249,7 +277,7 @@ func sendMessageToCloud(serverURL string, clientID string, ceEnabled bool, msgsL
 		}
 
 		natmsg := bridgemodel.NatsMessage{Reply: msg.Reply, Subject: msg.Subject, Data: msg.Data}
-		envelope, enverr := msgs.PutObjectInEnvelope(natmsg, clientID, msgs.CLOUD_ID)
+		envelope, enverr := msgs.PutObjectInEnvelope(natmsg, clientID, pkg.CLOUD_ID)
 		if enverr != nil {
 			log.Errorf("Error putting msg in envelope %s", enverr.Error())
 			continue
@@ -260,29 +288,47 @@ func sendMessageToCloud(serverURL string, clientID string, ceEnabled bool, msgsL
 			continue
 		}
 		bmsg := v1.BridgeMessage{ClientID: clientID, MessageData: string(jsonbits), FormatVersion: "1"}
-		messagesToSend=append(messagesToSend,bmsg)
+		messagesToSend = append(messagesToSend, bmsg)
 
 	}
 	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
 
-	var fullPostReq v1.BridgeMessagePostReq
-	fullPostReq.AuthChallenge = *msgs.NewAuthChallenge()
+	for true {
+		fullPostReq := v1.BridgeMessagePostReq{
+			AuthChallenge: *msgs.NewAuthChallenge(""),
+			Messages:      messagesToSend,
+		}
 
-	fullPostReq.Messages = messagesToSend
-	fullPostReq.Messages=messagesToSend
-	postMsgBits, bmsgerr := json.Marshal(&fullPostReq)
-	if bmsgerr != nil {
-		log.Errorf("Error marshaling bridge message to json bits %s", bmsgerr.Error())
-		return
+		postMsgBits, bmsgerr := json.Marshal(&fullPostReq)
+		if bmsgerr != nil {
+			log.WithError(bmsgerr).Errorf("Error marshaling bridge message to json bits")
+			return
+		}
+
+		r := bytes.NewReader(postMsgBits)
+		resp, postErr := http.DefaultClient.Post(url, "application/json", r)
+		if postErr != nil {
+			log.WithError(postErr).Errorf("Error sending message to server.  Dropping the messages ")
+			return
+		}
+
+		if resp.StatusCode == pkg.StatusCertificateError {
+			if certRotationErr := NewCertRotationHandler(serverURL, clientID).HandleCertRotation(); certRotationErr != nil {
+				log.Errorf("failed to rotate certificates")
+				return
+			}
+
+			// cert rotation successful retry the original request
+			continue
+		}
+
+		if resp.StatusCode >= 300 {
+			log.Errorf("Error sending message to server.  Dropping the messages because of %s", resp.Status)
+
+			return
+		}
+
+		break
 	}
 
-	r := bytes.NewReader(postMsgBits)
-	resp, posterr := http.DefaultClient.Post(url, "application/json", r)
-	if posterr != nil {
-		log.Errorf("Error sending message to server.  Dropping the message %d  error was %s", len(messagesToSend), posterr.Error())
-		return
-	}
-	if resp.StatusCode >= 300 {
-		log.Errorf("Error sending messages to server.  Dropping the message %d  error was %s", len(messagesToSend), resp.Status)
-	}
 }

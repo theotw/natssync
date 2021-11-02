@@ -10,15 +10,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg"
 	"io/ioutil"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/utils"
 )
 
 func GenerateUUID() string {
-	return uuid.New().String()
+	return utils.NewUUIDv4().String()
 }
 
 func NewHttpClient() *HttpClient {

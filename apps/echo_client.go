@@ -43,7 +43,7 @@ func getECArguments() Arguments {
 //that indicates which part of the journey has been hit.
 //the loop ends when it sees echolet.
 func main() {
-	log.Infof("Version %s",pkg.VERSION)
+	log.Infof("Version %s", pkg.VERSION)
 	args := getECArguments()
 
 	log.Printf("Connecting to NATS Server %s", *args.natsURL)
@@ -62,7 +62,7 @@ func main() {
 	var locationID string
 	if err != nil {
 		log.Errorf("Unable to get location ID from sync client, using cloud master %s", err.Error())
-		locationID = msgs.CLOUD_ID
+		locationID = pkg.CLOUD_ID
 	} else {
 		locationID = string(msg.Data)
 	}

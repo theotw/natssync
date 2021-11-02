@@ -2,7 +2,7 @@
  * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
-package msgs
+package mongo
 
 import (
 	"context"
@@ -13,20 +13,11 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/types"
+	"github.com/theotw/natssync/pkg/utils"
 )
-
-type TrustedLocation struct {
-	LocationID string `json:"locationID" bson:"locationID"`
-	PublicKey  []byte `json:"publicKey" bson:"publicKey"`
-	MetaData   map[string]string `json:"metaData" bson:"metaData"`
-}
-
-type ServiceKeyData struct {
-	ID         int    `json:"id" bson:"id"`
-	LocationID string `json:"locationID" bson:"locationID"`
-	PublicKey  []byte `json:"publicKey" bson:"publicKey"`
-	PrivateKey []byte `json:"privateKey" bson:"privateKey"`
-}
 
 type MongoKeyStore struct {
 	conn                    *mongo.Client
@@ -53,7 +44,7 @@ func (m *MongoKeyStore) initCollections() error {
 	_, err = kpCol.Indexes().CreateOne(
 		context.TODO(),
 		mongo.IndexModel{
-			Keys: bson.D{{"locationID", 1}},
+			Keys:    bson.D{{"locationID", 1}},
 			Options: options.Index().SetUnique(true),
 		},
 	)
@@ -81,77 +72,142 @@ func (m *MongoKeyStore) getLocationsCollection() *mongo.Collection {
 }
 
 func (m *MongoKeyStore) WriteKeyPair(locationID string, publicKey []byte, privateKey []byte) error {
+
 	log.Tracef("Saving key pair for %s", locationID)
-	keys := ServiceKeyData{
-		ID: 1,
-		LocationID: locationID,
-		PublicKey: publicKey,
-		PrivateKey: privateKey,
+	keys, err := types.NewLocationData(locationID, publicKey, privateKey, nil)
+	if err != nil {
+		return err
 	}
+
 	collection := m.getKeyPairCollection()
-	_, err := collection.InsertOne(context.TODO(), keys)
+	_, err = collection.InsertOne(context.TODO(), keys)
 	return err
 }
 
-func (m *MongoKeyStore) getServiceKeyPair() (*ServiceKeyData, error) {
+func (m *MongoKeyStore) ReadKeyPair(keyID string) (*types.LocationData, error) {
 	log.Trace("Reading key pair")
-	var keypair ServiceKeyData
+	if keyID == "" {
+		var err error
+		if keyID, err = m.GetLatestKeyID(); err != nil {
+			return nil, err
+		}
+	}
+
+	var keypair types.LocationData
 	collection := m.getKeyPairCollection()
-	cur := collection.FindOne(context.TODO(), bson.D{{"id", 1}})
+	cur := collection.FindOne(context.TODO(), bson.M{"keyID": keyID})
 	if err := cur.Decode(&keypair); err != nil {
 		return nil, fmt.Errorf("unable to get locationID from mongo: %s", err)
 	}
 	return &keypair, nil
 }
 
-func (m *MongoKeyStore) ReadKeyPair() ([]byte, []byte, error) {
-	keypair, err := m.getServiceKeyPair()
-	if err != nil {
-		return nil, nil, err
-	}
-	return keypair.PublicKey, keypair.PrivateKey, nil
-}
-
-func (m *MongoKeyStore) RemoveKeyPair() error {
+func (m *MongoKeyStore) RemoveKeyPair(keyID string) error {
 	log.Trace("Removing key pair")
-	collection := m.getLocationsCollection()
-	filter := bson.D{{"id", 1}}
+	if keyID == "" {
+		var err error
+		if keyID, err = m.GetLatestKeyID(); err != nil {
+			return err
+		}
+	}
+
+	collection := m.getKeyPairCollection()
+	filter := bson.M{"keyID": keyID}
 	_, err := collection.DeleteOne(context.TODO(), filter)
 	return err
 }
 
-func (m *MongoKeyStore) LoadLocationID() string {
+func (m *MongoKeyStore) LoadLocationID(keyID string) string {
 	log.Trace("Getting location ID")
-	keypair, err := m.getServiceKeyPair()
+	if keyID == "" {
+		var err error
+		if keyID, err = m.GetLatestKeyID(); err != nil {
+			return ""
+		}
+	}
+
+	keypair, err := m.ReadKeyPair(keyID)
 	if err != nil {
-		log.Debugf("Unable to get locationID from mongo: %s", err)
+		log.WithError(err).Debugf("Unable to get locationID from mongo")
 		return ""
 	}
-	return keypair.LocationID
+	return keypair.GetLocationID()
 }
 
-func (m *MongoKeyStore) WriteLocation(locationID string, buf []byte, metadata map[string]string) error {
-	log.Tracef("Mongo set public key for '%s'", locationID)
-	key := TrustedLocation{LocationID: locationID, PublicKey: buf, MetaData: metadata}
+func (m *MongoKeyStore) GetExistingKeys() ([]*utils.UUIDv1, error) {
+	collection := m.getKeyPairCollection()
+	filter := bson.M{}
+	cur, err := collection.Find(context.TODO(), filter)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		if err := cur.Close(context.TODO()); err != nil {
+			log.WithError(err).Error("failed to close mongo cursor")
+		}
+	}()
+
+	existingKeys := make([]*utils.UUIDv1, 0)
+
+	for cur.Next(context.TODO()) {
+		locationData := &types.LocationData{}
+		if err := cur.Decode(locationData); err != nil {
+			return nil, err
+		}
+		idString := locationData.KeyID
+		id, err := utils.ParseUUIDv1(idString)
+		if err != nil {
+			return nil, err
+		}
+
+		existingKeys = append(existingKeys, id)
+	}
+	return existingKeys, nil
+}
+
+func (m *MongoKeyStore) GetLatestKeyID() (string, error) {
+	existingKeys, err := m.GetExistingKeys()
+	if err != nil {
+		return "", err
+	}
+
+	if len(existingKeys) == 0 {
+		return "", fmt.Errorf("existing keys not found")
+	}
+
+	maxKey := existingKeys[0]
+	for _, key := range existingKeys {
+		if maxKey.GetCreationTime().Before(key.GetCreationTime()) {
+			maxKey = key
+		}
+	}
+
+	return maxKey.String(), nil
+}
+
+func (m *MongoKeyStore) WriteLocation(data types.LocationData) error {
+	log.Tracef("Mongo set public key for '%s'", data.GetLocationID())
+
 	collection := m.getLocationsCollection()
-	_, err := collection.InsertOne(context.TODO(), key)
-	if err != nil{
-		log.Errorf("Error writing mongo record %v %s",key,err.Error())
+	_, err := collection.InsertOne(context.TODO(), data)
+	if err != nil {
+		log.WithError(err).Errorf("Error writing mongo record %v", data)
 	}
 	return err
 }
 
-func (m *MongoKeyStore) ReadLocation(locationID string) ([]byte, map[string]string, error) {
+func (m *MongoKeyStore) ReadLocation(locationID string) (*types.LocationData, error) {
 	log.Tracef("Mongo get public key for '%s'", locationID)
 	collection := m.getLocationsCollection()
-	var location TrustedLocation
+	var location types.LocationData
 	cur := collection.FindOne(context.TODO(), bson.D{{"locationID", locationID}})
 	err := cur.Decode(&location)
-	return location.PublicKey, location.MetaData, err
+	return &location, err
 }
 
 func (m *MongoKeyStore) removeLocationData(locationID string, allowCloudMaster bool) error {
-	if locationID == CLOUD_ID && !allowCloudMaster {
+	if locationID == pkg.CLOUD_ID && !allowCloudMaster {
 		log.Errorf("Removing default cloud location ID")
 		err := errors.New("unable to remove cloud master location")
 		return err
@@ -171,7 +227,7 @@ func (m *MongoKeyStore) RemoveLocation(locationID string) error {
 }
 
 func (m *MongoKeyStore) RemoveCloudMasterData() error {
-	return m.removeLocationData(CLOUD_ID, true)
+	return m.removeLocationData(pkg.CLOUD_ID, true)
 }
 
 func (m *MongoKeyStore) ListKnownClients() ([]string, error) {
@@ -185,12 +241,12 @@ func (m *MongoKeyStore) ListKnownClients() ([]string, error) {
 	}
 
 	for cur.Next(context.TODO()) {
-		var location TrustedLocation
+		var location types.LocationData
 		err = cur.Decode(&location)
 		if err != nil {
 			return nil, err
 		}
-		locationIDs = append(locationIDs, location.LocationID)
+		locationIDs = append(locationIDs, location.GetLocationID())
 	}
 
 	if err = cur.Err(); err != nil {
