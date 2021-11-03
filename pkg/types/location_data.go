@@ -124,19 +124,19 @@ func (l *LocationData) SetMetadata(metadata map[string]string) *LocationData {
 	return l.UpdateLastModified()
 }
 
-func (l *LocationData) GetKeyID() string  {
+func (l *LocationData) GetKeyID() string {
 	return l.KeyID
 }
 
 func (l *LocationData) SetKeyID(keyID string) error {
-	if _,err := utils.ParseUUIDv1(keyID); err != nil {
+	if _, err := utils.ParseUUIDv1(keyID); err != nil {
 		return err
 	}
 	l.KeyID = keyID
 	return nil
 }
 
-func (l *LocationData) UnsetKeyID() *LocationData{
+func (l *LocationData) UnsetKeyID() *LocationData {
 	l.KeyID = ""
 	return l
 }

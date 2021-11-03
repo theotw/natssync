@@ -87,8 +87,12 @@ func handleGetMessages(c *gin.Context) {
 				plainMsg.Data = m.Data
 				plainMsg.Reply = m.Reply
 				plainMsg.Subject = m.Subject
-				envelope, err2 := msgs.PutObjectInEnvelope(plainMsg, pkg.CLOUD_ID, clientID)
-				if err2 == nil {
+
+				var envelopErr error
+				var envelope *msgs.MessageEnvelope
+				envelope, envelopErr = msgs.PutObjectInEnvelope(plainMsg, pkg.CLOUD_ID, clientID)
+
+				if envelopErr == nil {
 					jsonData, marshelError := json.Marshal(&envelope)
 					if marshelError == nil {
 						var bridgeMsg v1.BridgeMessage
@@ -100,7 +104,7 @@ func handleGetMessages(c *gin.Context) {
 						log.Errorf("Error marshelling message in envelope %s \n", marshelError.Error())
 					}
 				} else {
-					log.Errorf("Error putting message in envelope %s \n", err2.Error())
+					log.Errorf("Error putting message in envelope %s \n", envelopErr.Error())
 				}
 				keepWaiting = len(ret) < int(maxQueueSize)
 			} else {
@@ -466,7 +470,6 @@ func handlePostRegister(c *gin.Context) {
 	}
 
 	err = store.WriteLocation(*writeLocationData)
-
 
 	if err != nil {
 		code, ret := bridgemodel.HandleErrors(c, err)

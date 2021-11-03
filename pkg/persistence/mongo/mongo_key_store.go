@@ -75,7 +75,7 @@ func (m *MongoKeyStore) WriteKeyPair(locationData *types.LocationData) error {
 
 	log.WithFields(log.Fields{
 		"locationID": locationData.LocationID,
-		"keyID": locationData.KeyID,
+		"keyID":      locationData.KeyID,
 	}).Tracef("Saving key pair")
 
 	collection := m.getKeyPairCollection()

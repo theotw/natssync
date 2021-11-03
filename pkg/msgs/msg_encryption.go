@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"github.com/theotw/natssync/pkg/bridgemodel"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -75,7 +76,6 @@ func SaveKeyPair(locationID string, pair *rsa.PrivateKey) error {
 }
 
 func GetKeyPairLocationData(locationID string, pair *rsa.PrivateKey) (*types.LocationData, error) {
-
 
 	publicKey, err := encodePublicKeyAsBytes(&pair.PublicKey)
 	if err != nil {
@@ -178,10 +178,21 @@ func PutObjectInEnvelope(ob interface{}, senderID string, recipientID string) (*
 	if err != nil {
 		return nil, err
 	}
-	return PutMessageInEnvelope(bits, senderID, recipientID)
+	msg, ok := ob.(*bridgemodel.NatsMessage)
+	skipEncrpt := false
+	if ok {
+		parsedMsgSubject, _ := ParseSubject(msg.Subject)
+		skipEncrpt = parsedMsgSubject.SkipEncryption
+	}
+	log.Tracef("Puting message in Envelope with Encryption=%v", !skipEncrpt)
+	if skipEncrpt {
+		return PutMessageInEnvelopev4(bits, senderID, recipientID)
+	} else {
+		return PutMessageInEnvelopeV3(bits, senderID, recipientID)
+	}
 }
 
-func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*MessageEnvelope, error) {
+func PutMessageInEnvelopeV3(msg []byte, senderID string, recipientID string) (*MessageEnvelope, error) {
 	master, err := LoadPrivateKey("")
 	if err != nil {
 		return nil, err
@@ -218,6 +229,29 @@ func PutMessageInEnvelope(msg []byte, senderID string, recipientID string) (*Mes
 		return nil, err
 	}
 	ret.KeyID = locationData.KeyID
+
+	return ret, nil
+}
+func PutMessageInEnvelopev4(msg []byte, senderID string, recipientID string) (*MessageEnvelope, error) {
+	master, err := LoadPrivateKey("")
+
+	if err != nil {
+		return nil, err
+	}
+
+	ret := new(MessageEnvelope)
+	ret.MsgKey = BLANK_KEY
+
+	sigBits, err := SignData(msg, master)
+	if err != nil {
+		return nil, err
+	}
+
+	ret.Message = base64.StdEncoding.EncodeToString(msg)
+	ret.EnvelopeVersion = ENVELOPE_VERSION_4
+	ret.SenderID = senderID
+	ret.RecipientID = recipientID
+	ret.Signature = base64.StdEncoding.EncodeToString(sigBits)
 
 	return ret, nil
 }
@@ -287,6 +321,8 @@ func PullMessageFromEnvelope(envelope *MessageEnvelope) ([]byte, error) {
 
 	case ENVELOPE_VERSION_3:
 		return pullMessageFromEnvelopev3(envelope)
+	case ENVELOPE_VERSION_4:
+		return pullMessageFromEnvelopev4(envelope)
 	}
 	return nil, errors.New("invalid envelope")
 }
@@ -352,6 +388,32 @@ func pullMessageFromEnvelopev2(envelope *MessageEnvelope) ([]byte, error) {
 
 	plainMsgBits, err := DoAesCBCDecrypt(cipherMsgBits, msgKey)
 	return plainMsgBits, err
+}
+
+// Used for messages for version 4, which are messages that are signed but not encrypted.  for SSL type traffic
+func pullMessageFromEnvelopev4(envelope *MessageEnvelope) ([]byte, error) {
+	plainBits, err := base64.StdEncoding.DecodeString(envelope.Message)
+	if err != nil {
+		return nil, err
+	}
+
+	sigBits, err := base64.StdEncoding.DecodeString(envelope.Signature)
+	if err != nil {
+		return nil, err
+	}
+
+	publicKey, err := LoadPublicKey(envelope.SenderID)
+	if err != nil {
+		return nil, err
+	}
+	hash := sha256.Sum256(plainBits)
+
+	err = rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, hash[:], sigBits)
+	if err != nil {
+		return nil, err
+	}
+
+	return plainBits, err
 }
 
 func pullMessageFromEnvelopev3(envelope *MessageEnvelope) ([]byte, error) {

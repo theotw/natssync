@@ -65,8 +65,8 @@ func HandleConnectionRequest(msg *nats.Msg, targetLocationID string) {
 			connectionResp.StateDetails = err.Error() + " @ " + connectionMsg.Destination
 		} else {
 			connectionResp.State = "ok"
-			outBoundSubject := httpproxy.MakeHttpsMessageSubject(httpproxy.NATS_MSG_PREFIX, connectionMsg.ProxyLocationID, connectionMsg.ConnectionID)
-			inBoundSubject := httpproxy.MakeHttpsMessageSubject(httpproxy.NATS_MSG_PREFIX, targetLocationID, connectionMsg.ConnectionID)
+			outBoundSubject := httpproxy.MakeHttpsMessageSubject( connectionMsg.ProxyLocationID, connectionMsg.ConnectionID)
+			inBoundSubject := httpproxy.MakeHttpsMessageSubject( targetLocationID, connectionMsg.ConnectionID)
 			go StartBiDiNatsTunnel(outBoundSubject, inBoundSubject, connectionMsg.ConnectionID, targetSocket)
 		}
 	}

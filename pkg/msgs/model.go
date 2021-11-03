@@ -16,10 +16,12 @@ import (
 const ENVELOPE_VERSION_1 = 1 //EBC AES
 const ENVELOPE_VERSION_2 = 2 // CBC AES
 const ENVELOPE_VERSION_3 = 3 // CBC AES, update version
+const ENVELOPE_VERSION_4 = 4 // v4 is does not encrypt the message, just signs it.  this is for encrypted traffic
 const ECHOLET_SUFFIX = "echolet"
 const ECHO_SUBJECT_BASE = "echo"
 const NATSSYNC_MESSAGE_PREFIX = "natssyncmsg"
-
+const SKIP_ENCRYPTION_FLAG="noencrypt"  // used in third position of a subject (aka, first app usage position) then encryption is skipped.  Handy for SSL or other encrypted messages
+const BLANK_KEY="this key was intentionally left blank"
 type MessageEnvelope struct {
 	EnvelopeVersion int
 	RecipientID     string
@@ -54,16 +56,20 @@ type ParsedSubject struct {
 	OriginalSubject string
 	LocationID      string
 	AppData         []string //dotted strings parts after the location ID
+	SkipEncryption 	bool
 }
 
 func ParseSubject(subject string) (*ParsedSubject, error) {
+	ret := new(ParsedSubject)
+	ret.SkipEncryption=false
 	parts := strings.Split(subject, ".")
 	if len(parts) < 2 || (parts[0] != NATSSYNC_MESSAGE_PREFIX) {
-		return nil, errors.New("invalid.message.subject")
+		return ret, errors.New("invalid.message.subject")
 	}
-	ret := new(ParsedSubject)
+
 	ret.LocationID = parts[1]
 	ret.AppData = parts[2:]
+	ret.SkipEncryption= len(ret.AppData)>0 && ret.AppData[0]==SKIP_ENCRYPTION_FLAG
 	ret.OriginalSubject = subject
 
 	return ret, nil
