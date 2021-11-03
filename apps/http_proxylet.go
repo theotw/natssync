@@ -9,16 +9,19 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/nats-io/nats.go"
-	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg"
-	"github.com/theotw/natssync/pkg/httpsproxy"
-	models2 "github.com/theotw/natssync/pkg/httpsproxy/models"
-	"github.com/theotw/natssync/pkg/httpsproxy/server"
 	"io/ioutil"
 	"net/http"
 	"runtime"
 	"sync"
+
+	"github.com/nats-io/nats.go"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/theotw/natssync/pkg"
+	httpproxy "github.com/theotw/natssync/pkg/httpsproxy"
+	models2 "github.com/theotw/natssync/pkg/httpsproxy/models"
+	"github.com/theotw/natssync/pkg/httpsproxy/proxylet"
+	"github.com/theotw/natssync/pkg/httpsproxy/server"
 )
 
 func runHttpAPI(m *nats.Msg, nc *nats.Conn, i int) {
@@ -72,6 +75,7 @@ func runHttpAPI(m *nats.Msg, nc *nats.Conn, i int) {
 	nc.Flush()
 
 }
+
 func ConfigureDefaultTransport() {
 	// allows calls to https
 	dt := http.DefaultTransport
@@ -83,6 +87,7 @@ func ConfigureDefaultTransport() {
 		dt.(*http.Transport).TLSClientConfig.InsecureSkipVerify = true
 	}
 }
+
 func main() {
 	log.Infof("Version %s", pkg.VERSION)
 	logLevel := httpproxy.GetEnvWithDefaults("LOG_LEVEL", "debug")
@@ -92,6 +97,7 @@ func main() {
 		level = log.DebugLevel
 	}
 	log.SetLevel(level)
+
 	ConfigureDefaultTransport()
 	err := models2.InitNats()
 	if err != nil {
@@ -103,8 +109,8 @@ func main() {
 	setupQueueSubscriptions()
 	_, err = nc.Subscribe(server.ResponseForLocationID, func(msg *nats.Msg) {
 		locationID := string(msg.Data)
-		if len(locationID)==0{
-			locationID="*"
+		if len(locationID) == 0 {
+			locationID = "*"
 		}
 		httpproxy.SetMyLocationID(locationID)
 		log.Infof("Using location ID %s", locationID)
@@ -115,10 +121,7 @@ func main() {
 		log.Fatalf("Unable to talk to NATS %s", err.Error())
 	}
 
-
 	nc.Publish(server.RequestForLocationID, []byte(""))
-
-
 
 	//if *showTime {
 	//	log.SetFlags(log.LstdFlags)
@@ -126,27 +129,29 @@ func main() {
 
 	runtime.Goexit()
 }
+
 var httpSub *nats.Subscription
 var httpsSub *nats.Subscription
 var subMutex sync.Mutex
+
 func setupQueueSubscriptions() {
 	subMutex.Lock()
 	defer subMutex.Unlock()
-	if httpSub != nil{
+	if httpSub != nil {
 		httpSub.Unsubscribe()
-		httpSub=nil
+		httpSub = nil
 	}
-	if httpsSub != nil{
+	if httpsSub != nil {
 		httpsSub.Unsubscribe()
-		httpsSub=nil
+		httpsSub = nil
 	}
 
 	nc := models2.GetNatsClient()
 	locationID := httpproxy.GetMyLocationID()
-	log.Infof("Setting up subscriptions on location ID %s ",locationID)
+	log.Infof("Setting up subscriptions on location ID %s ", locationID)
 	subj := httpproxy.MakeMessageSubject(locationID, httpproxy.HTTP_PROXY_API_ID)
 	i := 0
-	httpSub,_=nc.Subscribe(subj, func(msg *nats.Msg) {
+	httpSub, _ = nc.Subscribe(subj, func(msg *nats.Msg) {
 		if string(msg.Data) != "" {
 			i += 1
 			runHttpAPI(msg, nc, i)
@@ -155,7 +160,7 @@ func setupQueueSubscriptions() {
 	log.Printf("Listening on [%s]", subj)
 
 	conReqSubject := httpproxy.MakeMessageSubject(locationID, httpproxy.HTTPS_PROXY_CONNECTION_REQUEST)
-	httpsSub,_=nc.Subscribe(conReqSubject, func(msg *nats.Msg) {
+	httpsSub, _ = nc.Subscribe(conReqSubject, func(msg *nats.Msg) {
 		models2.HandleConnectionRequest(msg, locationID)
 	})
 
@@ -164,4 +169,22 @@ func setupQueueSubscriptions() {
 	}
 	log.Printf("Listening on [%s]", conReqSubject)
 	nc.Flush()
+}
+
+func main1() {
+	log.Infof("Version %s", pkg.VERSION)
+	logLevel := httpproxy.GetEnvWithDefaults("LOG_LEVEL", "debug")
+	level, levelerr := log.ParseLevel(logLevel)
+	if levelerr != nil {
+		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
+		level = log.DebugLevel
+	}
+	log.SetLevel(level)
+
+	proxyletObject, err := proxylet.NewProxylet()
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create proxylet object")
+	}
+	proxyletObject.RunHttpProxylet()
+	runtime.Goexit()
 }

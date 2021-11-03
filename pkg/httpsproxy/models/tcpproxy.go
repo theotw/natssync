@@ -76,9 +76,10 @@ func HandleConnectionRequest(msg *nats.Msg, targetLocationID string) {
 		nc.Publish(msg.Reply, respbits)
 		nc.Flush()
 	} else {
-		log.Errorf("Error marashling connection resp message %s", jsonerr.Error())
+		log.WithError(err).Error("Error marshaling connection resp message")
 	}
 }
+
 func SendConnectionRequest(connectionID, clientID, host string) error {
 	nc := GetNatsClient()
 	reply := httpproxy.MakeReplyMessageSubject()
@@ -124,10 +125,11 @@ func SendConnectionRequest(connectionID, clientID, host string) error {
 	if resp.State != "ok" {
 		respError = errors.New(resp.State + resp.StateDetails)
 	}
-	log.Debugf("End Connection request status: %s  detailts %s", resp.State, resp.StateDetails)
+	log.Debugf("End Connection request status: %s  details %s", resp.State, resp.StateDetails)
 
 	return respError
 }
+
 func StartBiDiNatsTunnel(outBoundSubject, inBoundSubject, connectionID string, socket io.ReadWriteCloser) error {
 	nc := GetNatsClient()
 	defer socket.Close()
@@ -144,6 +146,7 @@ func StartBiDiNatsTunnel(outBoundSubject, inBoundSubject, connectionID string, s
 	TransferNatsToTcpData(inBoundQueue, socket)
 	return nil
 }
+
 func TransferTcpDataToNats(subject string, connectioID string, src io.ReadCloser) {
 	nc := GetNatsClient()
 
@@ -169,7 +172,7 @@ func TransferTcpDataToNats(subject string, connectioID string, src io.ReadCloser
 		}
 		if readErr != nil {
 			if readErr != io.EOF {
-				log.WithError(readErr).Errorf("Error reading data tcp -> nats %s", readErr.Error())
+				log.WithError(readErr).Errorf("Error reading data tcp -> nats")
 			}
 			break
 		}
@@ -178,13 +181,14 @@ func TransferTcpDataToNats(subject string, connectioID string, src io.ReadCloser
 	sequnceID = sequnceID + 1
 	dataToSend := EncodeTCPData(writebuf, connectioID, sequnceID)
 	//send one last 0 len data package to send the stream
-	log.Debugf("Sent final packate data to nats %s", subject)
+	log.WithField("subject", subject).Debug("Sent final packet data to nats")
 	nc.Publish(subject, dataToSend)
 	nc.Flush()
 
 	log.Debug("Terminating")
 	//send terminate
 }
+
 func TransferNatsToTcpData(queue *nats.Subscription, dest io.WriteCloser) {
 	for {
 		log.Debug("waiting for Data from nats")
@@ -194,7 +198,7 @@ func TransferNatsToTcpData(queue *nats.Subscription, dest io.WriteCloser) {
 		} else {
 			log.Debug("Got package from nats")
 			tcpData, readErr := DecodeTCPData(natsMsg.Data)
-			if err == nil {
+			if readErr == nil {
 				log.Debugf("Got valid package from nats len %d", len(tcpData))
 				if len(tcpData) > 0 {
 					dest.Write(tcpData)
@@ -203,7 +207,7 @@ func TransferNatsToTcpData(queue *nats.Subscription, dest io.WriteCloser) {
 					break
 				}
 			} else {
-				log.WithError(readErr).Errorf("Error reading data nats->tcp %s", readErr.Error())
+				log.WithError(readErr).Error("Error reading data nats->tcp")
 				break
 			}
 		}

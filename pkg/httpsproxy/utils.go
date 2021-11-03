@@ -46,7 +46,7 @@ func MakeMessageSubject(targetLocationID string, appID string) string {
 	return sub
 }
 
-func MakeHttpsMessageSubject( targetLocationID string, connectionID string) string {
-	sub := fmt.Sprintf("%s.%s.%s.%s,%s", NATS_MSG_PREFIX, targetLocationID,msgs.SKIP_ENCRYPTION_FLAG, HTTPS_PROXY_API_ID, connectionID)
+func MakeHttpsMessageSubject(targetLocationID string, connectionID string) string {
+	sub := fmt.Sprintf("%s.%s.%s.%s.%s", NATS_MSG_PREFIX, targetLocationID, msgs.SKIP_ENCRYPTION_FLAG, HTTPS_PROXY_API_ID, connectionID)
 	return sub
 }
