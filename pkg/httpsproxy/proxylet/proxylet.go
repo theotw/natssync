@@ -114,7 +114,7 @@ func (p *proxylet) configureNatsSyncLocationID() {
 	/*
 	 * 1. subscribe to queue to get  natssync client's locationID
 	 * 2. send out request for natsync client's locationID
-	 * when the locationID is received re-subscribe only to recieve messages for that locationID
+	 * when the locationID is received re-subscribe only to receive messages for that locationID
 	 */
 	_, err := p.natsClient.Subscribe(server.ResponseForLocationID, func(msg *nats.Msg) {
 		locationID := string(msg.Data)

@@ -55,7 +55,11 @@ func (rh *requestHandler) HttpHandler(m *nats.Msg) {
 	if err != nil {
 		log.WithError(err).Errorf("Error decoding http message")
 		resp = server.NewHttpApiResponseMessageFromError(err)
-		_ = rh.natsClient.Publish(m.Reply, []byte("ack"))
+		if err = rh.natsClient.Publish(m.Reply, []byte("ack")); err != nil {
+			log.WithError(err).
+				WithField("subject", m.Reply).
+				Error("Failed to publish ack response")
+		}
 		_ = rh.natsClient.Flush()
 		return
 	}
