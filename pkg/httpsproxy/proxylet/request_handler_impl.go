@@ -75,6 +75,7 @@ func (rh *requestHandler) HttpHandler(m *nats.Msg) {
 	respBytes, err := json.Marshal(&resp)
 	if err != nil {
 		log.WithError(err).Error("Error marshaling response body")
+		return
 	}
 
 	if err := rh.natsClient.Publish(m.Reply, respBytes); err != nil {
