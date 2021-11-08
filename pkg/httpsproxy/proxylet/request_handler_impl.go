@@ -8,33 +8,43 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/theotw/natssync/pkg/httpsproxy/models"
+	"github.com/theotw/natssync/pkg/httpsproxy/nats"
 	"github.com/theotw/natssync/pkg/httpsproxy/server"
 )
 
+type httpClientInterface interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type requestHandler struct {
 	counter    int
-	httpClient *http.Client
-	natsClient *nats.Conn
+	httpClient httpClientInterface
+	natsClient nats.ClientInterface
 	locationID string
 }
 
-func NewRequestHandler(LocationID string, natsClient *nats.Conn) *requestHandler {
+func NewRequestHandler(LocationID string, natsClient nats.ClientInterface) *requestHandler {
 
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
 		},
 	}
 
+	return NewRequestHandlerDetailed(0, httpClient, natsClient, LocationID)
+}
+
+func NewRequestHandlerDetailed(counter int, client httpClientInterface, natsClient nats.ClientInterface, locationID string) *requestHandler {
 	return &requestHandler{
-		counter:    0,
-		httpClient: &http.Client{Transport: transport},
+		counter:    counter,
+		httpClient: client,
 		natsClient: natsClient,
-		locationID: LocationID,
+		locationID: locationID,
 	}
 }
 

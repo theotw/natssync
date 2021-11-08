@@ -8,12 +8,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"github.com/nats-io/nats.go"
-	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg/httpsproxy"
 	"io"
 	"net"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/theotw/natssync/pkg/httpsproxy"
+	"github.com/theotw/natssync/pkg/httpsproxy/nats"
 )
 
 func EncodeTCPData(data []byte, connectionID string, sequenceID int) []byte {
@@ -65,8 +67,8 @@ func HandleConnectionRequest(msg *nats.Msg, targetLocationID string) {
 			connectionResp.StateDetails = err.Error() + " @ " + connectionMsg.Destination
 		} else {
 			connectionResp.State = "ok"
-			outBoundSubject := httpproxy.MakeHttpsMessageSubject( connectionMsg.ProxyLocationID, connectionMsg.ConnectionID)
-			inBoundSubject := httpproxy.MakeHttpsMessageSubject( targetLocationID, connectionMsg.ConnectionID)
+			outBoundSubject := httpproxy.MakeHttpsMessageSubject(connectionMsg.ProxyLocationID, connectionMsg.ConnectionID)
+			inBoundSubject := httpproxy.MakeHttpsMessageSubject(targetLocationID, connectionMsg.ConnectionID)
 			go StartBiDiNatsTunnel(outBoundSubject, inBoundSubject, connectionMsg.ConnectionID, targetSocket)
 		}
 	}
@@ -189,7 +191,7 @@ func TransferTcpDataToNats(subject string, connectioID string, src io.ReadCloser
 	//send terminate
 }
 
-func TransferNatsToTcpData(queue *nats.Subscription, dest io.WriteCloser) {
+func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCloser) {
 	for {
 		log.Debug("waiting for Data from nats")
 		natsMsg, err := queue.NextMsg(10 * time.Minute)

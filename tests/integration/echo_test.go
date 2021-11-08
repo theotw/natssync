@@ -7,18 +7,20 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/nats-io/nats.go"
-	"github.com/stretchr/testify/assert"
-	"github.com/theotw/natssync/pkg"
-	"github.com/theotw/natssync/pkg/msgs"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/nats-io/nats.go"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/msgs"
 )
 
-func TestEcho(t *testing.T) {
+func GetNatsSyncClientLocationID(t *testing.T) string {
 	url := pkg.GetEnvWithDefaults("syncclient_url", "http://localhost:30281")
 	regURL := fmt.Sprintf("%s/bridge-client/1/register", url)
 	resp, err := http.Get(regURL)
@@ -39,14 +41,18 @@ func TestEcho(t *testing.T) {
 		t.Fatalf("Unable to unmarsell body %s ", err.Error())
 	}
 	locationOb := data["locationID"]
-	locationID := locationOb.(string)
+	return locationOb.(string)
+}
 
+func TestEcho(t *testing.T) {
 	natsURL := pkg.GetEnvWithDefaults("natsserver_url", "nats://localhost:30221")
 
 	nc, err := nats.Connect(natsURL)
 	if !assert.Nil(t, err) {
 		t.Fatalf("Unable to connect to NATS %s ", err.Error())
 	}
+
+	locationID := GetNatsSyncClientLocationID(t)
 	subject := msgs.MakeEchoSubject(locationID)
 	replySubject := msgs.MakeNBReplySubject()
 	replyListenSub := fmt.Sprintf("%s.*", replySubject)
