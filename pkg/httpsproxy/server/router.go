@@ -19,10 +19,25 @@ import (
 	"time"
 )
 
+const (
+	defaultLocationID = "proxy"
+	locationIDEnvVar  = "DEFAULT_LOCATION_ID"
+)
+
+func getLocationIDFromEnv() string {
+	value, ok := os.LookupEnv(locationIDEnvVar)
+	if !ok {
+		return defaultLocationID
+	}
+	return value
+}
+
 var quit chan os.Signal
 
 // Run - configures and starts the web server
 func RunHttpProxyServer(test bool) error {
+
+	httpproxy.SetMyLocationID(getLocationIDFromEnv())
 
 	err := models2.InitNats()
 	if err != nil {

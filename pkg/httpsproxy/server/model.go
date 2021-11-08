@@ -4,6 +4,17 @@
 
 package server
 
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+
+	"github.com/nats-io/nats.go"
+	log "github.com/sirupsen/logrus"
+)
+
 // RequestForLocationID send this message to get the location ID
 const RequestForLocationID = "natssync.location.request"
 
@@ -26,4 +37,54 @@ type HttpApiResponseMessage struct {
 	RespBody       string
 	RequestID      string
 	Headers        map[string]string
+}
+
+func NewHttpApiReqMessageFromNatsMessage(m *nats.Msg) (*HttpApiReqMessage, error) {
+	req := &HttpApiReqMessage{}
+	if err := json.Unmarshal(m.Data, &req); err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
+func (req *HttpApiReqMessage) ToHttpRequest() *http.Request {
+	url := fmt.Sprintf("http://%s%s", req.Target, req.HttpPath)
+	reader := bytes.NewReader(req.Body)
+	httpRequest, _ := http.NewRequest(req.HttpMethod, url, reader)
+	for _, x := range req.Headers {
+		httpRequest.Header.Add(x.Key, x.Values[0])
+	}
+
+	return httpRequest
+}
+
+func NewHttpApiResponseMessageFromHttpResponse(resp *http.Response) *HttpApiResponseMessage {
+	output := &HttpApiResponseMessage{}
+
+	output.HttpStatusCode = resp.StatusCode
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err == nil {
+		output.RespBody = string(bodyBytes)
+	} else {
+		log.WithError(err).Errorf("Got an error reading a resp body from http api")
+		output.RespBody = err.Error()
+	}
+	output.Headers = make(map[string]string)
+
+	for k, v := range resp.Header {
+		if len(v) > 0 {
+			output.Headers[k] = v[0]
+		} else {
+			output.Headers[k] = ""
+		}
+	}
+
+	return output
+}
+
+func NewHttpApiResponseMessageFromError(err error) *HttpApiResponseMessage {
+	return &HttpApiResponseMessage{
+		HttpStatusCode: http.StatusBadGateway,
+		RespBody:       err.Error(),
+	}
 }
