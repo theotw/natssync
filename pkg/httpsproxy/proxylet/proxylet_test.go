@@ -11,11 +11,6 @@ import (
 	"github.com/theotw/natssync/pkg/httpsproxy/server"
 )
 
-func TestNewProxylet(t *testing.T) {
-	proxyletObject, err := proxylet.NewProxylet()
-	assert.Nil(t, err)
-	assert.NotNil(t, proxyletObject)
-}
 
 func TestLocationIDSetting(t *testing.T) {
 	natsConn := utres.NewMockNats(utres.NewDefaultMockNatsInput())
