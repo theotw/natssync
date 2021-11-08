@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	proxyServerHostPort = "localhost:8084"
+	proxyServerHostPort = "localhost:8082"
 	httpGetTestURL      = "http://testnginx"
 	httpsGetTestURL     = "https://testnginx"
 )
