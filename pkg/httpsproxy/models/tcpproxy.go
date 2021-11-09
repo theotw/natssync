@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"net"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -45,41 +44,6 @@ func DecodeTCPData(data []byte) ([]byte, error) {
 		return nil, errors.New("mismatch data len ")
 	}
 	return bits, err
-}
-
-// HandleConnectionRequest is used in the proxlet to handle a connection request to a service in the internal network
-// We attempt to estabilsh a socket to the target host:port.  If we can connect, we then setup two channels.  One listener for
-// packets to write to a socket and then a publisher to send packets read from the socket
-func HandleConnectionRequest(msg *nats.Msg, targetLocationID string) {
-	var connectionMsg TCPConnectRequest
-	var connectionResp TCPConnectResponse
-	err := json.Unmarshal(msg.Data, &connectionMsg)
-	if err != nil {
-		log.Errorf("Error decing connection request %s", err.Error())
-		connectionResp.State = "failed"
-		connectionResp.StateDetails = err.Error()
-	} else {
-		targetSocket, err := net.DialTimeout("tcp", connectionMsg.Destination, 10*time.Second)
-
-		if err != nil {
-			log.Errorf("Error dialing connection to %s ", connectionMsg.Destination)
-			connectionResp.State = "failed"
-			connectionResp.StateDetails = err.Error() + " @ " + connectionMsg.Destination
-		} else {
-			connectionResp.State = "ok"
-			outBoundSubject := httpproxy.MakeHttpsMessageSubject(connectionMsg.ProxyLocationID, connectionMsg.ConnectionID)
-			inBoundSubject := httpproxy.MakeHttpsMessageSubject(targetLocationID, connectionMsg.ConnectionID)
-			go StartBiDiNatsTunnel(outBoundSubject, inBoundSubject, connectionMsg.ConnectionID, targetSocket)
-		}
-	}
-	nc := GetNatsClient()
-	respbits, jsonerr := json.Marshal(&connectionResp)
-	if jsonerr == nil {
-		nc.Publish(msg.Reply, respbits)
-		nc.Flush()
-	} else {
-		log.WithError(err).Error("Error marshaling connection resp message")
-	}
 }
 
 func SendConnectionRequest(connectionID, clientID, host string) error {
@@ -132,8 +96,7 @@ func SendConnectionRequest(connectionID, clientID, host string) error {
 	return respError
 }
 
-func StartBiDiNatsTunnel(outBoundSubject, inBoundSubject, connectionID string, socket io.ReadWriteCloser) error {
-	nc := GetNatsClient()
+func StartBiDiNatsTunnel(nc nats.ClientInterface, outBoundSubject, inBoundSubject, connectionID string, socket io.ReadWriteCloser) error {
 	defer socket.Close()
 
 	//First, setup and subscribe to the inbound Subject
@@ -149,7 +112,7 @@ func StartBiDiNatsTunnel(outBoundSubject, inBoundSubject, connectionID string, s
 	return nil
 }
 
-func TransferTcpDataToNats(subject string, connectioID string, src io.ReadCloser) {
+func TransferTcpDataToNats(subject string, connectionID string, src io.ReadCloser) {
 	nc := GetNatsClient()
 
 	sequnceID := 0
@@ -161,7 +124,7 @@ func TransferTcpDataToNats(subject string, connectioID string, src io.ReadCloser
 		if len > 0 {
 			writebuf := buf[:len]
 			sequnceID = sequnceID + 1
-			dataToSend := EncodeTCPData(writebuf, connectioID, sequnceID)
+			dataToSend := EncodeTCPData(writebuf, connectionID, sequnceID)
 
 			writeErr := nc.Publish(subject, dataToSend)
 			nc.Flush()
@@ -181,7 +144,7 @@ func TransferTcpDataToNats(subject string, connectioID string, src io.ReadCloser
 	}
 	writebuf := make([]byte, 0)
 	sequnceID = sequnceID + 1
-	dataToSend := EncodeTCPData(writebuf, connectioID, sequnceID)
+	dataToSend := EncodeTCPData(writebuf, connectionID, sequnceID)
 	//send one last 0 len data package to send the stream
 	log.WithField("subject", subject).Debug("Sent final packet data to nats")
 	nc.Publish(subject, dataToSend)

@@ -11,13 +11,11 @@ import (
 	"github.com/theotw/natssync/pkg/httpsproxy/server"
 )
 
-
 func TestLocationIDSetting(t *testing.T) {
 	natsConn := utres.NewMockNats(utres.NewDefaultMockNatsInput())
 	natsSyncClientID := "testLocationID"
 	err := natsConn.Publish(server.ResponseForLocationID, []byte(natsSyncClientID))
 	assert.Nil(t, err)
-
 	locationID := "dummyLocationID"
 	requestHandler := utres.NewMockRequestHandler()
 	mockProxylet := proxylet.NewProxyletDetailed(natsConn, locationID, requestHandler)
