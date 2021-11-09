@@ -5,8 +5,6 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/theotw/natssync/pkg/httpsproxy/nats"
 )
 
@@ -28,13 +26,11 @@ func (m *mockSubscription) NextMsg(duration time.Duration) (*nats.Msg, error) {
 			if m.counter < len(m.queue) {
 				break
 			}
-			log.Infof("waiting for nxt message ctr:%v q:%v", m.counter, len(m.queue))
 		}
 	}
 
 	message := m.queue[m.counter]
 	m.counter = m.counter + 1
-	log.Infof("responding with next message: %+v", message)
 	return &message, m.nextMsgError
 }
 
