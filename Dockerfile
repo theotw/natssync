@@ -13,6 +13,7 @@ COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
 FROM scratch as natssync-server
 WORKDIR /build
 COPY --from=base /build/LICENSE /data/
+COPY --from=base /build/LICENSE /tmp/
 COPY --from=base /build/web /build/web
 COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
 COPY --from=base /build/out/bridgeserver_amd64_linux ./bridgeserver_amd64_linux
@@ -27,6 +28,7 @@ ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 WORKDIR /build
 COPY --from=base /build/LICENSE /data/
+COPY --from=base /build/LICENSE /tmp/
 COPY --from=base /build/webout /build/webout
 COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
 COPY --from=base /build/out/bridgeclient_amd64_linux ./bridgeclient_amd64_linux
