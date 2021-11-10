@@ -11,8 +11,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/theotw/natssync/pkg/httpsproxy/nats"
 )
 
 // RequestForLocationID send this message to get the location ID

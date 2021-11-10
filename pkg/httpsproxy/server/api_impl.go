@@ -43,12 +43,13 @@ func connectHandlerNats(c *gin.Context) {
 		c.String(500, "unable to make tunnel %s", err.Error())
 		return
 	}
-	outBoundSubject := httpproxy.MakeHttpsMessageSubject( clientID, connectionUUID)
+	outBoundSubject := httpproxy.MakeHttpsMessageSubject(clientID, connectionUUID)
 	locationID := httpproxy.GetMyLocationID()
 	inBoundSubject := httpproxy.MakeHttpsMessageSubject(locationID, connectionUUID)
 	c.JSON(200, "")
 	srcCon, _, err := c.Writer.Hijack()
-	go models2.StartBiDiNatsTunnel(outBoundSubject, inBoundSubject, connectionUUID, srcCon)
+	nc := models2.GetNatsClient()
+	go models2.StartBiDiNatsTunnel(nc, outBoundSubject, inBoundSubject, connectionUUID, srcCon)
 
 }
 func connectHandlerLocal(c *gin.Context) {

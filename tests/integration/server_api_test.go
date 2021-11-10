@@ -6,11 +6,13 @@ package integration
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"github.com/theotw/natssync/pkg"
 	"net/http"
 	"testing"
+
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/theotw/natssync/pkg"
 )
 
 func TestServerAPI(t *testing.T) {
@@ -50,7 +52,7 @@ func TestServerURLs(t *testing.T) {
 		t.Run(test.UrlSuffix, func(t *testing.T) {
 			url := fmt.Sprintf("%s/bridge-server/%s", url, test.UrlSuffix)
 			status := get_test(url, t)
-			assert.Equal(t, test.ExpectedStatus, status,fmt.Sprintf("Test :%s ",test.UrlSuffix))
+			assert.Equal(t, test.ExpectedStatus, status, fmt.Sprintf("Test :%s ", test.UrlSuffix))
 		})
 
 	}

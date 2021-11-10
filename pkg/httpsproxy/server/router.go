@@ -7,29 +7,36 @@ package server
 import (
 	"context"
 	"encoding/base64"
-	"github.com/gin-gonic/gin"
-	"github.com/nats-io/nats.go"
-	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg/httpsproxy"
-	models2 "github.com/theotw/natssync/pkg/httpsproxy/models"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/httpsproxy"
+	models2 "github.com/theotw/natssync/pkg/httpsproxy/models"
+	"github.com/theotw/natssync/pkg/httpsproxy/nats"
 )
 
 const (
 	defaultLocationID = "proxy"
 	locationIDEnvVar  = "DEFAULT_LOCATION_ID"
+	proxyPortEnvVar   = "PROXY_PORT"
+	defaultProxyPort  = "8080"
 )
 
 func getLocationIDFromEnv() string {
-	value, ok := os.LookupEnv(locationIDEnvVar)
-	if !ok {
-		return defaultLocationID
-	}
-	return value
+	return pkg.GetEnvWithDefaults(locationIDEnvVar, defaultLocationID)
+}
+
+func getProxyHostPort() string {
+	port := pkg.GetEnvWithDefaults(proxyPortEnvVar, defaultProxyPort)
+	return fmt.Sprintf(":%s", port)
 }
 
 var quit chan os.Signal
@@ -69,7 +76,7 @@ func RunHttpProxyServer(test bool) error {
 
 	r := newRouter(test)
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    getProxyHostPort(),
 		Handler: r,
 	}
 	log.Infof("Starting server on port 8080")

@@ -56,6 +56,7 @@ jobs:
         echo $IMAGE_TAG
         echo $IMAGE_TAG > IMAGE_TAG
         make cicd
+        make nginxTest
 
     - name: Deploy Docker Containers
       run: single_cluster_test/docker-deploy.sh $(cat IMAGE_TAG)

@@ -8,11 +8,11 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 
 	httpproxy "github.com/theotw/natssync/pkg/httpsproxy"
 	"github.com/theotw/natssync/pkg/httpsproxy/models"
+	"github.com/theotw/natssync/pkg/httpsproxy/nats"
 	"github.com/theotw/natssync/pkg/httpsproxy/server"
 )
 
@@ -29,9 +29,9 @@ type RequestHandlerInterface interface {
 
 type proxylet struct {
 	subMutex          sync.Mutex
-	httpSubscription  *nats.Subscription
-	httpsSubscription *nats.Subscription
-	natsClient        *nats.Conn
+	httpSubscription  nats.NatsSubscriptionInterface
+	httpsSubscription nats.NatsSubscriptionInterface
+	natsClient        nats.ClientInterface
 	locationID        string
 	requestHandler    RequestHandlerInterface
 }
@@ -82,7 +82,7 @@ func NewProxylet() (*proxylet, error) {
 
 }
 
-func NewProxyletDetailed(natsClient *nats.Conn, locationID string, handler RequestHandlerInterface) *proxylet {
+func NewProxyletDetailed(natsClient nats.ClientInterface, locationID string, handler RequestHandlerInterface) *proxylet {
 	return &proxylet{
 		natsClient:     natsClient,
 		locationID:     locationID,
@@ -90,7 +90,7 @@ func NewProxyletDetailed(natsClient *nats.Conn, locationID string, handler Reque
 	}
 }
 
-func getInitializedNatsClient() (*nats.Conn, error) {
+func getInitializedNatsClient() (nats.ClientInterface, error) {
 	if err := models.InitNats(); err != nil {
 		return nil, err
 	}
