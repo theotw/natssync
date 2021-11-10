@@ -175,7 +175,7 @@ allarmimages: baseimagearm cloudimagearm clientimagearm echoproxyletarm simpleau
 
 allimagesBuildAndPush:testimageBuildAndPush cloudimageBuildAndPush clientimageBuildAndPush echoproxyletBuildAndPush simpleauthBuildAndPush
 
-imagelist=natssync-server natssync-client echo-proxylet simple-reg-auth natssync-tests natssync-server-debug httpproxy_server httpproxylet
+imagelist=natssync-server natssync-client echo-proxylet simple-reg-auth natssync-tests natssync-server-debug httpproxy-server httpproxylet
 loopover:
 	@ for img in ${imagelist}; \
  		do \
@@ -189,7 +189,9 @@ tag:
 	docker tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} ${IMAGE_REPO}/simple-reg-auth:latest
 	docker tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} ${IMAGE_REPO}/natssync-tests:latest
 	docker tag ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG} ${IMAGE_REPO}/natssync-server-debug:latest
-	docker tag ${IMAGE_REPO}/httpproxy_server:${IMAGE_TAG} ${IMAGE_REPO}/httpproxy_server:latest
+	docker tag ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG} ${IMAGE_REPO}/httpproxy-server:latest
+#   httpproxy_server is depricated use httpproxy-server instead 
+	docker tag ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG} ${IMAGE_REPO}/httpproxy_server:latest
 	docker tag ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG} ${IMAGE_REPO}/httpproxylet:latest
 
 tagAndPushToDockerHub: tag
@@ -205,6 +207,9 @@ tagAndPushToDockerHub: tag
 	docker push ${IMAGE_REPO}/natssync-tests:latest
 	docker push ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-server-debug:latest
+	docker push ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG}
+ 	docker push ${IMAGE_REPO}/httpproxy-server:latest
+#   httpproxy_server is depricated use httpproxy-server instead 
 	docker push ${IMAGE_REPO}/httpproxy_server:${IMAGE_TAG}
  	docker push ${IMAGE_REPO}/httpproxy_server:latest
 	docker push ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG}
@@ -218,6 +223,8 @@ pushall:
 	docker push ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG}
+#   httpproxy_server is depricated use httpproxy-server instead 
 	docker push ${IMAGE_REPO}/httpproxy_server:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG}
 
