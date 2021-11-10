@@ -22,6 +22,12 @@ echo "IMAGE_TAG=$IMAGE_TAG"
 
 docker network create $NETWORK
 
+if [ "${TEST_MODE_ENABLED}" = "true" ]; then
+  NATSSYNC_TEST_IMAGE="natssync-tests"
+  SYNCCLIENT="${NATSSYNC_TEST_IMAGE}"
+  SYNCSERVER="${NATSSYNC_TEST_IMAGE}"
+fi
+
 # Cloud side
 docker run -d --network $NETWORK --name $MONGOCLOUD mongo
 docker run -d --network $NETWORK --name $NATSCLOUD -p 4222:4222 nats

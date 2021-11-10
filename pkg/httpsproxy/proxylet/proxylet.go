@@ -5,6 +5,7 @@ package proxylet
 
 import (
 	"os"
+	"runtime"
 	"sync"
 
 	"github.com/nats-io/nats.go"
@@ -41,6 +42,27 @@ func getLocationIDFromEnv() string {
 		return defaultLocationID
 	}
 	return value
+}
+
+func RunProxylet(test bool) {
+	if test {
+		log.Warn("TEST MODE IS ENABLED")
+	}
+
+	logLevel := httpproxy.GetEnvWithDefaults("LOG_LEVEL", "debug")
+	level, levelerr := log.ParseLevel(logLevel)
+	if levelerr != nil {
+		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
+		level = log.DebugLevel
+	}
+	log.SetLevel(level)
+
+	proxyletObject, err := NewProxylet()
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create proxylet object")
+	}
+	proxyletObject.RunHttpProxylet()
+	runtime.Goexit()
 }
 
 func NewProxylet() (*proxylet, error) {

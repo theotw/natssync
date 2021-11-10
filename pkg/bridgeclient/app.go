@@ -43,6 +43,10 @@ func getClientArguments() Arguments {
 }
 
 func RunClient(test bool) {
+	if test {
+		log.Warn("TEST MODE IS ENABLED")
+	}
+
 	log.Info("Starting NATSSync Client")
 	args := getClientArguments()
 	err := bridgemodel.InitNats(*args.natsURL, "echo client", 1*time.Minute)

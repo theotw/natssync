@@ -36,6 +36,9 @@ var quit chan os.Signal
 
 // Run - configures and starts the web server
 func RunHttpProxyServer(test bool) error {
+	if test {
+		log.Warn("TEST MODE IS ENABLED")
+	}
 
 	httpproxy.SetMyLocationID(getLocationIDFromEnv())
 

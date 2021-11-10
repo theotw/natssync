@@ -5,29 +5,13 @@
 package main
 
 import (
-	"runtime"
-
 	log "github.com/sirupsen/logrus"
+	"github.com/theotw/natssync/pkg/httpsproxy/proxylet"
 
 	"github.com/theotw/natssync/pkg"
-	httpproxy "github.com/theotw/natssync/pkg/httpsproxy"
-	"github.com/theotw/natssync/pkg/httpsproxy/proxylet"
 )
 
 func main() {
 	log.Infof("Version %s", pkg.VERSION)
-	logLevel := httpproxy.GetEnvWithDefaults("LOG_LEVEL", "debug")
-	level, levelerr := log.ParseLevel(logLevel)
-	if levelerr != nil {
-		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
-		level = log.DebugLevel
-	}
-	log.SetLevel(level)
-
-	proxyletObject, err := proxylet.NewProxylet()
-	if err != nil {
-		log.WithError(err).Fatal("Failed to create proxylet object")
-	}
-	proxyletObject.RunHttpProxylet()
-	runtime.Goexit()
+	proxylet.RunProxylet(false)
 }
