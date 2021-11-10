@@ -161,11 +161,13 @@ simpleauthBuildAndPush: simpleauth
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
 
 httpproxy:
-	DOCKER_BUILDKIT=1 docker build -f Dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/httpproxy_server:${IMAGE_TAG} --target http_proxy .
+	DOCKER_BUILDKIT=1 docker build -f Dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG} --target http_proxy .
 
 httpproxylet:
 	DOCKER_BUILDKIT=1 docker build -f Dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG} --target http_proxylet .
 
+nginxTest:
+	cd testNginx && docker build --tag ${IMAGE_REPO}/testnginx:${IMAGE_TAG} .
 
 allimages: baseimage testimage cloudimage clientimage echoproxylet simpleauth debugcloudimage httpproxy httpproxylet
 

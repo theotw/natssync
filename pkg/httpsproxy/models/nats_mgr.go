@@ -6,14 +6,15 @@ package models
 
 import (
 	"errors"
-	"github.com/nats-io/nats.go"
-	httpproxy "github.com/theotw/natssync/pkg/httpsproxy"
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
+	httpproxy "github.com/theotw/natssync/pkg/httpsproxy"
+	"github.com/theotw/natssync/pkg/httpsproxy/nats"
 )
 
-var nc *nats.Conn
+var nc nats.ClientInterface
 
 func InitNats() error {
 	counter := 0
@@ -33,6 +34,7 @@ func InitNats() error {
 	}
 	return nil
 }
+
 func connect() error {
 	natsURL := httpproxy.GetEnvWithDefaults("NATS_SERVER_URL", "nats://127.0.0.1:4222")
 	log.Infof("Connecting to NATS server %s", natsURL)
@@ -46,6 +48,7 @@ func connect() error {
 	nc = tmpnc
 	return nil
 }
-func GetNatsClient() *nats.Conn {
+
+func GetNatsClient() nats.ClientInterface {
 	return nc
 }

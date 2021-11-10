@@ -11,6 +11,9 @@ NATSCLOUD="nats-cloud"
 MONGOCLOUD="mongo-cloud"
 NATSONPREM="nats-onprem"
 MONGOONPREM="mongo-onprem"
+HTTPPROXYLET="httpproxylet"
+HTTPPROXYSERVER="httpproxy-server"
+NGINXTEST="testnginx"
 
 CONTAINERS=(
   $SYNCCLIENT
@@ -21,4 +24,7 @@ CONTAINERS=(
   $MONGOCLOUD
   $NATSONPREM
   $MONGOONPREM
+  $HTTPPROXYLET
+  $HTTPPROXYSERVER
+  $NGINXTEST
 )
