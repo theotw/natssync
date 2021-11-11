@@ -5,7 +5,6 @@ package proxylet
 
 import (
 	"os"
-	"runtime"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -62,7 +61,7 @@ func RunProxylet(test bool) {
 		log.WithError(err).Fatal("Failed to create proxylet object")
 	}
 	proxyletObject.RunHttpProxylet()
-	runtime.Goexit()
+
 }
 
 func NewProxylet() (*proxylet, error) {

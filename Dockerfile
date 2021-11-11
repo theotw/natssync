@@ -8,6 +8,7 @@ ENV GOSUMDB=off
 COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
 RUN rm -r -f out & mkdir -p out & mkdir -p webout & mkdir -p /certs
 COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
+ENTRYPOINT ["go", "test"]
 
 # Bridge server
 FROM scratch as natssync-server

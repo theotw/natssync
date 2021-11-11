@@ -91,6 +91,14 @@ func RunClient(test bool) {
 	var lastClientID string
 	var currentSubscription *nats.Subscription
 	for true {
+		select {
+			case <-Quit:
+				log.Info("Quit signal received, breaking out...")
+				return
+			default:
+				log.Debug("I'm not a quitter!")
+		}
+
 		nc := bridgemodel.GetNatsConnection()
 		clientID := store.LoadLocationID("")
 		if len(clientID) == 0 {
@@ -120,7 +128,7 @@ func RunClient(test bool) {
 		msglist, err := getMessagesFromCloud(serverURL, clientID)
 		if err != nil {
 			log.Errorf("Error fetching messages %s", err.Error())
-			time.Sleep(2 * time.Second)
+			time.Sleep(5 * time.Second)
 			continue
 		}
 		log.Infof("Received %d messages from server", len(msglist))

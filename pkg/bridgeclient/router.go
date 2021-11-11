@@ -15,7 +15,7 @@ import (
 	"os"
 )
 
-var quit chan os.Signal
+var Quit = make(chan os.Signal, 1)
 
 // Run - configures and starts the web server
 func RunBridgeClientRestAPI(test bool) error {
@@ -46,7 +46,8 @@ func newRouter(test bool) *gin.Engine {
 	root.Handle("GET", "/metrics", metricGetHandlers)
 	if test {
 		root.Handle("GET", "/kill", func(c *gin.Context) {
-			quit <- os.Interrupt
+			log.Infof("Kill command received, interrupting...")
+			Quit <- os.Interrupt
 		})
 	}
 	v1 := router.Group("/bridge-client/1", routeMiddleware)
