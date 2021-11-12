@@ -8,11 +8,11 @@ ifndef IMAGE_REPO
 	IMAGE_REPO=theotw
 endif
 BASE_VERSION := $(shell cat 'version.txt')
-BUILD_DATE=$(shell date '+%Y%m%d%H%M')
+BUILD_DATE := $(shell date '+%Y%m%d%H%M')
 
-BUILD_VERSION=${BASE_VERSION}.${BUILD_DATE}
+BUILD_VERSION := ${BASE_VERSION}.${BUILD_DATE}
 ifndef IMAGE_TAG
-	IMAGE_TAG=${BUILD_VERSION}
+	IMAGE_TAG := ${BUILD_VERSION}
 endif
 
 
