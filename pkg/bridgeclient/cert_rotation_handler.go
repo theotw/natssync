@@ -82,9 +82,18 @@ func (crh *certRotationHandler) HandleCertRotation() error {
 		return err
 	}
 
-	payload.PremID = crh.store.LoadLocationID("")
+	locationID := crh.store.LoadLocationID("")
+
+	selfLocationData, err := msgs.GetKeyPairLocationData(locationID, pair)
+	if err != nil {
+		log.WithError(err).WithField("PremID", locationID).Errorf("failed to generate new key pair")
+		return err
+	}
+
+	payload.PremID = locationID
 	payload.PublicKeyPackage = *envelope
 	payload.AuthChallenge = *msgs.NewAuthChallenge("")
+	payload.KeyID = selfLocationData.GetKeyID()
 
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -104,7 +113,7 @@ func (crh *certRotationHandler) HandleCertRotation() error {
 		return fmt.Errorf("failed to rotate certificates")
 	}
 
-	err = msgs.SaveKeyPair(payload.PremID, pair)
+	err = crh.store.WriteKeyPair(selfLocationData)
 	if err != nil {
 		log.WithError(err).WithField("PremID", payload.PremID).Errorf("failed to save keypair")
 		return err

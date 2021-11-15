@@ -73,18 +73,26 @@ func (r *reaper) cleanupOldKeys() {
 
 	latestKeyID, err := r.store.GetLatestKeyID()
 	if err != nil {
-		log.WithError(err).Error("failed to get the latest keyID")
+		log.WithError(err).Error("failed to get the latest key ID")
+	}
+
+	latestKey, err := utils.ParseUUIDv1(latestKeyID)
+	if err != nil {
+		log.WithError(err).Error("failed to parse the latest key ID")
 	}
 
 	for _, key := range existingKeys {
-		// do not delete the latest key
-		if key.String() == latestKeyID {
+
+		// do not delete the latest key or any key created after the latest key
+		if key.String() == latestKeyID || key.GetCreationTime().After(latestKey.GetCreationTime()) {
 			continue
 		}
 
 		if time.Now().Sub(key.GetCreationTime()) >= r.cleanupTTL {
 			if err = r.store.RemoveKeyPair(key.String()); err != nil {
 				log.WithError(err).WithField("keyID", key).Error("failed to delete expired key pair")
+			} else {
+				log.WithField("keyID", key).Debugf("successfully deleted expired key")
 			}
 		}
 	}
