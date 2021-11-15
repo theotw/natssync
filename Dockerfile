@@ -11,23 +11,28 @@ COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
 ENTRYPOINT ["go", "test"]
 
 # Bridge server
-FROM scratch as natssync-server
+FROM alpine:3.14 as natssync-server
 WORKDIR /build
 COPY --from=base /build/LICENSE /data/
 COPY --from=base /build/web /build/web
+#when running with scratch, this needs to go away
+RUN chmod -R 777 /data/
 COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
 COPY --from=base /build/out/bridgeserver_amd64_linux ./bridgeserver_amd64_linux
 COPY --from=base /build/third_party/swaggerui/ ./third_party/swaggerui/
 COPY --from=base /build/openapi/bridge_server_v1.yaml ./openapi/
 ENV GIN_MODE=release
+
 ENTRYPOINT ["./bridgeserver_amd64_linux"]
 
 # Bridge client
-FROM scratch as natssync-client
+FROM alpine:3.14 as natssync-client
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 WORKDIR /build
 COPY --from=base /build/LICENSE /data/
+#when running with scratch, this needs to go away
+RUN chmod -R 777 /data/
 COPY --from=base /build/webout /build/webout
 COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
 COPY --from=base /build/out/bridgeclient_amd64_linux ./bridgeclient_amd64_linux
