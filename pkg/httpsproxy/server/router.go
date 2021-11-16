@@ -39,14 +39,8 @@ func getProxyHostPort() string {
 	return fmt.Sprintf(":%s", port)
 }
 
-var quit chan os.Signal
-
 // Run - configures and starts the web server
 func RunHttpProxyServer(test bool) error {
-	if test {
-		log.Warn("TEST MODE IS ENABLED")
-	}
-
 	httpproxy.SetMyLocationID(getLocationIDFromEnv())
 
 	err := models2.InitNats()
@@ -74,7 +68,7 @@ func RunHttpProxyServer(test bool) error {
 	}
 	nc.Publish(RequestForLocationID, []byte(""))
 
-	r := newRouter(test)
+	r := newRouter()
 	srv := &http.Server{
 		Addr:    getProxyHostPort(),
 		Handler: r,
@@ -90,8 +84,11 @@ func RunHttpProxyServer(test bool) error {
 	// Wait for interrupt signal to gracefully shutdown the server with
 	// a timeout of 5 seconds.
 	log.Infof("Server Started blocking on channel")
-	quit = make(chan os.Signal)
+	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Interrupt)
+	if test {
+		nc.NotifyOnAppExitMessage(quit)
+	}
 	<-quit
 	log.Println("Shutdown Server ...")
 
@@ -104,7 +101,7 @@ func RunHttpProxyServer(test bool) error {
 	return nil
 }
 
-func newRouter(test bool) *gin.Engine {
+func newRouter() *gin.Engine {
 	router := gin.Default()
 	router.Use(loggerMiddleware)
 	root := router.Group("/")

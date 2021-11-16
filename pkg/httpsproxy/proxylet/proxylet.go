@@ -5,6 +5,7 @@ package proxylet
 
 import (
 	"os"
+	"runtime"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -44,10 +45,6 @@ func getLocationIDFromEnv() string {
 }
 
 func RunProxylet(test bool) {
-	if test {
-		log.Warn("TEST MODE IS ENABLED")
-	}
-
 	logLevel := httpproxy.GetEnvWithDefaults("LOG_LEVEL", "debug")
 	level, levelerr := log.ParseLevel(logLevel)
 	if levelerr != nil {
@@ -62,6 +59,14 @@ func RunProxylet(test bool) {
 	}
 	proxyletObject.RunHttpProxylet()
 
+	if test {
+		log.Warn("TEST MODE IS ENABLED")
+		quit := make(chan os.Signal)
+		proxyletObject.natsClient.NotifyOnAppExitMessage(quit)
+		<- quit
+	} else {
+		runtime.Goexit()
+	}
 }
 
 func NewProxylet() (*proxylet, error) {

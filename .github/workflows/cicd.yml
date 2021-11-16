@@ -38,7 +38,7 @@ jobs:
       if: always()
       with:
         name: test-results
-        path: out/report_*.xml
+        path: out/*_report.xml
         retention-days: 5
 
     - name: Publish Unit Test Results
@@ -46,7 +46,7 @@ jobs:
       if: always()
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        files: out/report_*.xml
+        files: out/*_report.xml
 
     - name: Build Images
       run: |
@@ -74,7 +74,7 @@ jobs:
     - name: Run Integration Tests
       run: |
         export syncserver_url='http://localhost:8080'
-        export syncclient_url='http://localhost:8081'
+        export syncclient_url='http://localhost:8083'
         export natsserver_url='nats://localhost:4222'
         echo 'test version 5'
         go test -v github.com/theotw/natssync/tests/integration/...
@@ -83,6 +83,21 @@ jobs:
       run: |
         curl -i -f -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"`cat locationID.txt`"}' "http://localhost:8081/bridge-client/1/unregister"
         echo "Unregistered ID: `cat locationID.txt`"
+
+    - name: Upload Unit Test Results
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: test-results
+        path: out/*_report.xml
+        retention-days: 5
+
+    - name: Publish Unit Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v1.6
+      if: always()
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        files: out/*_report.xml
 
     - name: Deploy to DockerHub
       if: github.ref == 'refs/heads/main'

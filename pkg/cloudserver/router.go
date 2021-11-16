@@ -7,6 +7,7 @@ package cloudserver
 import (
 	"bytes"
 	"context"
+	"github.com/theotw/natssync/pkg/testing"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -36,7 +37,7 @@ func RunBridgeServer(test bool) {
 	log.SetLevel(level)
 	// Initializes database connection
 
-	r := newRouter(test)
+	r := newRouter()
 	srv := &http.Server{
 		Addr:    pkg.Config.ListenString,
 		Handler: r,
@@ -61,6 +62,9 @@ func RunBridgeServer(test bool) {
 	// a timeout of 5 seconds.
 	quit = make(chan os.Signal)
 	signal.Notify(quit, os.Interrupt)
+	if test {
+		testing.NotifyOnAppExitMessage(connection, quit)
+	}
 	<-quit
 	log.Println("Shutdown Server ...")
 
@@ -72,16 +76,10 @@ func RunBridgeServer(test bool) {
 	log.Println("Server exiting")
 }
 
-func newRouter(test bool) *gin.Engine {
+func newRouter() *gin.Engine {
 	router := gin.Default()
 	root := router.Group("/")
 	root.Handle(http.MethodGet, "/metrics", metricGetHandlers)
-	bidgeRoot := router.Group("/bridge-server/")
-	if test {
-		bidgeRoot.Handle(http.MethodGet, "/kill", func(c *gin.Context) {
-			quit <- os.Interrupt
-		})
-	}
 
 	certMiddleware := NewCertMiddleware(persistence.GetKeyStore())
 

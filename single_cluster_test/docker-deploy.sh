@@ -10,6 +10,7 @@ CLOUDNATSURL="nats://$NATSCLOUD"
 ONPREMKEYSTOREURL="mongodb://$MONGOONPREM"
 ONPREMNATSURL="nats://$NATSONPREM"
 CLOUD_BRIDGE_URL="http://$SYNCSERVER:8080"
+SYNCCLIENT_PORT="${SYNCCLIENT_PORT:-8081}"
 
 IMAGE_TAG="latest"
 
@@ -22,20 +23,15 @@ echo "IMAGE_TAG=$IMAGE_TAG"
 
 docker network create $NETWORK
 
-if [ "${TEST_MODE_ENABLED}" = "true" ]; then
-  COVERAGE_DIR="${COVERAGE_DIR:-out/coverage}"
+if [ "${TEST_MODE}" = "true" ]; then
+  COVERAGE_DIR="${COVERAGE_DIR:-out}"
   VOLUME_MOUNT_ARG="-v $(pwd)/${COVERAGE_DIR}:/build/${COVERAGE_DIR}"
   NATSSYNC_TEST_IMAGE="${REPO}/natssync-tests:${IMAGE_TAG}"
 
-  SYNCSERVER_FULL_IMG="${NATSSYNC_TEST_IMAGE}"
-  SYNCCLIENT_FULL_IMG="${NATSSYNC_TEST_IMAGE}"
-  HTTPPROXYSERVER_FULL_IMG="${NATSSYNC_TEST_IMAGE}"
-  HTTPPROXYLET_FULL_IMG="${NATSSYNC_TEST_IMAGE}"
-
-  SYNCSERVER_ARGS="-v apps/bridge_server_test.go -coverprofile=${COVERAGE_DIR}/bridge_server_coverage.out -coverpkg=./pkg/..."
-  SYNCCLIENT_ARGS="-v apps/bridge_client_test.go -coverprofile=${COVERAGE_DIR}/bridge_client_coverage.out -coverpkg=./pkg/..."
-  HTTPPROXYSERVER_ARGS="-v apps/httpproxy_server_test.go -coverprofile=${COVERAGE_DIR}/httpproxy_server_coverage.out -coverpkg=./pkg/..."
-  HTTPPROXYLET_ARGS="-v apps/http_proxylet_test.go -coverprofile=${COVERAGE_DIR}/http_proxylet_coverage.out -coverpkg=./pkg/..."
+  SYNCSERVER_FULL_IMG="${NATSSYNC_TEST_IMAGE} apps/bridge_server_test.go"
+  SYNCCLIENT_FULL_IMG="${NATSSYNC_TEST_IMAGE} apps/bridge_client_test.go"
+  HTTPPROXYSERVER_FULL_IMG="${NATSSYNC_TEST_IMAGE} apps/httpproxy_server_test.go"
+  HTTPPROXYLET_FULL_IMG="${NATSSYNC_TEST_IMAGE} apps/http_proxylet_test.go"
 else
   SYNCCLIENT_FULL_IMG="${REPO}/${SYNCCLIENT}:${IMAGE_TAG}"
   SYNCSERVER_FULL_IMG="${REPO}/${SYNCSERVER}:${IMAGE_TAG}"
@@ -52,8 +48,8 @@ docker run -d --network $NETWORK $VOLUME_MOUNT_ARG --name $HTTPPROXYSERVER -p 80
 
 # On-prem side
 docker run -d --network $NETWORK $VOLUME_MOUNT_ARG --name $MONGOONPREM mongo
-docker run -d --network $NETWORK $VOLUME_MOUNT_ARG --name $NATSONPREM nats
+docker run -d --network $NETWORK $VOLUME_MOUNT_ARG --name $NATSONPREM -p 4223:4222 nats
 docker run -d --network $NETWORK $VOLUME_MOUNT_ARG --name $ECHOPROXY -e LOG_LEVEL=trace -e NATS_SERVER_URL=$ONPREMNATSURL $REPO/$ECHOPROXY:$IMAGE_TAG
-docker run -d --network $NETWORK $VOLUME_MOUNT_ARG --name $SYNCCLIENT -p 8083:8080 -e LOG_LEVEL=trace -e KEYSTORE_URL=$ONPREMKEYSTOREURL -e NATS_SERVER_URL=$ONPREMNATSURL -e CLOUD_BRIDGE_URL=$CLOUD_BRIDGE_URL $SYNCCLIENT_FULL_IMG $SYNCCLIENT_ARGS
+docker run -d --network $NETWORK $VOLUME_MOUNT_ARG --name $SYNCCLIENT -p "${SYNCCLIENT_PORT}":8080 -e LOG_LEVEL=trace -e KEYSTORE_URL=$ONPREMKEYSTOREURL -e NATS_SERVER_URL=$ONPREMNATSURL -e CLOUD_BRIDGE_URL=$CLOUD_BRIDGE_URL $SYNCCLIENT_FULL_IMG $SYNCCLIENT_ARGS
 docker run -d --network $NETWORK $VOLUME_MOUNT_ARG --name $HTTPPROXYLET -e DEFAULT_LOCATION_ID="*" -e NATS_SERVER_URL=$ONPREMNATSURL $HTTPPROXYLET_FULL_IMG $HTTPPROXYLET_ARGS
 docker run -d --network $NETWORK $VOLUME_MOUNT_ARG --name $NGINXTEST $REPO/$NGINXTEST:$IMAGE_TAG

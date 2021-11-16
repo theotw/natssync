@@ -8,7 +8,7 @@ ENV GOSUMDB=off
 COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
 RUN rm -r -f out & mkdir -p out & mkdir -p webout & mkdir -p /certs
 COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
-ENTRYPOINT ["go", "test"]
+ENTRYPOINT ["scripts/go_test_app_for_coverage.sh"]
 
 # Bridge server
 FROM alpine:3.14 as natssync-server

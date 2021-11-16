@@ -6,6 +6,7 @@ require (
 	github.com/gin-contrib/static v0.0.0-20191128031702-f81c604d8ac2
 	github.com/gin-gonic/gin v1.7.4
 	github.com/google/uuid v1.1.1
+	github.com/jstemmer/go-junit-report v0.9.1 // indirect
 	github.com/nats-io/nats.go v1.13.0
 	github.com/prometheus/client_golang v1.9.0
 	github.com/prometheus/common v0.15.0

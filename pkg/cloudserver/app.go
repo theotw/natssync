@@ -17,10 +17,6 @@ import (
 )
 
 func RunBridgeServerApp(test bool) {
-	if test {
-		log.Warn("TEST MODE IS ENABLED")
-	}
-
 	level, levelerr := log.ParseLevel(pkg.Config.LogLevel)
 	if levelerr != nil {
 		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)

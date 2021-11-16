@@ -234,10 +234,26 @@ l1:
 	go get github.com/jstemmer/go-junit-report; \
 	mkdir -p out; \
 	go test -v -coverpkg=github.com/theotw/natssync/pkg/... -coverprofile=out/unit_coverage.out github.com/theotw/natssync/pkg/... > out/l1_out.txt 2>&1 || SUCCESS=1; \
-	cat out/l1_out.txt | go-junit-report > out/report_l1.xml || echo "Failure generating report xml"; \
+	cat out/l1_out.txt | go-junit-report > out/l1_report.xml || echo "Failure generating report xml"; \
 	cat out/l1_out.txt; \
 	exit $$SUCCESS;
 
+singleclustertest: SYNCCLIENT_PORT ?= 8081
+singleclustertest:
+	./single_cluster_test/docker-cleanup.sh && SYNCCLIENT_PORT=${SYNCCLIENT_PORT} ./single_cluster_test/docker-deploy.sh
+	go run apps/natstool.go -u nats://localhost:4222 -s natssync.registration.request -m '{"authToken":"42","locationID":"client1"}'
+	sleep 10
+	curl -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"client1"}' "http://localhost:${SYNCCLIENT_PORT}/bridge-client/1/register" | jq .locationID | sed s/\"//g > locationID.txt
+	echo "ID: `cat locationID.txt`"
+	go run apps/echo_client.go -m "hello world" -i `cat locationID.txt`
+	syncserver_url='http://localhost:8080' syncclient_url='http://localhost:${SYNCCLIENT_PORT}' natsserver_url='nats://localhost:4222' go test -v github.com/theotw/natssync/tests/integration/...
+	curl -i -f -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"`cat locationID.txt`"}' "http://localhost:8081/bridge-client/1/unregister"
+	echo "Unregistered ID: `cat locationID.txt`"
+
+coveragereport:
+	./scripts/exit_apps_gracefully.sh
+	gocovmerge out/*_coverage.out > out/merged.out
+	go tool cover -func out/merged.out
 
 writeimage:
 	$(shell echo ${IMAGE_TAG} >'IMAGE_TAG')
