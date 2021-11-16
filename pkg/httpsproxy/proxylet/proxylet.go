@@ -4,6 +4,7 @@
 package proxylet
 
 import (
+	"github.com/theotw/natssync/pkg/testing"
 	"os"
 	"runtime"
 	"sync"
@@ -60,9 +61,8 @@ func RunProxylet(test bool) {
 	proxyletObject.RunHttpProxylet()
 
 	if test {
-		log.Warn("TEST MODE IS ENABLED")
 		quit := make(chan os.Signal)
-		proxyletObject.natsClient.NotifyOnAppExitMessage(quit)
+		testing.NotifyOnAppExitMessageGeneric(proxyletObject.natsClient, quit)
 		<- quit
 	} else {
 		runtime.Goexit()

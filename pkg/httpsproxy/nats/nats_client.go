@@ -2,8 +2,6 @@ package nats
 
 import (
 	natspkg "github.com/nats-io/nats.go"
-	"github.com/theotw/natssync/pkg/testing"
-	"os"
 )
 
 type MsgHandler func(*Msg)
@@ -15,7 +13,6 @@ type ClientInterface interface {
 	Flush() error
 	SubscribeSync(reply string) (NatsSubscriptionInterface, error)
 	PublishRequest(subj string, reply string, data []byte) error
-	NotifyOnAppExitMessage(quitChannel chan os.Signal)
 }
 
 type natsClient struct {
@@ -49,10 +46,6 @@ func (n natsClient) Flush() error {
 func (n natsClient) SubscribeSync(subj string) (NatsSubscriptionInterface, error){
 	pkgSubscription, err := n.natsConn.SubscribeSync(subj)
 	return newNatsSubscription(pkgSubscription), err
-}
-
-func (n natsClient) NotifyOnAppExitMessage(quitChannel chan os.Signal) {
-	testing.NotifyOnAppExitMessage(n.natsConn, quitChannel)
 }
 
 func newNatsClient(natsConn *natspkg.Conn) *natsClient {
