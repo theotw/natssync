@@ -32,7 +32,7 @@ func (m *MongoKeyStore) initCollections() error {
 	_, err := locCol.Indexes().CreateOne(
 		context.TODO(),
 		mongo.IndexModel{
-			Keys:    bson.D{{"id", 1}},
+			Keys:    bson.D{{"locationID", 1}},
 			Options: options.Index().SetUnique(true),
 		},
 	)
@@ -44,7 +44,7 @@ func (m *MongoKeyStore) initCollections() error {
 	_, err = kpCol.Indexes().CreateOne(
 		context.TODO(),
 		mongo.IndexModel{
-			Keys:    bson.D{{"locationID", 1}},
+			Keys:    bson.D{{"keyID", 1}},
 			Options: options.Index().SetUnique(true),
 		},
 	)
