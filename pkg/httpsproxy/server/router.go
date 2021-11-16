@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/theotw/natssync/pkg/testing"
 	"net/http"
 	"os"
 	"os/signal"
@@ -87,7 +88,7 @@ func RunHttpProxyServer(test bool) error {
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Interrupt)
 	if test {
-		nc.NotifyOnAppExitMessage(quit)
+		testing.NotifyOnAppExitMessageGeneric(nc, quit)
 	}
 	<-quit
 	log.Println("Shutdown Server ...")
