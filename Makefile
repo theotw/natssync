@@ -241,12 +241,13 @@ l1:
 deploysingle: SYNCCLIENT_PORT ?= 8081
 deploysingle: TEST_MODE ?= false
 deploysingle:
-	./single_cluster_test/docker-cleanup.sh && TEST_MODE=${TEST_MODE} SYNCCLIENT_PORT=${SYNCCLIENT_PORT} ./single_cluster_test/docker-deploy.sh "${IMAGE_TAG}"
+	./single_cluster_test/docker-cleanup.sh
+	TEST_MODE=${TEST_MODE} SYNCCLIENT_PORT=${SYNCCLIENT_PORT} ./single_cluster_test/docker-deploy.sh "${IMAGE_TAG}"
 
 integrationtests: SYNCCLIENT_PORT ?= 8081
 integrationtests:
 	go run apps/natstool.go -u nats://localhost:4222 -s natssync.registration.request -m '{"authToken":"42","locationID":"client1"}'
-	sleep 10
+	sleep 20
 	curl -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"client1"}' "http://localhost:${SYNCCLIENT_PORT}/bridge-client/1/register" | jq .locationID | sed s/\"//g > locationID.txt
 	echo "ID: `cat locationID.txt`"
 	go run apps/echo_client.go -m "hello world" -i `cat locationID.txt`
