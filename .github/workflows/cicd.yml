@@ -60,7 +60,10 @@ jobs:
     - name: Integration Tests (test mode on)
       env:
         TEST_MODE: true
-      run: make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
+      run: |
+        make deploysingle IMAGE_TAG=$(cat IMAGE_TAG)
+        sleep 20
+        make integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
 
     - name: Integration Tests (test mode off)
       run: make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)

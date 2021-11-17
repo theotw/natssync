@@ -16,7 +16,8 @@ go_test_output_filepath="${COVERAGE_DIR}/${app_test_name}_output.txt"
 go_coverage_filepath="${COVERAGE_DIR}/${app_test_name}_coverage.out"
 junit_report_filepath="${COVERAGE_DIR}/${app_test_name}_report.xml"
 
-echo "${app_test_name}"
+echo "testing app: ${app_test_name}"
+date
 
 go test -v "${app_test_filepath}" -coverprofile="${go_coverage_filepath}" -coverpkg=./pkg/... 2>&1 | tee "${go_test_output_filepath}"
 go-junit-report < "${go_test_output_filepath}" > "${junit_report_filepath}"
