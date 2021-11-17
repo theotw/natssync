@@ -6,6 +6,7 @@ FROM natssync-base:latest as natssync-tests
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
+RUN go get github.com/stretchr/testify github.com/pmezard/go-difflib github.com/davecgh/go-spew
 RUN rm -r -f out & mkdir -p out & mkdir -p webout & mkdir -p /certs
 COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
 ENTRYPOINT ["scripts/go_test_app_for_coverage.sh"]
