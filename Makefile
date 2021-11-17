@@ -238,16 +238,20 @@ l1:
 	cat out/l1_out.txt; \
 	exit $$SUCCESS;
 
+deploysingle: SYNCCLIENT_PORT ?= 8081
+deploysingle: TEST_MODE ?= false
+deploysingle:
+	./single_cluster_test/docker-cleanup.sh && TEST_MODE=${TEST_MODE} SYNCCLIENT_PORT=${SYNCCLIENT_PORT} ./single_cluster_test/docker-deploy.sh "${IMAGE_TAG}"
+
 integrationtests: SYNCCLIENT_PORT ?= 8081
 integrationtests:
-	./single_cluster_test/docker-cleanup.sh && SYNCCLIENT_PORT=${SYNCCLIENT_PORT} ./single_cluster_test/docker-deploy.sh "${IMAGE_TAG}"
 	go run apps/natstool.go -u nats://localhost:4222 -s natssync.registration.request -m '{"authToken":"42","locationID":"client1"}'
 	sleep 10
 	curl -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"client1"}' "http://localhost:${SYNCCLIENT_PORT}/bridge-client/1/register" | jq .locationID | sed s/\"//g > locationID.txt
 	echo "ID: `cat locationID.txt`"
 	go run apps/echo_client.go -m "hello world" -i `cat locationID.txt`
 	syncserver_url='http://localhost:8080' syncclient_url='http://localhost:${SYNCCLIENT_PORT}' natsserver_url='nats://localhost:4222' go test -v github.com/theotw/natssync/tests/integration/...
-	curl -i -f -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"`cat locationID.txt`"}' "http://localhost:8081/bridge-client/1/unregister"
+	curl -i -f -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"`cat locationID.txt`"}' "http://localhost:${SYNCCLIENT_PORT}/bridge-client/1/unregister"
 	echo "Unregistered ID: `cat locationID.txt`"
 	echo "Single cluster test done"
 

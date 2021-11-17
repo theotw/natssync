@@ -58,12 +58,12 @@ jobs:
         make cicd
 
     - name: Integration Tests (test mode off)
-      run: make integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
+      run: make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
 
     - name: Integration Tests (test mode on)
       env:
-        TEST_MODE_ENABLED: true
-      run: make integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
+        TEST_MODE: true
+      run: make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
 
     - name: Collect Coverage
       run: make coveragereport
