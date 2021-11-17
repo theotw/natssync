@@ -169,7 +169,7 @@ httpproxylet:
 nginxTest:
 	cd testNginx && docker build --tag ${IMAGE_REPO}/testnginx:${IMAGE_TAG} .
 
-allimages: baseimage testimage cloudimage clientimage echoproxylet simpleauth debugcloudimage httpproxy httpproxylet
+allimages: baseimage testimage cloudimage clientimage echoproxylet simpleauth debugcloudimage httpproxy httpproxylet nginxTest
 
 allarmimages: baseimagearm cloudimagearm clientimagearm echoproxyletarm simpleautharm
 

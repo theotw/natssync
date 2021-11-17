@@ -56,7 +56,6 @@ jobs:
         echo $IMAGE_TAG
         echo $IMAGE_TAG > IMAGE_TAG
         make cicd
-        make nginxTest
 
     - name: Integration Tests (test mode off)
       run: make integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
