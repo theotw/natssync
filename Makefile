@@ -238,13 +238,13 @@ l1:
 	cat out/l1_out.txt; \
 	exit $$SUCCESS;
 
-deploysingle: SYNCCLIENT_PORT ?= 8081
+deploysingle: SYNCCLIENT_PORT ?= 8083
 deploysingle: TEST_MODE ?= false
 deploysingle:
 	./single_cluster_test/docker-cleanup.sh
 	TEST_MODE=${TEST_MODE} SYNCCLIENT_PORT=${SYNCCLIENT_PORT} ./single_cluster_test/docker-deploy.sh "${IMAGE_TAG}"
 
-integrationtests: SYNCCLIENT_PORT ?= 8081
+integrationtests: SYNCCLIENT_PORT ?= 8083
 integrationtests:
 	go run apps/natstool.go -u nats://localhost:4222 -s natssync.registration.request -m '{"authToken":"42","locationID":"client1"}'
 	sleep 20
