@@ -58,41 +58,26 @@ jobs:
         make cicd
         make nginxTest
 
-    - name: Deploy Docker Containers
-      run: single_cluster_test/docker-deploy.sh $(cat IMAGE_TAG)
+    - name: Integration Tests (test mode off)
+      run: make integrationtests
 
-    - name: Client Registration
-      run: |
-        go run apps/natstool.go -u nats://localhost:4222 -s natssync.registration.request -m '{"authToken":"42","locationID":"client1"}'
-        sleep 1
-        curl -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"client1"}' "http://localhost:8081/bridge-client/1/register" | jq .locationID | sed s/\"//g > locationID.txt
-        echo "ID: `cat locationID.txt`"
+    - name: Integration Tests (test mode on)
+      env:
+        TEST_MODE_ENABLED: true
+      run: make integrationtests
 
-    - name: Echo Test
-      run: timeout 30 go run apps/echo_client.go -m "hello world" -i `cat locationID.txt`
+    - name: Collect Coverage
+      run: make coveragereport
 
-    - name: Run Integration Tests
-      run: |
-        export syncserver_url='http://localhost:8080'
-        export syncclient_url='http://localhost:8081'
-        export natsserver_url='nats://localhost:4222'
-        echo 'test version 5'
-        go test -v github.com/theotw/natssync/tests/integration/...
-
-    - name: Client Unregistration
-      run: |
-        curl -i -f -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"`cat locationID.txt`"}' "http://localhost:8081/bridge-client/1/unregister"
-        echo "Unregistered ID: `cat locationID.txt`"
-
-    - name: Upload Unit Test Results
+    - name: Upload Merged Test Results (Unit + Integration)
       uses: actions/upload-artifact@v2
       if: always()
       with:
-        name: test-results
+        name: merged-test-results
         path: out/*_report.xml
         retention-days: 5
 
-    - name: Publish Unit Test Results
+    - name: Publish Integration Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1.6
       if: always()
       with:

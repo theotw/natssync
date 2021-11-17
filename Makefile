@@ -238,8 +238,8 @@ l1:
 	cat out/l1_out.txt; \
 	exit $$SUCCESS;
 
-singleclustertest: SYNCCLIENT_PORT ?= 8081
-singleclustertest:
+integrationtests: SYNCCLIENT_PORT ?= 8081
+integrationtests:
 	./single_cluster_test/docker-cleanup.sh && SYNCCLIENT_PORT=${SYNCCLIENT_PORT} ./single_cluster_test/docker-deploy.sh
 	go run apps/natstool.go -u nats://localhost:4222 -s natssync.registration.request -m '{"authToken":"42","locationID":"client1"}'
 	sleep 10
@@ -249,6 +249,7 @@ singleclustertest:
 	syncserver_url='http://localhost:8080' syncclient_url='http://localhost:${SYNCCLIENT_PORT}' natsserver_url='nats://localhost:4222' go test -v github.com/theotw/natssync/tests/integration/...
 	curl -i -f -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"`cat locationID.txt`"}' "http://localhost:8081/bridge-client/1/unregister"
 	echo "Unregistered ID: `cat locationID.txt`"
+	echo "Single cluster test done"
 
 coveragereport:
 	./scripts/exit_apps_gracefully.sh
