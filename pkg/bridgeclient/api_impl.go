@@ -91,7 +91,7 @@ func handlePostUnRegister(c *gin.Context) {
 		c.JSON(code, response)
 		return
 	}
-	c.JSON(http.StatusCreated, nil)
+	c.JSON(http.StatusNoContent, nil)
 }
 
 func handlePostRegister(c *gin.Context) {
