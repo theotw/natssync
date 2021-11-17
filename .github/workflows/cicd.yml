@@ -57,12 +57,12 @@ jobs:
         echo $IMAGE_TAG > IMAGE_TAG
         make cicd
 
-    - name: Integration Tests (test mode off)
-      run: make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
-
     - name: Integration Tests (test mode on)
       env:
         TEST_MODE: true
+      run: make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
+
+    - name: Integration Tests (test mode off)
       run: make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
 
     - name: Collect Coverage
