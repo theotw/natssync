@@ -13,8 +13,8 @@ if [ `command -v nats` ]; then
   nats pub --server="${NATS_CLOUD_SERVER}" "${EXIT_APP_TOPIC}" '' || true
   nats pub --server="${NATS_ONPREM_SERVER}" "${EXIT_APP_TOPIC}" '' || true
 else
-	go run apps/natstool.go -u "${NATS_CLOUD_SERVER}" -s "${EXIT_APP_TOPIC}" -m '' || true
-	go run apps/natstool.go -u "${NATS_ONPREM_SERVER}" -s "${EXIT_APP_TOPIC}" -m '' || true
+	go run apps/natstool.go -u "${NATS_CLOUD_SERVER}" -s "${EXIT_APP_TOPIC}" -m 'hello world' || true
+	go run apps/natstool.go -u "${NATS_ONPREM_SERVER}" -s "${EXIT_APP_TOPIC}" -m 'hello world' || true
 fi
 
 # Wait until the relevant containers are stopped
