@@ -27,7 +27,7 @@ date
 # the static files in there
 cleanup_static_files_folders
 cp -r openapi/ apps/
-cp -r third_party/swaggerui/ apps/
+cp -r third_party/swaggerui/ apps/third_party/
 
 go test -v "${app_test_filepath}" -coverprofile="${go_coverage_filepath}" -coverpkg=./pkg/... 2>&1 | tee "${go_test_output_filepath}"
 go-junit-report < "${go_test_output_filepath}" > "${junit_report_filepath}"
