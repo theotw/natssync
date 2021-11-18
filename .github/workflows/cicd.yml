@@ -58,7 +58,9 @@ jobs:
         make cicd
 
     - name: Integration Tests (test mode off)
-      run: make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
+      run: |
+        make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
+        scripts/exit_apps_gracefully.sh
 
     - name: Integration Tests (test mode on)
       env:
@@ -71,7 +73,7 @@ jobs:
         # Replace with health check at some point.
         echo "sleeping 90s to let 'go test' compile stuff"
         sleep 90
-        
+
         make integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
 
     - name: Publish Integration Test Results
