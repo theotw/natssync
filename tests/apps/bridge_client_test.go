@@ -5,11 +5,13 @@
 package apps
 
 import (
+	"github.com/prometheus/common/log"
+	"github.com/theotw/natssync/pkg"
 	cloudclient "github.com/theotw/natssync/pkg/bridgeclient"
 	"testing"
 )
 
-func TestBridgeClient(t *testing.T) {
+func Test_bridge_client(t *testing.T) {
+	log.Infof("Version %s",pkg.VERSION)
 	cloudclient.RunClient(true)
-
 }

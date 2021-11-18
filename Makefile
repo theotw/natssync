@@ -3,7 +3,6 @@ CLIENT_OPENAPIDEF_FILE=openapi/bridge_client_v1.yaml
 openapicli_jar=third_party/openapi-generator-cli.jar
 OPENAPI_IMAGE=openapitools/openapi-generator-cli:v5.2.0
 
-
 ifndef IMAGE_REPO
 	IMAGE_REPO=theotw
 endif
@@ -15,6 +14,7 @@ ifndef IMAGE_TAG
 	IMAGE_TAG := ${BUILD_VERSION}
 endif
 
+TEST_APPS ?= $(shell ls tests/apps)
 
 
 printversion:
@@ -109,6 +109,18 @@ buildarm: export GOARCH=arm
 buildarm: export CGO_ENABLED=0
 buildarm: export GO111MODULE=on
 buildarm: basebuild
+
+buildtest: export GOOS=linux
+buildtest: export GOARCH=amd64
+buildtest: export CGO_ENABLED=0
+buildtest: export GO111MODULE=on
+buildtest: export LDFLAGS=-ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}"
+buildtest: export COVERPKG=-coverpkg=./pkg/...
+buildtest:
+	go test ${LDFLAGS} ${COVERPKG} -c -o out/bridge_client_${GOARCH}_${GOOS}.test tests/apps/bridge_client_test.go
+	go test ${LDFLAGS} ${COVERPKG} -c -o out/bridge_server_${GOARCH}_${GOOS}.test tests/apps/bridge_server_test.go
+	go test ${LDFLAGS} ${COVERPKG} -c -o out/http_proxylet_${GOARCH}_${GOOS}.test tests/apps/http_proxylet_test.go
+	go test ${LDFLAGS} ${COVERPKG} -c -o out/httpproxy_server_${GOARCH}_${GOOS}.test tests/apps/httpproxy_server_test.go
 
 clean:
 	rm -r -f tmp
@@ -256,8 +268,10 @@ integrationtests:
 	echo "Unregistered ID: `cat locationID.txt`"
 	echo "Single cluster test done"
 
+totalcoverage: export COVERAGE_FILES=out/*_coverage.out
 totalcoverage:
-	gocovmerge out/**/*_coverage.out > out/merged.out
+	./scripts/exit_apps_gracefully.sh
+	gocovmerge ${COVERAGE_FILES} > out/merged.out
 	go tool cover -func out/merged.out | tail -1
 
 writeimage:

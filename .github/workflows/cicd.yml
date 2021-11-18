@@ -67,14 +67,7 @@ jobs:
         TEST_MODE: true
         COVERAGE_DIR: out/integration_coverage
       run: |
-        make deploysingle IMAGE_TAG=$(cat IMAGE_TAG)
-
-        # Test mode uses 'go test' which takes longer since it has to compile the apps so a good long sleep is needed.
-        # Replace with health check at some point.
-        echo "sleeping 90s to let 'go test' compile stuff"
-        sleep 90
-
-        make integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
+        make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
 
     - name: Publish Integration Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1.6
@@ -107,6 +100,8 @@ jobs:
         retention-days: 5
 
     - name: Total Code Coverage
+      env:
+        COVERAGE_FILES: out/*_coverage.out out/integration_coverage/*.out
       run: make totalcoverage
 
     - name: Deploy to DockerHub
