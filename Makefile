@@ -256,10 +256,9 @@ integrationtests:
 	echo "Unregistered ID: `cat locationID.txt`"
 	echo "Single cluster test done"
 
-coveragereport:
-	./scripts/exit_apps_gracefully.sh
-	gocovmerge out/*_coverage.out > out/merged.out
-	go tool cover -func out/merged.out
+totalcoverage:
+	gocovmerge out/**/*_coverage.out > out/merged.out
+	go tool cover -func out/merged.out | tail -1
 
 writeimage:
 	$(shell echo ${IMAGE_TAG} >'IMAGE_TAG')

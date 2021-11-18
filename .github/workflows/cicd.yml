@@ -57,37 +57,55 @@ jobs:
         echo $IMAGE_TAG > IMAGE_TAG
         make cicd
 
-    - name: Integration Tests (test mode on)
-      env:
-        TEST_MODE: true
-      run: |
-        make deploysingle IMAGE_TAG=$(cat IMAGE_TAG)
-        # Test mode uses 'go test' which takes longer since it has to compile the apps so a good long sleep is needed.
-        # Replace with health check at some point.
-        echo "sleeping 90s"
-        sleep 90
-        make integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
-
     - name: Integration Tests (test mode off)
       run: make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
 
-    - name: Collect Coverage
-      run: make coveragereport
+    - name: Integration Tests (test mode on)
+      env:
+        TEST_MODE: true
+        COVERAGE_DIR: out/integration_coverage
+      run: |
+        make deploysingle IMAGE_TAG=$(cat IMAGE_TAG)
 
-    - name: Upload Merged Test Results (Unit + Integration)
-      uses: actions/upload-artifact@v2
-      if: always()
-      with:
-        name: merged-test-results
-        path: out/*_report.xml
-        retention-days: 5
+        # Test mode uses 'go test' which takes longer since it has to compile the apps so a good long sleep is needed.
+        # Replace with health check at some point.
+        echo "sleeping 90s to let 'go test' compile stuff"
+        sleep 90
+        
+        make integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
 
     - name: Publish Integration Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1.6
       if: always()
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        files: out/*_report.xml
+        files: out/integration_coverage/*_report.xml
+
+    - name: Upload Integration Test Results
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: integration-test-results
+        path: out/integration_coverage/*_report.xml
+        retention-days: 5
+
+    - name: Publish Merged Test Results (Unit + Integration)
+      uses: EnricoMi/publish-unit-test-result-action@v1.6
+      if: always()
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        files: out/**/*_report.xml
+
+    - name: Upload Merged Test Results (Unit + Integration)
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: merged-test-results
+        path: out/**/*_report.xml
+        retention-days: 5
+
+    - name: Total Code Coverage
+      run: make totalcoverage
 
     - name: Deploy to DockerHub
       if: github.ref == 'refs/heads/main'
