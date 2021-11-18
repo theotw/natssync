@@ -8,8 +8,8 @@ ENV GOSUMDB=off
 
 # Using 'go test' (as we do in this container) will serve from the /build/apps folder instead of /build so we need to move some of
 # the static files in there
-RUN cp -r /build/openapi/ ./apps/openapi/
-RUN cp -r /build/third_party/swaggerui/ ./apps/third_party/swaggerui/
+RUN cp -r /build/openapi/ ./apps/
+RUN cp -r /build/third_party/swaggerui/ ./apps/
 
 RUN rm -r -f out & mkdir -p out & mkdir -p webout & mkdir -p /certs
 ENTRYPOINT ["scripts/go_test_app_for_coverage.sh"]
