@@ -66,10 +66,6 @@ jobs:
         # Replace with health check at some point.
         echo "sleeping 90s"
         sleep 90
-        ls openapi
-        ls .
-        ls /
-        echo "# stuff" > openapi/bridge_server_v1.yaml
         make integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
 
     - name: Integration Tests (test mode off)

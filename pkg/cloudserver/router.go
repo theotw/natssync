@@ -81,6 +81,9 @@ func newRouter() *gin.Engine {
 	root := router.Group("/")
 	root.Handle(http.MethodGet, "/metrics", metricGetHandlers)
 
+	dir, _ := os.Getwd()
+	log.Info("current working directory: ", dir)
+
 	certMiddleware := NewCertMiddleware(persistence.GetKeyStore())
 
 	v1 := router.Group("/bridge-server/1", routeMiddleware)
