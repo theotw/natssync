@@ -16,8 +16,20 @@ go_test_output_filepath="${COVERAGE_DIR}/${app_test_name}_output.txt"
 go_coverage_filepath="${COVERAGE_DIR}/${app_test_name}_coverage.out"
 junit_report_filepath="${COVERAGE_DIR}/${app_test_name}_report.xml"
 
+function cleanup_static_files_folders() {
+    rm -rf apps/openapi apps/third_party
+}
+
 echo "testing app: ${app_test_name}"
 date
 
+# Using 'go test' (as we do in this container) will serve from the /build/apps folder instead of /build so we need to move some of
+# the static files in there
+cleanup_static_files_folders
+cp -r openapi/ apps/
+cp -r third_party/swaggerui/ apps/
+
 go test -v "${app_test_filepath}" -coverprofile="${go_coverage_filepath}" -coverpkg=./pkg/... 2>&1 | tee "${go_test_output_filepath}"
 go-junit-report < "${go_test_output_filepath}" > "${junit_report_filepath}"
+
+cleanup_static_files_folders
