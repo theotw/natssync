@@ -6,14 +6,12 @@ FROM natssync-base:latest as natssync-tests
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 
-COPY --from=base /build/BUILD_DATE /build/BUILD_DATE
 # Using 'go test' (as we do in this container) will serve from the /build/apps folder instead of /build so we need to move some of
 # the static files in there
-COPY --from=base /build/openapi/ ./apps/openapi/
-COPY --from=base /build/third_party/swaggerui/ ./apps/third_party/swaggerui/
+RUN cp /build/openapi/ ./apps/openapi/
+RUN cp /build/third_party/swaggerui/ ./apps/third_party/swaggerui/
 
 RUN rm -r -f out & mkdir -p out & mkdir -p webout & mkdir -p /certs
-
 ENTRYPOINT ["scripts/go_test_app_for_coverage.sh"]
 
 # Bridge server
