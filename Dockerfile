@@ -6,6 +6,7 @@ FROM natssync-base:latest as natssync-tests
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 RUN rm -r -f out & mkdir -p out & mkdir -p webout & mkdir -p /certs
+RUN go mod download
 RUN make buildtest && cp out/*.test ./
 
 # Bridge server
