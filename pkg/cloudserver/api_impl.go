@@ -497,7 +497,6 @@ func handlePostCertRotation(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, "")
 		return
 	}
-
 	pubKeyBits, err := msgs.PullMessageFromEnvelope(&in.PublicKeyPackage)
 
 	if err != nil {
@@ -527,6 +526,18 @@ func handlePostCertRotation(c *gin.Context) {
 	}
 
 	existingLocationData.SetKeyPair(pubKeyBits, nil).UpdateLastKeyPairRotation()
+	if err = existingLocationData.SetKeyID(in.KeyID); err != nil {
+		code, ret := bridgemodel.HandleErrors(c, err)
+		c.JSON(code, &ret)
+		return
+	}
+
+	err = store.RemoveLocation(existingLocationData.GetLocationID())
+	if err != nil {
+		code, ret := bridgemodel.HandleErrors(c, err)
+		c.JSON(code, &ret)
+		return
+	}
 
 	err = store.WriteLocation(*existingLocationData)
 	if err != nil {
