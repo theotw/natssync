@@ -268,9 +268,9 @@ integrationtests:
 	echo "Unregistered ID: `cat locationID.txt`"
 	echo "Single cluster test done"
 
-coverage: export COVERAGE_FILES=out/*_coverage.out
-coverage: export OUT_FILE=out/cobertura.xml
-coverage:
+mergedcoverage: export COVERAGE_FILES=out/*_coverage.out
+mergedcoverage: export OUT_FILE=out/cobertura.xml
+mergedcoverage:
 	go get github.com/t-yuki/gocover-cobertura
 	go get github.com/wadey/gocovmerge
 	./scripts/exit_apps_gracefully.sh

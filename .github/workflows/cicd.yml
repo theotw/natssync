@@ -33,14 +33,6 @@ jobs:
     - name: Unit / L1 Test
       run: make l1
 
-    - name: Upload Unit Test Results
-      uses: actions/upload-artifact@v2
-      if: always()
-      with:
-        name: test-results
-        path: out/*_report.xml
-        retention-days: 5
-
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1.6
       if: always()
@@ -71,8 +63,8 @@ jobs:
     - name: Collect Coverage
       env:
         COVERAGE_FILES: out/*_coverage.out
-        OUT_FILE: out/integration_cobertura.xml
-      run: make coverage
+        OUT_FILE: out/unit_and_integration_cobertura.xml
+      run: make mergedcoverage
 
     - name: Publish Cobertura Report (integration)
       uses: 5monkeys/cobertura-action@v12
@@ -82,6 +74,17 @@ jobs:
         minimum_coverage: 50
         fail_below_threshold: false
         path: out/*cobertura.xml
+
+    - name: Upload Coverage Files
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: code-coverage
+        path: |
+          out/*cobertura.xml
+          out/*report.xml
+          out/*coverage.out
+        retention-days: 5
 
     - name: Deploy to DockerHub
       if: github.ref == 'refs/heads/main'
