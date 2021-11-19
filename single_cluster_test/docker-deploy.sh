@@ -28,10 +28,10 @@ if [ "${TEST_MODE}" = "true" ]; then
   VOLUME_MOUNT_ARG="-v $(pwd)/${COVERAGE_DIR}:/build/${COVERAGE_DIR}"
   NATSSYNC_TEST_IMAGE="${REPO}/natssync-tests:${IMAGE_TAG}"
 
-  SYNCSERVER_FULL_IMG="${NATSSYNC_TEST_IMAGE} ./bridge_server_amd64_linux.test -test.coverprofile=${COVERAGE_DIR}/bridge_server_test_coverage.out"
-  SYNCCLIENT_FULL_IMG="${NATSSYNC_TEST_IMAGE} ./bridge_client_amd64_linux.test -test.coverprofile=${COVERAGE_DIR}/bridge_client_test_coverage.out"
-  HTTPPROXYSERVER_FULL_IMG="${NATSSYNC_TEST_IMAGE} ./httpproxy_server_amd64_linux.test -test.coverprofile=${COVERAGE_DIR}/httpproxy_server_test_coverage.out"
-  HTTPPROXYLET_FULL_IMG="${NATSSYNC_TEST_IMAGE} ./http_proxylet_amd64_linux.test -test.coverprofile=${COVERAGE_DIR}/http_proxylet_test_coverage.out"
+  SYNCSERVER_FULL_IMG="${NATSSYNC_TEST_IMAGE} ./bridge_server_amd64_linux.test -test.coverprofile=${COVERAGE_DIR}/bridge_server_test_coverage.out -coverpkg=./pkg/..."
+  SYNCCLIENT_FULL_IMG="${NATSSYNC_TEST_IMAGE} ./bridge_client_amd64_linux.test -test.coverprofile=${COVERAGE_DIR}/bridge_client_test_coverage.out -coverpkg=./pkg/..."
+  HTTPPROXYSERVER_FULL_IMG="${NATSSYNC_TEST_IMAGE} ./httpproxy_server_amd64_linux.test -test.coverprofile=${COVERAGE_DIR}/httpproxy_server_test_coverage.out -coverpkg=./pkg/..."
+  HTTPPROXYLET_FULL_IMG="${NATSSYNC_TEST_IMAGE} ./http_proxylet_amd64_linux.test -test.coverprofile=${COVERAGE_DIR}/http_proxylet_test_coverage.out -coverpkg=./pkg/..."
 else
   SYNCCLIENT_FULL_IMG="${REPO}/${SYNCCLIENT}:${IMAGE_TAG}"
   SYNCSERVER_FULL_IMG="${REPO}/${SYNCSERVER}:${IMAGE_TAG}"
