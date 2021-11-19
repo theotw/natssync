@@ -274,6 +274,8 @@ totalcoverage:
 	go get github.com/t-yuki/gocover-cobertura
 	go get github.com/wadey/gocovmerge
 	./scripts/exit_apps_gracefully.sh
+	@echo "files:"
+	@ls ${COVERAGE_FILES}
 	gocovmerge ${COVERAGE_FILES} > out/merged.out
 	gocover-cobertura < out/merged.out > ${OUT_FILE}
 

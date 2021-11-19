@@ -83,7 +83,6 @@ jobs:
         fail_below_threshold: false
         path: out/*cobertura.xml
 
-
     - name: Deploy to DockerHub
       if: github.ref == 'refs/heads/main'
       env:
