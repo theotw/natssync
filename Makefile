@@ -259,7 +259,7 @@ deploysingle:
 integrationtests: SYNCCLIENT_PORT ?= 8083
 integrationtests:
 	go run apps/natstool.go -u nats://localhost:4222 -s natssync.registration.request -m '{"authToken":"42","locationID":"client1"}'
-	sleep 1
+	sleep 5
 	curl -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"client1"}' "http://localhost:${SYNCCLIENT_PORT}/bridge-client/1/register" | jq .locationID | sed s/\"//g > locationID.txt
 	echo "ID: `cat locationID.txt`"
 	go run apps/echo_client.go -m "hello world" -i `cat locationID.txt`
