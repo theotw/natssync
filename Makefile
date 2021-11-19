@@ -268,9 +268,9 @@ integrationtests:
 	echo "Unregistered ID: `cat locationID.txt`"
 	echo "Single cluster test done"
 
-totalcoverage: export COVERAGE_FILES=out/*_coverage.out
-totalcoverage: export OUT_FILE=out/cobertura.xml
-totalcoverage:
+coverage: export COVERAGE_FILES=out/*_coverage.out
+coverage: export OUT_FILE=out/cobertura.xml
+coverage:
 	go get github.com/t-yuki/gocover-cobertura
 	go get github.com/wadey/gocovmerge
 	./scripts/exit_apps_gracefully.sh
@@ -278,6 +278,8 @@ totalcoverage:
 	@ls ${COVERAGE_FILES}
 	gocovmerge ${COVERAGE_FILES} > out/merged.out
 	gocover-cobertura < out/merged.out > ${OUT_FILE}
+	go tool cover -func out/merged.out | tail -1
+
 
 writeimage:
 	$(shell echo ${IMAGE_TAG} >'IMAGE_TAG')
