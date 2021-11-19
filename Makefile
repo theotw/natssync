@@ -269,13 +269,13 @@ integrationtests:
 	echo "Single cluster test done"
 
 totalcoverage: export COVERAGE_FILES=out/*_coverage.out
-totalcoverage: export OUTPUT_FILE=out/merged_cobertura.xml
+totalcoverage: export OUT_FILE=out/cobertura.xml
 totalcoverage:
 	go get github.com/t-yuki/gocover-cobertura
 	go get github.com/wadey/gocovmerge
 	./scripts/exit_apps_gracefully.sh
 	gocovmerge ${COVERAGE_FILES} > out/merged.out
-	gocover-cobertura < out/merged.out > ${OUTPUT_FILE}
+	gocover-cobertura < out/merged.out > ${OUT_FILE}
 
 writeimage:
 	$(shell echo ${IMAGE_TAG} >'IMAGE_TAG')
