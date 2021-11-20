@@ -73,7 +73,7 @@ jobs:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         minimum_coverage: 50
         fail_below_threshold: false
-        show_class_names: true
+        only_changed_files: true
         path: out/*cobertura.xml
 
     - name: Upload Coverage Files
