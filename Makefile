@@ -207,11 +207,10 @@ tagAndPushToDockerHub: tag
 	docker push ${IMAGE_REPO}/natssync-tests:latest
 	docker push ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/httpproxy-server:latest
-	docker push ${IMAGE_REPO}/httpproxylet::${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/httpproxylet:latest
 	docker push ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-server-debug:latest
-
 	docker push ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-server-debug:latest
 
