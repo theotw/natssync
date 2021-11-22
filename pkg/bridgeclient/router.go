@@ -12,17 +12,14 @@ import (
 	"github.com/theotw/natssync/pkg"
 	"io/ioutil"
 	"net/http"
-	"os"
 )
 
-var quit chan os.Signal
-
 // Run - configures and starts the web server
-func RunBridgeClientRestAPI(test bool) error {
+func RunBridgeClientRestAPI() error {
 
 	listenString := pkg.GetEnvWithDefaults("LISTEN_STRING", ":8080")
 
-	r := newRouter(test)
+	r := newRouter()
 	srv := &http.Server{
 		Addr:    listenString,
 		Handler: r,
@@ -39,16 +36,12 @@ func RunBridgeClientRestAPI(test bool) error {
 	return nil
 }
 
-func newRouter(test bool) *gin.Engine {
+func newRouter() *gin.Engine {
 	router := gin.Default()
 
 	root := router.Group("/bridge-client/")
 	root.Handle("GET", "/metrics", metricGetHandlers)
-	if test {
-		root.Handle("GET", "/kill", func(c *gin.Context) {
-			quit <- os.Interrupt
-		})
-	}
+
 	v1 := router.Group("/bridge-client/1", routeMiddleware)
 	v1.Handle("GET", "/about", aboutGetUnversioned)
 	v1.Handle("POST", "/unregister", handlePostUnRegister)

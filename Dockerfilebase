@@ -9,4 +9,5 @@ ENV GOSUMDB=off
 ARG IMAGE_TAG=latest
 RUN make incontainergenerate
 RUN make buildlinux
+RUN make buildtest
 RUN date -uIseconds > ./BUILD_DATE

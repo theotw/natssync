@@ -4,7 +4,9 @@
 package proxylet
 
 import (
+	"github.com/theotw/natssync/pkg/testing"
 	"os"
+	"runtime"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -41,6 +43,30 @@ func getLocationIDFromEnv() string {
 		return defaultLocationID
 	}
 	return value
+}
+
+func RunProxylet(test bool) {
+	logLevel := httpproxy.GetEnvWithDefaults("LOG_LEVEL", "debug")
+	level, levelerr := log.ParseLevel(logLevel)
+	if levelerr != nil {
+		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
+		level = log.DebugLevel
+	}
+	log.SetLevel(level)
+
+	proxyletObject, err := NewProxylet()
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create proxylet object")
+	}
+	proxyletObject.RunHttpProxylet()
+
+	if test {
+		quit := make(chan os.Signal)
+		testing.NotifyOnAppExitMessageGeneric(proxyletObject.natsClient, quit)
+		<- quit
+	} else {
+		runtime.Goexit()
+	}
 }
 
 func NewProxylet() (*proxylet, error) {

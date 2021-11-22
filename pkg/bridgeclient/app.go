@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/theotw/natssync/pkg/testing"
 	"math"
 	"net/http"
 	"os"
@@ -31,6 +32,8 @@ type Arguments struct {
 	cloudServerURL *string
 	cloudEvents    *bool
 }
+
+var quitChannel = make(chan os.Signal, 1)
 
 func getClientArguments() Arguments {
 	args := Arguments{
@@ -69,7 +72,7 @@ func RunClient(test bool) {
 	if msgFormat == nil {
 		log.Fatalf("Unable to get the message format")
 	}
-	if err := RunBridgeClientRestAPI(test); err != nil {
+	if err := RunBridgeClientRestAPI(); err != nil {
 		log.Errorf("Error starting API server %s", err.Error())
 		os.Exit(1)
 	}
@@ -83,10 +86,18 @@ func RunClient(test bool) {
 		clientID := store.LoadLocationID("")
 		connection.Publish(bridgemodel.ResponseForLocationID, []byte(clientID))
 	})
+	if test {
+		testing.NotifyOnAppExitMessage(connection, quitChannel)
+	}
 
 	var lastClientID string
 	var currentSubscription *nats.Subscription
 	for true {
+		if timeToQuit(quitChannel) {
+			log.Info("Quit signal received, exiting app...")
+			return
+		}
+
 		nc := bridgemodel.GetNatsConnection()
 		clientID := store.LoadLocationID("")
 		if len(clientID) == 0 {
@@ -320,4 +331,13 @@ func sendMessageToCloud(serverURL string, clientID string, ceEnabled bool, msgsL
 		break
 	}
 
+}
+
+func timeToQuit(quitChannel chan os.Signal) bool {
+	select {
+		case <-quitChannel:
+			return true
+		default:
+			return false
+	}
 }

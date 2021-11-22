@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/theotw/natssync/pkg/testing"
 	"net/http"
 	"os"
 	"os/signal"
@@ -39,11 +40,8 @@ func getProxyHostPort() string {
 	return fmt.Sprintf(":%s", port)
 }
 
-var quit chan os.Signal
-
 // Run - configures and starts the web server
 func RunHttpProxyServer(test bool) error {
-
 	httpproxy.SetMyLocationID(getLocationIDFromEnv())
 
 	err := models2.InitNats()
@@ -71,7 +69,7 @@ func RunHttpProxyServer(test bool) error {
 	}
 	nc.Publish(RequestForLocationID, []byte(""))
 
-	r := newRouter(test)
+	r := newRouter()
 	srv := &http.Server{
 		Addr:    getProxyHostPort(),
 		Handler: r,
@@ -87,8 +85,11 @@ func RunHttpProxyServer(test bool) error {
 	// Wait for interrupt signal to gracefully shutdown the server with
 	// a timeout of 5 seconds.
 	log.Infof("Server Started blocking on channel")
-	quit = make(chan os.Signal)
+	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Interrupt)
+	if test {
+		testing.NotifyOnAppExitMessageGeneric(nc, quit)
+	}
 	<-quit
 	log.Println("Shutdown Server ...")
 
@@ -101,7 +102,7 @@ func RunHttpProxyServer(test bool) error {
 	return nil
 }
 
-func newRouter(test bool) *gin.Engine {
+func newRouter() *gin.Engine {
 	router := gin.Default()
 	router.Use(loggerMiddleware)
 	root := router.Group("/")
