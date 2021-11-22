@@ -71,7 +71,7 @@ jobs:
       if: always()
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        minimum_coverage: 50
+        minimum_coverage: 0
         fail_below_threshold: false
         only_changed_files: true
         path: out/*cobertura.xml
