@@ -3,7 +3,6 @@ CLIENT_OPENAPIDEF_FILE=openapi/bridge_client_v1.yaml
 openapicli_jar=third_party/openapi-generator-cli.jar
 OPENAPI_IMAGE=openapitools/openapi-generator-cli:v5.2.0
 
-
 ifndef IMAGE_REPO
 	IMAGE_REPO=theotw
 endif
@@ -110,6 +109,18 @@ buildarm: export CGO_ENABLED=0
 buildarm: export GO111MODULE=on
 buildarm: basebuild
 
+buildtest: export GOOS=linux
+buildtest: export GOARCH=amd64
+buildtest: export CGO_ENABLED=0
+buildtest: export GO111MODULE=on
+buildtest: export LDFLAGS=-ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}"
+buildtest: export COVERPKG=-coverpkg=./pkg/...
+buildtest:
+	go test ${LDFLAGS} ${COVERPKG} -c -o out/bridge_client_${GOARCH}_${GOOS}.test tests/apps/bridge_client_test.go
+	go test ${LDFLAGS} ${COVERPKG} -c -o out/bridge_server_${GOARCH}_${GOOS}.test tests/apps/bridge_server_test.go
+	go test ${LDFLAGS} ${COVERPKG} -c -o out/http_proxylet_${GOARCH}_${GOOS}.test tests/apps/http_proxylet_test.go
+	go test ${LDFLAGS} ${COVERPKG} -c -o out/httpproxy_server_${GOARCH}_${GOOS}.test tests/apps/httpproxy_server_test.go
+
 clean:
 	rm -r -f tmp
 	rm -r -f pkg/bridgemodel/generated/v1
@@ -169,7 +180,7 @@ httpproxylet:
 nginxTest:
 	cd testNginx && docker build --tag ${IMAGE_REPO}/testnginx:${IMAGE_TAG} .
 
-allimages: baseimage testimage cloudimage clientimage echoproxylet simpleauth debugcloudimage httpproxy httpproxylet
+allimages: baseimage testimage cloudimage clientimage echoproxylet simpleauth debugcloudimage httpproxy httpproxylet nginxTest
 
 allarmimages: baseimagearm cloudimagearm clientimagearm echoproxyletarm simpleautharm
 
@@ -227,16 +238,54 @@ pushall:
 	docker push ${IMAGE_REPO}/httpproxy_server:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG}
 
+### Testing
+
 
 l1:
 	SUCCESS=0; \
 	go get github.com/jstemmer/go-junit-report; \
 	mkdir -p out; \
 	go test -v -coverpkg=github.com/theotw/natssync/pkg/... -coverprofile=out/unit_coverage.out github.com/theotw/natssync/pkg/... > out/l1_out.txt 2>&1 || SUCCESS=1; \
-	cat out/l1_out.txt | go-junit-report > out/report_l1.xml || echo "Failure generating report xml"; \
+	cat out/l1_out.txt | go-junit-report > out/l1_report.xml || echo "Failure generating report xml"; \
 	cat out/l1_out.txt; \
 	exit $$SUCCESS;
 
+deploysingle: SYNCCLIENT_PORT ?= 8083
+deploysingle: TEST_MODE ?= false
+deploysingle:
+	./single_cluster_test/docker-cleanup.sh
+	TEST_MODE=${TEST_MODE} SYNCCLIENT_PORT=${SYNCCLIENT_PORT} ./single_cluster_test/docker-deploy.sh "${IMAGE_TAG}"
+
+integrationtests: SYNCCLIENT_PORT ?= 8083
+integrationtests:
+	go run apps/natstool.go -u nats://localhost:4222 -s natssync.registration.request -m '{"authToken":"42","locationID":"client1"}'
+	sleep 5
+	curl -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"client1"}' "http://localhost:${SYNCCLIENT_PORT}/bridge-client/1/register" | jq .locationID | sed s/\"//g > locationID.txt
+	echo "ID: `cat locationID.txt`"
+	go run apps/echo_client.go -m "hello world" -i `cat locationID.txt`
+	syncserver_url='http://localhost:8080' syncclient_url='http://localhost:${SYNCCLIENT_PORT}' natsserver_url='nats://localhost:4222' go test -v github.com/theotw/natssync/tests/integration/...
+	curl -i -f -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"`cat locationID.txt`"}' "http://localhost:${SYNCCLIENT_PORT}/bridge-client/1/unregister"
+	echo "Unregistered ID: `cat locationID.txt`"
+	rm -f locationID.txt
+	echo "Single cluster test done"
+
+mergecoverage: COVERAGE_FILES ?= out/*_coverage.out
+mergecoverage: OUT_FILE ?= out/cobertura.xml
+mergecoverage:
+	go get github.com/t-yuki/gocover-cobertura
+	go get github.com/wadey/gocovmerge
+	./scripts/exit_apps_gracefully.sh
+	@echo " -- Coverage files to be merged:" && ls ${COVERAGE_FILES}
+	gocovmerge ${COVERAGE_FILES} > out/merged.out
+	gocover-cobertura < out/merged.out > ${OUT_FILE}
+	@echo " -- Total coverage:" && go tool cover -func out/merged.out | tail -1 | awk '{print $3}'
+	@echo " -- Go coverprofile:" && echo out/merged.out
+	@echo " -- Cobertura report saved to:" && echo ${OUT_FILE}
+
+testall: TEST_MODE ?= false
+testall:
+	rm -f out/*coverage.out
+	TEST_MODE=${TEST_MODE} $(MAKE) l1 allimages deploysingle integrationtests mergecoverage
 
 writeimage:
 	$(shell echo ${IMAGE_TAG} >'IMAGE_TAG')

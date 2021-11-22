@@ -33,20 +33,12 @@ jobs:
     - name: Unit / L1 Test
       run: make l1
 
-    - name: Upload Unit Test Results
-      uses: actions/upload-artifact@v2
-      if: always()
-      with:
-        name: test-results
-        path: out/report_*.xml
-        retention-days: 5
-
     - name: Publish Unit Test Results
       uses: EnricoMi/publish-unit-test-result-action@v1.6
       if: always()
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        files: out/report_*.xml
+        files: out/*_report.xml
 
     - name: Build Images
       run: |
@@ -56,33 +48,44 @@ jobs:
         echo $IMAGE_TAG
         echo $IMAGE_TAG > IMAGE_TAG
         make cicd
-        make nginxTest
 
-    - name: Deploy Docker Containers
-      run: single_cluster_test/docker-deploy.sh $(cat IMAGE_TAG)
-
-    - name: Client Registration
+    - name: Integration Tests (test mode off)
       run: |
-        go run apps/natstool.go -u nats://localhost:4222 -s natssync.registration.request -m '{"authToken":"42","locationID":"client1"}'
-        sleep 1
-        curl -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"client1"}' "http://localhost:8081/bridge-client/1/register" | jq .locationID | sed s/\"//g > locationID.txt
-        echo "ID: `cat locationID.txt`"
+        make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
 
-    - name: Echo Test
-      run: timeout 30 go run apps/echo_client.go -m "hello world" -i `cat locationID.txt`
-
-    - name: Run Integration Tests
+    - name: Integration Tests (test mode on)
+      env:
+        TEST_MODE: true
       run: |
-        export syncserver_url='http://localhost:8080'
-        export syncclient_url='http://localhost:8081'
-        export natsserver_url='nats://localhost:4222'
-        echo 'test version 5'
-        go test -v github.com/theotw/natssync/tests/integration/...
+        make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
+        scripts/exit_apps_gracefully.sh
 
-    - name: Client Unregistration
-      run: |
-        curl -i -f -X POST -H 'Content-Type: application/json' -d '{"authToken":"42","locationID":"`cat locationID.txt`"}' "http://localhost:8081/bridge-client/1/unregister"
-        echo "Unregistered ID: `cat locationID.txt`"
+    - name: Collect Coverage
+      env:
+        COVERAGE_FILES: out/*_coverage.out
+        OUT_FILE: out/unit_and_integration_cobertura.xml
+      run: make mergecoverage
+
+    - name: Publish Cobertura Report (integration)
+      uses: 5monkeys/cobertura-action@v12
+      if: always()
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        minimum_coverage: 0
+        fail_below_threshold: false
+        only_changed_files: false
+        path: out/*cobertura.xml
+
+    - name: Upload Coverage Files
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: code-coverage
+        path: |
+          out/*cobertura.xml
+          out/*report.xml
+          out/*coverage.out
+        retention-days: 5
 
     - name: Deploy to DockerHub
       if: github.ref == 'refs/heads/main'
