@@ -14,7 +14,6 @@ ifndef IMAGE_TAG
 	IMAGE_TAG := ${BUILD_VERSION}
 endif
 
-TEST_APPS ?= $(shell ls tests/apps)
 
 
 printversion:
@@ -250,13 +249,13 @@ l1:
 	cat out/l1_out.txt; \
 	exit $$SUCCESS;
 
-deploysingle: SYNCCLIENT_PORT ?= 8083
-deploysingle: TEST_MODE ?= false
+deploysingle: export SYNCCLIENT_PORT=8083
+deploysingle: export TEST_MODE=false
 deploysingle:
 	./single_cluster_test/docker-cleanup.sh
 	TEST_MODE=${TEST_MODE} SYNCCLIENT_PORT=${SYNCCLIENT_PORT} ./single_cluster_test/docker-deploy.sh "${IMAGE_TAG}"
 
-integrationtests: SYNCCLIENT_PORT ?= 8083
+integrationtests: export SYNCCLIENT_PORT=8083
 integrationtests:
 	go run apps/natstool.go -u nats://localhost:4222 -s natssync.registration.request -m '{"authToken":"42","locationID":"client1"}'
 	sleep 5
@@ -268,16 +267,19 @@ integrationtests:
 	echo "Unregistered ID: `cat locationID.txt`"
 	echo "Single cluster test done"
 
-mergedcoverage: export COVERAGE_FILES=out/*_coverage.out
-mergedcoverage: export OUT_FILE=out/cobertura.xml
-mergedcoverage:
+mergecoverage: export COVERAGE_FILES=out/*_coverage.out
+mergecoverage: export OUT_FILE=out/cobertura.xml
+mergecoverage:
 	go get github.com/t-yuki/gocover-cobertura
 	go get github.com/wadey/gocovmerge
 	./scripts/exit_apps_gracefully.sh
-	@echo "Coverage files:" && ls ${COVERAGE_FILES}
+	@echo " -- Coverage files to be merged:" && ls ${COVERAGE_FILES}
 	gocovmerge ${COVERAGE_FILES} > out/merged.out
 	gocover-cobertura < out/merged.out > ${OUT_FILE}
-	go tool cover -func out/merged.out | tail -1
+	@echo " -- Total coverage: $(go tool cover -func out/merged.out | tail -1)"
+	@echo " -- Go coverprofile:" && echo out/merged.out
+	@echo " -- Cobertura report saved to:" && echo ${OUT_FILE}
+
 
 
 writeimage:

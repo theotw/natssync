@@ -12,7 +12,7 @@ import (
 	"github.com/theotw/natssync/pkg"
 )
 
-func Test_http_proxylet(t *testing.T) {
+func TestHttpProxylet(t *testing.T) {
 	log.Infof("Version %s", pkg.VERSION)
 	proxylet.RunProxylet(true)
 }

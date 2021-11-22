@@ -64,7 +64,7 @@ jobs:
       env:
         COVERAGE_FILES: out/*_coverage.out
         OUT_FILE: out/unit_and_integration_cobertura.xml
-      run: make mergedcoverage
+      run: make mergecoverage
 
     - name: Publish Cobertura Report (integration)
       uses: 5monkeys/cobertura-action@v12

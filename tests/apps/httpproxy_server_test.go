@@ -13,8 +13,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func Test_httpproxy_server(t *testing.T) {
-	log.Infof("Version %s",pkg.VERSION)
+func TestHttpProxyServer(t *testing.T) {
+	log.Infof("Version %s", pkg.VERSION)
 	if err := server.RunHttpProxyServer(true); err != nil {
 		log.Panic(err)
 		os.Exit(1)

@@ -15,6 +15,7 @@ type ClientInterface interface {
 	PublishRequest(subj string, reply string, data []byte) error
 }
 
+
 type natsClient struct {
 	natsConn *natspkg.Conn
 }

@@ -46,10 +46,6 @@ func getClientArguments() Arguments {
 }
 
 func RunClient(test bool) {
-	if test {
-		log.Warn("TEST MODE IS ENABLED")
-	}
-
 	log.Info("Starting NATSSync Client")
 	args := getClientArguments()
 	err := bridgemodel.InitNats(*args.natsURL, "echo client", 1*time.Minute)
@@ -131,7 +127,7 @@ func RunClient(test bool) {
 		msglist, err := getMessagesFromCloud(serverURL, clientID)
 		if err != nil {
 			log.Errorf("Error fetching messages %s", err.Error())
-			time.Sleep(5 * time.Second)
+			time.Sleep(2 * time.Second)
 			continue
 		}
 		log.Infof("Received %d messages from server", len(msglist))

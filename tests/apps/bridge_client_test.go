@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-func Test_bridge_client(t *testing.T) {
-	log.Infof("Version %s",pkg.VERSION)
+func TestBridgeClient(t *testing.T) {
+	log.Infof("Version %s", pkg.VERSION)
 	cloudclient.RunClient(true)
 }

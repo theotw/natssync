@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-func Test_bridge_server(t *testing.T) {
-	log.Infof("Version %s",pkg.VERSION)
+func TestBridgeServer(t *testing.T) {
+	log.Infof("Version %s", pkg.VERSION)
 	cloudserver.RunBridgeServerApp(true)
 }
