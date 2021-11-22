@@ -239,6 +239,8 @@ pushall:
 	docker push ${IMAGE_REPO}/httpproxy_server:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG}
 
+### Testing
+
 
 l1:
 	SUCCESS=0; \
@@ -249,13 +251,13 @@ l1:
 	cat out/l1_out.txt; \
 	exit $$SUCCESS;
 
-deploysingle: export SYNCCLIENT_PORT=8083
-deploysingle: export TEST_MODE=false
+deploysingle: SYNCCLIENT_PORT ?= 8083
+deploysingle: TEST_MODE ?= false
 deploysingle:
 	./single_cluster_test/docker-cleanup.sh
 	TEST_MODE=${TEST_MODE} SYNCCLIENT_PORT=${SYNCCLIENT_PORT} ./single_cluster_test/docker-deploy.sh "${IMAGE_TAG}"
 
-integrationtests: export SYNCCLIENT_PORT=8083
+integrationtests: SYNCCLIENT_PORT ?= 8083
 integrationtests:
 	go run apps/natstool.go -u nats://localhost:4222 -s natssync.registration.request -m '{"authToken":"42","locationID":"client1"}'
 	sleep 5
@@ -268,8 +270,8 @@ integrationtests:
 	rm -f locationID.txt
 	echo "Single cluster test done"
 
-mergecoverage: export COVERAGE_FILES=out/*_coverage.out
-mergecoverage: export OUT_FILE=out/cobertura.xml
+mergecoverage: COVERAGE_FILES ?= out/*_coverage.out
+mergecoverage: OUT_FILE ?= out/cobertura.xml
 mergecoverage:
 	go get github.com/t-yuki/gocover-cobertura
 	go get github.com/wadey/gocovmerge
@@ -281,9 +283,10 @@ mergecoverage:
 	@echo " -- Go coverprofile:" && echo out/merged.out
 	@echo " -- Cobertura report saved to:" && echo ${OUT_FILE}
 
+testall: TEST_MODE ?= false
 testall:
 	rm -f out/*coverage.out
-	$(MAKE) l1 allimages deploysingle integrationtests mergecoverage TEST_MODE=${TEST_MODE}
+	TEST_MODE=${TEST_MODE} $(MAKE) l1 allimages deploysingle integrationtests mergecoverage
 
 writeimage:
 	$(shell echo ${IMAGE_TAG} >'IMAGE_TAG')
