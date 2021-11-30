@@ -142,7 +142,7 @@ metadata:
 spec:
   containers:
     - name: httpproxyserver
-      image: theotw/httpproxy_server:latest
+      image: theotw/httpproxy-server:latest
       imagePullPolicy: Always
       env:
         - name: LOG_LEVEL

@@ -101,7 +101,7 @@ basebuild:
 	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/echo_main_${GOARCH}_${GOOS} apps/echo_main.go
 	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/echo_client_${GOARCH}_${GOOS} apps/echo_client.go
 	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/simple_auth_${GOARCH}_${GOOS} apps/simple_reg_auth_server.go
-	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/http_proxy_${GOARCH}_${GOOS} apps/httpproxy_server.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/http_proxy_${GOARCH}_${GOOS} apps/httpproxy-server.go
 	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/http_proxylet_${GOARCH}_${GOOS} apps/http_proxylet.go
 
 buildarm: export GOOS=linux
@@ -190,8 +190,7 @@ tag:
 	docker tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} ${IMAGE_REPO}/natssync-tests:latest
 	docker tag ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG} ${IMAGE_REPO}/natssync-server-debug:latest
 	docker tag ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG} ${IMAGE_REPO}/httpproxy-server:latest
-#   httpproxy_server is depricated use httpproxy-server instead 
-	docker tag ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG} ${IMAGE_REPO}/httpproxy_server:latest
+	docker tag ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG} ${IMAGE_REPO}/httpproxy-server:latest
 	docker tag ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG} ${IMAGE_REPO}/httpproxylet:latest
 
 tagAndPushToDockerHub: tag
@@ -208,12 +207,10 @@ tagAndPushToDockerHub: tag
 	docker push ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-server-debug:latest
 	docker push ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG}
- 	docker push ${IMAGE_REPO}/httpproxy-server:latest
-#   httpproxy_server is depricated use httpproxy-server instead 
-	docker push ${IMAGE_REPO}/httpproxy_server:${IMAGE_TAG}
- 	docker push ${IMAGE_REPO}/httpproxy_server:latest
+	docker push ${IMAGE_REPO}/httpproxy-server:latest
+	docker push ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG}
- 	docker push ${IMAGE_REPO}/httpproxylet:latest
+	docker push ${IMAGE_REPO}/httpproxylet:latest
 
 
 
@@ -224,8 +221,7 @@ pushall:
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG}
-#   httpproxy_server is depricated use httpproxy-server instead 
-	docker push ${IMAGE_REPO}/httpproxy_server:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG}
 
 
