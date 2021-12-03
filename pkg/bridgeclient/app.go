@@ -72,6 +72,12 @@ func RunClient(test bool) {
 	if msgFormat == nil {
 		log.Fatalf("Unable to get the message format")
 	}
+
+	if pkg.Config.SkipTlsValidation {
+		log.Warn("SKIP_TLS_VALIDATION was set to true! Don't use this in production!")
+		bridgemodel.ConfigureDefaultTransportToSkipTlsValidation()
+	}
+
 	if err := RunBridgeClientRestAPI(); err != nil {
 		log.Errorf("Error starting API server %s", err.Error())
 		os.Exit(1)

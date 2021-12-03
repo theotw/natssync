@@ -20,12 +20,13 @@ const (
 var Config Configuration
 
 type Configuration struct {
-	NatsServerUrl  string
-	CloudBridgeUrl string
-	LogLevel       string
-	KeystoreUrl    string
-	ListenString   string
-	CloudEvents    bool
+	NatsServerUrl     string
+	CloudBridgeUrl    string
+	LogLevel          string
+	KeystoreUrl       string
+	ListenString      string
+	CloudEvents       bool
+	SkipTlsValidation bool
 }
 
 type configOption struct {
@@ -42,6 +43,7 @@ func (c *Configuration) LoadValues() {
 		{&c.KeystoreUrl, "KEYSTORE_URL", "file:///tmp"},
 		{&c.ListenString, "LISTEN_STRING", ":8080"},
 		{&c.CloudEvents, "CLOUDEVENTS_ENABLED", false},
+		{&c.SkipTlsValidation, "SKIP_TLS_VALIDATION", false},
 	}
 
 	for _, option := range configOptions {
