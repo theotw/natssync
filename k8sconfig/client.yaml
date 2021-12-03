@@ -8,7 +8,7 @@ data:
   cloud_bridge_url: "http://message-bridge.hcieng.com"
   key_store: "file:///data"
   log_leve: "trace"
-  skip_tls_validation: "true"
+  skip_tls_validation: "false"
 
 ---
 apiVersion: v1
