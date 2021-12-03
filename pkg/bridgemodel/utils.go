@@ -68,7 +68,7 @@ func (t *HttpClient) sendAuthorizedRequest(method string, url string, body []byt
 	return
 }
 
-func ConfigureDefaultTransport() {
+func ConfigureDefaultTransportToSkipTlsValidation() {
 	// allows calls to https
 	dt := http.DefaultTransport
 	switch dt.(type) {

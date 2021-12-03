@@ -8,6 +8,7 @@ data:
   cloud_bridge_url: "http://message-bridge.hcieng.com"
   key_store: "file:///data"
   log_leve: "trace"
+  skip_tls_validation: "false"
 
 ---
 apiVersion: v1
@@ -92,6 +93,11 @@ spec:
             configMapKeyRef:
               name: natsync-client-config
               key: key_store
+        - name: SKIP_TLS_VALIDATION
+          valueFrom:
+            configMapKeyRef:
+              name: natsync-client-config
+              key: skip_tls_validation
 
 
 ---
