@@ -41,7 +41,7 @@ func (s *server) connectHandler(c *gin.Context) {
 
 func (s *server) sendConnectionRequest(connectionID, clientID, host string) error {
 
-	reply := httpproxy.MakeReplyMessageSubject(s.locationID, s.test)
+	reply := httpproxy.MakeReplyMessageSubject(s.locationID, s.unitTestMode)
 	sub := httpproxy.MakeMessageSubject(clientID, httpproxy.HTTPS_PROXY_CONNECTION_REQUEST)
 	sync, err := s.natsClient.SubscribeSync(reply)
 	if err != nil {
@@ -240,7 +240,7 @@ func (s *server) RouteHandler(c *gin.Context) {
 		return
 	}
 
-	reply := httpproxy.MakeReplyMessageSubject(s.locationID, s.test)
+	reply := httpproxy.MakeReplyMessageSubject(s.locationID, s.unitTestMode)
 	sub := httpproxy.MakeMessageSubject(clientID, httpproxy.HTTP_PROXY_API_ID)
 	sync, err := s.natsClient.SubscribeSync(reply)
 	if err != nil {

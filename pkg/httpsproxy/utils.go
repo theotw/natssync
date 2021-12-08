@@ -27,11 +27,12 @@ func GetEnvWithDefaults(envKey string, defaultVal string) string {
 	return val
 }
 
-//makes a random reply subject that will route from the client (south side) to the server side
-func MakeReplyMessageSubject(locationID string, test bool) string {
+// MakeReplyMessageSubject: makes a random reply subject that will route from the client (south side) to the server side
+// if unitTestMode is set,  TestRandomReplyMessageUUID will be used instead of a true random uuid,
+func MakeReplyMessageSubject(locationID string, unitTestMode bool) string {
 	randomClientUUID := uuid.New().String()
 
-	if test {
+	if unitTestMode {
 		randomClientUUID = TestRandomReplyMessageUUID
 	}
 

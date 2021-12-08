@@ -13,6 +13,7 @@ import (
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/httpsproxy/models"
 	"github.com/theotw/natssync/pkg/httpsproxy/nats"
+	"github.com/theotw/natssync/pkg/testing"
 )
 
 const (
@@ -32,9 +33,9 @@ func getProxyHostPort() string {
 }
 
 type server struct {
-	locationID string
-	natsClient nats.ClientInterface
-	test       bool
+	locationID   string
+	natsClient   nats.ClientInterface
+	unitTestMode bool
 }
 
 func NewServer() (*server, error) {
@@ -48,11 +49,11 @@ func NewServer() (*server, error) {
 	return server, nil
 }
 
-func NewServerDetailed(locationID string, natsClient nats.ClientInterface, test bool) *server {
+func NewServerDetailed(locationID string, natsClient nats.ClientInterface, unitTestMode bool) *server {
 	return &server{
-		locationID: locationID,
-		natsClient: natsClient,
-		test:       test,
+		locationID:   locationID,
+		natsClient:   natsClient,
+		unitTestMode: unitTestMode,
 	}
 }
 
@@ -79,7 +80,7 @@ func (s *server) configureNatsSyncLocationID() {
 }
 
 // Run - configures and starts the web server
-func (s *server) RunHttpProxyServer() {
+func (s *server) RunHttpProxyServer(test bool) {
 
 	s.configureNatsSyncLocationID()
 
@@ -104,6 +105,9 @@ func (s *server) RunHttpProxyServer() {
 	log.Info("Server Started blocking on channel")
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Interrupt)
+	if test {
+		testing.NotifyOnAppExitMessageGeneric(s.natsClient, quit)
+	}
 	<-quit
 
 	log.Info("Shutdown Server ...")
