@@ -48,28 +48,28 @@ RUN go get github.com/go-delve/delve/cmd/dlv
 ENTRYPOINT ["dlv","--listen=:2345","--headless=true","--api-version=2","--accept-multiclient","exec" ,"out/bridgeserver_amd64_linux"]
 
 # Echo proxylet
-FROM scratch as echo-proxylet
+FROM alpine:3.14 as echo-proxylet
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 COPY --from=base /build/out/echo_main_amd64_linux ./echo_main_amd64_linux
 ENTRYPOINT ["./echo_main_amd64_linux"]
 
 # Simple auth
-FROM scratch as simple-reg-auth
+FROM alpine:3.14 as simple-reg-auth
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 COPY --from=base /build/out/simple_auth_amd64_linux ./simple_auth_amd64_linux
 ENTRYPOINT ["./simple_auth_amd64_linux"]
 
 # http proxy
-FROM scratch as http_proxy
+FROM alpine:3.14 as http_proxy
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 COPY --from=base /build/out/http_proxy_amd64_linux ./http_proxy_amd64_linux
 ENTRYPOINT ["./http_proxy_amd64_linux"]
 
 # http proxylet
-FROM scratch as http_proxylet
+FROM alpine:3.14 as http_proxylet
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 COPY --from=base /build/out/http_proxylet_amd64_linux ./http_proxylet_amd64_linux
