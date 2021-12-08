@@ -13,7 +13,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/theotw/natssync/pkg/httpsproxy"
 	"github.com/theotw/natssync/pkg/httpsproxy/nats"
 )
 
@@ -46,58 +45,20 @@ func DecodeTCPData(data []byte) ([]byte, error) {
 	return bits, err
 }
 
-func SendConnectionRequest(connectionID, clientID, host string) error {
-	nc := GetNatsClient()
-	reply := httpproxy.MakeReplyMessageSubject()
-	sub := httpproxy.MakeMessageSubject(clientID, httpproxy.HTTPS_PROXY_CONNECTION_REQUEST)
-	sync, err := nc.SubscribeSync(reply)
-	if err != nil {
-		log.Errorf("Error connecting to NATS subject  %s", err.Error())
-		return err
-	}
-	var connectionMsg TCPConnectRequest
-	connectionMsg.ConnectionID = connectionID
-	connectionMsg.Destination = host
-	connectionMsg.ProxyLocationID = httpproxy.GetMyLocationID()
-	jsonBits, jsonerr := json.Marshal(&connectionMsg)
-	if jsonerr != nil {
-		return jsonerr
-	}
-
-	//_ = sync.AutoUnsubscribe(1)
-	err = nc.PublishRequest(sub, reply, jsonBits)
-	if err != nil {
-		log.Errorf("Error Sendsing to NATS message  %s", err.Error())
-		return err
-	}
-
-	err = nc.Flush()
-	if err != nil {
-		log.Errorf("Error flushing NATS  %s", err.Error())
-		return err
-	}
-
-	respmsg, nextErr := sync.NextMsg(1 * time.Minute)
-	if nextErr != nil {
-		log.Errorf("Error reading nats msg %s", nextErr.Error())
-		return nextErr
-	}
-	var resp TCPConnectResponse
-	jsonerr = json.Unmarshal(respmsg.Data, &resp)
-	if jsonerr != nil {
-		return jsonerr
-	}
-	var respError error
-	if resp.State != "ok" {
-		respError = errors.New(resp.State + resp.StateDetails)
-	}
-	log.Debugf("End Connection request status: %s  details %s", resp.State, resp.StateDetails)
-
-	return respError
-}
-
 func StartBiDiNatsTunnel(nc nats.ClientInterface, outBoundSubject, inBoundSubject, connectionID string, socket io.ReadWriteCloser) error {
-	defer socket.Close()
+
+	defer func() {
+		if err := socket.Close(); err != nil {
+			log.WithError(err).
+				WithFields(
+					log.Fields{
+						"outBoundSubject": outBoundSubject,
+						"inBoundSubject":  inBoundSubject,
+						"connectionID":    connectionID,
+					},
+				).Errorf("failed to close socket")
+		}
+	}()
 
 	//First, setup and subscribe to the inbound Subject
 	inBoundQueue, err := nc.SubscribeSync(inBoundSubject)
@@ -115,26 +76,30 @@ func StartBiDiNatsTunnel(nc nats.ClientInterface, outBoundSubject, inBoundSubjec
 func TransferTcpDataToNats(subject string, connectionID string, src io.ReadCloser) {
 	nc := GetNatsClient()
 
-	sequnceID := 0
+	sequenceID := 0
 	for {
 		log.Debug("Reading Data from socket")
 		buf := make([]byte, 1024)
-		len, readErr := src.Read(buf)
-		log.Debugf("Read %d bytes ", len)
-		if len > 0 {
-			writebuf := buf[:len]
-			sequnceID = sequnceID + 1
-			dataToSend := EncodeTCPData(writebuf, connectionID, sequnceID)
+		bufferLen, readErr := src.Read(buf)
+		log.Debugf("Read %d bytes ", bufferLen)
+		if bufferLen > 0 {
+			writeBuf := buf[:bufferLen]
+			sequenceID = sequenceID + 1
+			dataToSend := EncodeTCPData(writeBuf, connectionID, sequenceID)
 
 			writeErr := nc.Publish(subject, dataToSend)
-			nc.Flush()
+			if err := nc.Flush(); err != nil {
+				log.WithError(err).Errorf("failed to flush natssync")
+			}
+
 			if writeErr != nil {
-				log.Errorf("Error writing data to nats %s", writeErr.Error())
+				log.WithError(writeErr).Errorf("Error writing data to nats")
 				break
 			} else {
-				log.Debugf("Sent socket data to nats %s", subject)
+				log.WithField("subject", subject).Debugf("Sent socket data to nats")
 			}
 		}
+
 		if readErr != nil {
 			if readErr != io.EOF {
 				log.WithError(readErr).Errorf("Error reading data tcp -> nats")
@@ -142,13 +107,19 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 			break
 		}
 	}
+
 	writebuf := make([]byte, 0)
-	sequnceID = sequnceID + 1
-	dataToSend := EncodeTCPData(writebuf, connectionID, sequnceID)
+	sequenceID = sequenceID + 1
+	dataToSend := EncodeTCPData(writebuf, connectionID, sequenceID)
+
 	//send one last 0 len data package to send the stream
 	log.WithField("subject", subject).Debug("Sent final packet data to nats")
-	nc.Publish(subject, dataToSend)
-	nc.Flush()
+	if err := nc.Publish(subject, dataToSend); err != nil {
+		log.WithError(err).Errorf("failed to publish data")
+	}
+	if err := nc.Flush(); err != nil {
+		log.WithError(err).Errorf("failed to flush natssync")
+	}
 
 	log.Debug("Terminating")
 	//send terminate
@@ -159,14 +130,16 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 		log.Debug("waiting for Data from nats")
 		natsMsg, err := queue.NextMsg(10 * time.Minute)
 		if err != nil {
-			log.Errorf("Error reading from NATS %s", err.Error())
+			log.WithError(err).Errorf("Error reading from NATS")
 		} else {
 			log.Debug("Got package from nats")
 			tcpData, readErr := DecodeTCPData(natsMsg.Data)
 			if readErr == nil {
 				log.Debugf("Got valid package from nats len %d", len(tcpData))
 				if len(tcpData) > 0 {
-					dest.Write(tcpData)
+					if _, err := dest.Write(tcpData); err != nil {
+						log.WithError(err).Errorf("failed to write tcp data to socket")
+					}
 				} else {
 					//if we got 0 length data, we are done, bail
 					break

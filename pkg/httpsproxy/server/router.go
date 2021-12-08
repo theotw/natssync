@@ -5,154 +5,61 @@
 package server
 
 import (
-	"context"
 	"encoding/base64"
-	"fmt"
-	"github.com/theotw/natssync/pkg/testing"
 	"net/http"
-	"os"
-	"os/signal"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/theotw/natssync/pkg"
-	"github.com/theotw/natssync/pkg/httpsproxy"
-	models2 "github.com/theotw/natssync/pkg/httpsproxy/models"
-	"github.com/theotw/natssync/pkg/httpsproxy/nats"
 )
 
-const (
-	defaultLocationID = "proxy"
-	locationIDEnvVar  = "DEFAULT_LOCATION_ID"
-	proxyPortEnvVar   = "PROXY_PORT"
-	defaultProxyPort  = "8080"
-)
-
-func getLocationIDFromEnv() string {
-	return pkg.GetEnvWithDefaults(locationIDEnvVar, defaultLocationID)
-}
-
-func getProxyHostPort() string {
-	port := pkg.GetEnvWithDefaults(proxyPortEnvVar, defaultProxyPort)
-	return fmt.Sprintf(":%s", port)
-}
-
-// Run - configures and starts the web server
-func RunHttpProxyServer(test bool) error {
-	httpproxy.SetMyLocationID(getLocationIDFromEnv())
-
-	err := models2.InitNats()
-	if err != nil {
-		return err
-	}
-
-	logLevel := httpproxy.GetEnvWithDefaults("LOG_LEVEL", "debug")
-	level, levelerr := log.ParseLevel(logLevel)
-	if levelerr != nil {
-		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
-		level = log.DebugLevel
-	}
-	log.SetLevel(level)
-
-	nc := models2.GetNatsClient()
-	_, err = nc.Subscribe(ResponseForLocationID, func(msg *nats.Msg) {
-		locationID := string(msg.Data)
-		httpproxy.SetMyLocationID(locationID)
-		log.Infof("Using location ID %s", locationID)
-
-	})
-	if err != nil {
-		log.Fatalf("Unable to talk to NATS %s", err.Error())
-	}
-	nc.Publish(RequestForLocationID, []byte(""))
-
-	r := newRouter()
-	srv := &http.Server{
-		Addr:    getProxyHostPort(),
-		Handler: r,
-	}
-	log.Infof("Starting server on port 8080")
-	go func() {
-		// service connections
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
-		}
-	}()
-
-	// Wait for interrupt signal to gracefully shutdown the server with
-	// a timeout of 5 seconds.
-	log.Infof("Server Started blocking on channel")
-	quit := make(chan os.Signal)
-	signal.Notify(quit, os.Interrupt)
-	if test {
-		testing.NotifyOnAppExitMessageGeneric(nc, quit)
-	}
-	<-quit
-	log.Println("Shutdown Server ...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("Server Shutdown:", err)
-	}
-	log.Println("Server exiting")
-	return nil
-}
-
-func newRouter() *gin.Engine {
+func newRouter(s *server) *gin.Engine {
 	router := gin.Default()
 	router.Use(loggerMiddleware)
-	root := router.Group("/")
+
 	router.NoRoute(func(c *gin.Context) {
-		//not sure why I need to do this here and connect is not picked up below, debug it later
+
 		if c.Request.Method == http.MethodConnect {
-			connectHandler(c)
-		} else {
-			c.Status(404)
+			s.connectHandler(c)
+			return
 		}
 
+		c.Status(http.StatusNotFound)
 	})
-	router.Handle(http.MethodConnect, "", connectHandler)
-	root.Handle(http.MethodGet, "*urlPath", routeHandler)
-	root.Handle(http.MethodPost, "*urlPath", routeHandler)
-	root.Handle(http.MethodPut, "*urlPath", routeHandler)
-	root.Handle(http.MethodPatch, "*urlPath", routeHandler)
-	root.Handle(http.MethodHead, "*urlPath", routeHandler)
-	root.Handle(http.MethodOptions, "*urlPath", routeHandler)
-	root.Handle(http.MethodDelete, "*urlPath", routeHandler)
-	root.Handle(http.MethodTrace, "*urlPath", routeHandler)
+
+	router.Any("*urlPath", s.RouteHandler)
+
+	log.Info("registered routes: ")
+	for _, routeInfo := range router.Routes() {
+		log.Infof("%s %s", routeInfo.Method, routeInfo.Path)
+	}
 
 	return router
 }
 
-//router middle ware
-func loggerMiddleware(c *gin.Context) {
-	clientID := FetchClientIDFromProxyAuthHeader(c)
-	log.Debugf("Recieved Request for Client ID:%s of %s %s", clientID, c.Request.Method, c.Request.RequestURI)
-	c.Next()
-}
-
-const BASIC_AUTH_PREFIX = "Basic "
+const (
+	BASIC_AUTH_PREFIX = "Basic "
+	ProxyAuthHeader   = "Proxy-Authorization"
+)
 
 func FetchClientIDFromProxyAuthHeader(c *gin.Context) string {
-	proxyAuth := c.Request.Header.Get("Proxy-Authorization")
-	var clientID string
+
+	proxyAuth := c.Request.Header.Get(ProxyAuthHeader)
 	if strings.HasPrefix(proxyAuth, BASIC_AUTH_PREFIX) {
 		b64authInfo := proxyAuth[len(BASIC_AUTH_PREFIX):]
 		authInfo, err := base64.StdEncoding.DecodeString(b64authInfo)
-
 		if err != nil {
-			log.Errorf("Error decoding auth %s", err.Error())
+			log.WithError(err).Error("Error decoding auth")
+			return ""
+
 		} else {
-			tmp := string(authInfo)
-			split := strings.Split(tmp, ":")
+			split := strings.Split(string(authInfo), ":")
 			if len(split) > 0 {
-				clientID = split[0]
+				return split[0]
 			}
 		}
 	}
-	return clientID
+
+	log.Errorf("failed to find clientID from '%s' header", ProxyAuthHeader)
+	return ""
 }

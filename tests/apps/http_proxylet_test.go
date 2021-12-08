@@ -5,14 +5,24 @@
 package apps
 
 import (
-	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg/httpsproxy/proxylet"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/httpsproxy/proxylet"
+	"github.com/theotw/natssync/utils"
 )
 
 func TestHttpProxylet(t *testing.T) {
+	utils.InitLogging()
+
 	log.Infof("Version %s", pkg.VERSION)
-	proxylet.RunProxylet(true)
+
+	proxyletObject, err := proxylet.NewProxylet()
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create proxylet object")
+	}
+
+	proxyletObject.RunHttpProxylet(true)
 }

@@ -12,7 +12,7 @@ type mockSubscription struct {
 	autoUnsubscribeError error
 	unsubscribeError     error
 	nextMsgError         error
-	queue                []nats.Msg
+	Queue                []nats.Msg
 	counter              int
 }
 
@@ -21,15 +21,15 @@ func (m *mockSubscription) AutoUnsubscribe(max int) error {
 }
 
 func (m *mockSubscription) NextMsg(duration time.Duration) (*nats.Msg, error) {
-	if m.counter >= len(m.queue) {
+	if m.counter >= len(m.Queue) {
 		for {
-			if m.counter < len(m.queue) {
+			if m.counter < len(m.Queue) {
 				break
 			}
 		}
 	}
 
-	message := m.queue[m.counter]
+	message := m.Queue[m.counter]
 	m.counter = m.counter + 1
 	return &message, m.nextMsgError
 }
@@ -57,7 +57,7 @@ func (m *mockNats) Subscribe(subj string, cb nats.MsgHandler) (nats.NatsSubscrip
 	}()
 
 	if ok {
-		for _, msg := range subscription.queue {
+		for _, msg := range subscription.Queue {
 			subscription.counter++
 			cb(&msg)
 		}
@@ -70,10 +70,10 @@ func (m *mockNats) Publish(subj string, data []byte) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	if _, ok := m.Queues[subj]; !ok {
-		m.Queues[subj] = &mockSubscription{queue: make([]nats.Msg, 0)}
+		m.Queues[subj] = &mockSubscription{Queue: make([]nats.Msg, 0)}
 	}
 	msg := nats.Msg{Data: data}
-	m.Queues[subj].queue = append(m.Queues[subj].queue, msg)
+	m.Queues[subj].Queue = append(m.Queues[subj].Queue, msg)
 	return m.publishError
 }
 
@@ -89,19 +89,23 @@ func (m *mockNats) SubscribeSync(subj string) (nats.NatsSubscriptionInterface, e
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	if _, ok := m.Queues[subj]; !ok {
-		m.Queues[subj] = &mockSubscription{queue: make([]nats.Msg, 0)}
+		m.Queues[subj] = &mockSubscription{Queue: make([]nats.Msg, 0)}
 	}
 
 	return m.Queues[subj], nil
 }
 
 func (m *mockNats) PublishRequest(subj string, reply string, data []byte) error {
-	panic("implement me")
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.Queues[subj] = &mockSubscription{Queue: []nats.Msg{{Data: data, Reply: reply}}}
+
+	return nil
 }
 
 func (m *mockNats) PrintDebug() {
 	for subject, subscription := range m.Queues {
-		fmt.Printf("subject: %s count: %v : %v\n", subject, len(subscription.queue), subscription.queue)
+		fmt.Printf("subject: %s count: %v : %v\n", subject, len(subscription.Queue), subscription.Queue)
 	}
 	fmt.Println()
 }

@@ -18,8 +18,8 @@ func TestLocationIDSetting(t *testing.T) {
 	assert.Nil(t, err)
 	locationID := "dummyLocationID"
 	requestHandler := utres.NewMockRequestHandler()
-	mockProxylet := proxylet.NewProxyletDetailed(natsConn, locationID, requestHandler)
-	mockProxylet.RunHttpProxylet()
+	mockProxylet := proxylet.NewProxyletDetailed(natsConn, locationID, requestHandler, true)
+	mockProxylet.RunHttpProxylet(false)
 
 	assert.Equal(t, natsSyncClientID, requestHandler.GetLocationID())
 }
@@ -33,8 +33,8 @@ func TestHttpRequest(t *testing.T) {
 
 	requestHandler := utres.NewMockRequestHandler()
 
-	mockProxylet := proxylet.NewProxyletDetailed(natsConn, locationID, requestHandler)
-	mockProxylet.RunHttpProxylet()
+	mockProxylet := proxylet.NewProxyletDetailed(natsConn, locationID, requestHandler, true)
+	mockProxylet.RunHttpProxylet(false)
 	assert.True(t, requestHandler.InvokedHttpHandler())
 	assert.False(t, requestHandler.InvokedHttpsHandler())
 }
@@ -48,8 +48,8 @@ func TestHttpsRequest(t *testing.T) {
 
 	requestHandler := utres.NewMockRequestHandler()
 
-	mockProxylet := proxylet.NewProxyletDetailed(natsConn, locationID, requestHandler)
-	mockProxylet.RunHttpProxylet()
+	mockProxylet := proxylet.NewProxyletDetailed(natsConn, locationID, requestHandler, true)
+	mockProxylet.RunHttpProxylet(false)
 	assert.True(t, requestHandler.InvokedHttpsHandler())
 	assert.False(t, requestHandler.InvokedHttpHandler())
 

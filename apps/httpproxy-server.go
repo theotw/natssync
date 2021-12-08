@@ -5,17 +5,22 @@
 package main
 
 import (
+	log "github.com/sirupsen/logrus"
+
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/httpsproxy/server"
-	"os"
-
-	log "github.com/sirupsen/logrus"
+	"github.com/theotw/natssync/utils"
 )
 
 func main() {
-	log.Infof("Version %s",pkg.VERSION)
-	if err := server.RunHttpProxyServer(false); err != nil {
-		log.Panic(err)
-		os.Exit(1)
+	utils.InitLogging()
+
+	log.Infof("Version %s", pkg.VERSION)
+
+	proxyServer, err := server.NewServer()
+	if err != nil {
+		log.WithError(err).Fatal("failed to instantiate proxy server")
 	}
+
+	proxyServer.RunHttpProxyServer(false)
 }

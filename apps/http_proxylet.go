@@ -6,12 +6,21 @@ package main
 
 import (
 	log "github.com/sirupsen/logrus"
-	"github.com/theotw/natssync/pkg/httpsproxy/proxylet"
 
 	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/httpsproxy/proxylet"
+	"github.com/theotw/natssync/utils"
 )
 
 func main() {
+	utils.InitLogging()
+
 	log.Infof("Version %s", pkg.VERSION)
-	proxylet.RunProxylet(false)
+
+	proxyletObject, err := proxylet.NewProxylet()
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create proxylet object")
+	}
+
+	proxyletObject.RunHttpProxylet(false)
 }

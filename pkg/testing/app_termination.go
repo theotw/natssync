@@ -1,10 +1,12 @@
 package testing
 
 import (
+	"os"
+
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
+
 	nats2 "github.com/theotw/natssync/pkg/httpsproxy/nats"
-	"os"
 )
 
 type NatsConnectionInterface interface {
@@ -30,7 +32,7 @@ func NotifyOnAppExitMessage(natsConnection NatsConnectionInterface, quitChannel 
 		log.WithError(err).Fatal("failed to subscribe to the app exit topic")
 	}
 
-	log.Infof("Succesfully subscribed to the app exit topic. To exit the app gracefully, send a NATS message to: %s", AppExitTopic)
+	log.Infof("Successfully subscribed to the app exit topic. To exit the app gracefully, send a NATS message to: %s", AppExitTopic)
 }
 
 // NotifyOnAppExitMessageGeneric does the same thing as NotifyOnAppExitMessage but allows using the generic interface defined in this
@@ -47,5 +49,5 @@ func NotifyOnAppExitMessageGeneric(client nats2.ClientInterface, quitChannel cha
 		log.WithError(err).Fatal("failed to subscribe to the app exit topic")
 	}
 
-	log.Infof("Succesfully subscribed to the app exit topic. To exit the app gracefully, send a NATS message to: %s", AppExitTopic)
+	log.Infof("Successfully subscribed to the app exit topic. To exit the app gracefully, send a NATS message to: %s", AppExitTopic)
 }

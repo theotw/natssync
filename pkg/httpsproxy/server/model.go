@@ -26,6 +26,7 @@ type HttpReqHeader struct {
 	Key    string
 	Values []string
 }
+
 type HttpApiReqMessage struct {
 	HttpMethod string
 	HttpPath   string
@@ -33,6 +34,7 @@ type HttpApiReqMessage struct {
 	Headers    []HttpReqHeader
 	Target     string
 }
+
 type HttpApiResponseMessage struct {
 	HttpStatusCode int
 	RespBody       string
@@ -46,6 +48,32 @@ func NewHttpApiReqMessageFromNatsMessage(m *nats.Msg) (*HttpApiReqMessage, error
 		return nil, err
 	}
 	return req, nil
+}
+
+func NewHttpApiReqMessageFromHttpRequest(req *http.Request) (*HttpApiReqMessage, error) {
+
+	msg := &HttpApiReqMessage{
+		Target:     req.Host,
+		HttpMethod: req.Method,
+		HttpPath:   req.URL.Path,
+	}
+
+	if bodyBits, bodyErr := ioutil.ReadAll(req.Body); bodyErr != nil {
+		return nil, fmt.Errorf("error reading body %s", bodyErr.Error())
+	} else {
+		msg.Body = bodyBits
+	}
+
+	for k, v := range req.Header {
+		x := HttpReqHeader{
+			Key:    k,
+			Values: v,
+		}
+
+		msg.Headers = append(msg.Headers, x)
+	}
+
+	return msg, nil
 }
 
 func (req *HttpApiReqMessage) ToHttpRequest() *http.Request {
