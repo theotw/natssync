@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -79,7 +80,17 @@ func (rv *requestValidator) swapMapIfRequired() error {
 	}()
 }
 
+func getTargetHost(target string) string {
+	output := strings.Split(target, ":")
+	if len(output) > 0 {
+		return output[0]
+	}
+	return target
+}
+
 func (rv *requestValidator) IsValidRequest(target string) error {
+
+	targetHost := getTargetHost(target)
 
 	rv.refreshConfigIfRequired()
 
@@ -89,7 +100,7 @@ func (rv *requestValidator) IsValidRequest(target string) error {
 	func() {
 		rv.Mutex.Lock()
 		defer rv.Mutex.Unlock()
-		targetValue, targetExists = rv.configMap[target]
+		targetValue, targetExists = rv.configMap[targetHost]
 	}()
 
 	if !targetExists || !targetValue {
