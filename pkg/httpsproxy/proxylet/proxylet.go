@@ -35,6 +35,7 @@ type proxylet struct {
 	natsClient        nats.ClientInterface
 	locationID        string
 	requestHandler    RequestHandlerInterface
+	unitTestMode      bool
 }
 
 func getLocationIDFromEnv() string {
@@ -63,15 +64,17 @@ func NewProxylet() (*proxylet, error) {
 		natsClient,
 		defaultLocationID,
 		requestHandler,
+		false,
 	), nil
 
 }
 
-func NewProxyletDetailed(natsClient nats.ClientInterface, locationID string, handler RequestHandlerInterface) *proxylet {
+func NewProxyletDetailed(natsClient nats.ClientInterface, locationID string, handler RequestHandlerInterface, unitTestMode bool) *proxylet {
 	return &proxylet{
 		natsClient:     natsClient,
 		locationID:     locationID,
 		requestHandler: handler,
+		unitTestMode:   unitTestMode,
 	}
 }
 
@@ -155,5 +158,7 @@ func (p *proxylet) RunHttpProxylet(test bool) {
 		return
 	}
 
-	runtime.Goexit()
+	if !p.unitTestMode {
+		runtime.Goexit()
+	}
 }
