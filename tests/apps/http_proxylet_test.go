@@ -11,11 +11,11 @@ import (
 
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/httpsproxy/proxylet"
-	utils2 "github.com/theotw/natssync/utils"
+	"github.com/theotw/natssync/utils"
 )
 
 func TestHttpProxylet(t *testing.T) {
-	utils2.InitLogging()
+	utils.InitLogging()
 
 	log.Infof("Version %s", pkg.VERSION)
 

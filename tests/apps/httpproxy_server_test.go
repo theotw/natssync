@@ -9,13 +9,13 @@ import (
 
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/httpsproxy/server"
-	utils2 "github.com/theotw/natssync/utils"
+	"github.com/theotw/natssync/utils"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func TestHttpProxyServer(t *testing.T) {
-	utils2.InitLogging()
+	utils.InitLogging()
 
 	log.Infof("Version %s", pkg.VERSION)
 
