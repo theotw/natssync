@@ -1,3 +1,6 @@
 {
-  "testnginx": true
+  "defaultBehaviour": "block",
+  "hosts": {
+    "testnginx": true
+  }
 }
