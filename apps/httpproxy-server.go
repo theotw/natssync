@@ -5,17 +5,33 @@
 package main
 
 import (
-	"github.com/theotw/natssync/pkg"
-	"github.com/theotw/natssync/pkg/httpsproxy/server"
-	"os"
-
 	log "github.com/sirupsen/logrus"
+
+	"github.com/theotw/natssync/pkg"
+	httpproxy "github.com/theotw/natssync/pkg/httpsproxy"
+	"github.com/theotw/natssync/pkg/httpsproxy/server"
+)
+
+const (
+	logLevelEnvVariableServer = "LOG_LEVEL"
 )
 
 func main() {
-	log.Infof("Version %s",pkg.VERSION)
-	if err := server.RunHttpProxyServer(false); err != nil {
-		log.Panic(err)
-		os.Exit(1)
+
+	logLevel := httpproxy.GetEnvWithDefaults(logLevelEnvVariableServer, log.DebugLevel.String())
+
+	level, levelErr := log.ParseLevel(logLevel)
+	if levelErr != nil {
+		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
+		level = log.DebugLevel
 	}
+	log.SetLevel(level)
+
+	log.Infof("Version %s", pkg.VERSION)
+
+	proxyServer, err := server.NewServer()
+	if err != nil {
+		log.WithError(err).Fatal("failed to instantiate proxy server")
+	}
+	proxyServer.RunHttpProxyServer()
 }

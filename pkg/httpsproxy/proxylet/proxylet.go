@@ -78,10 +78,15 @@ func NewProxylet() (*proxylet, error) {
 
 	defaultLocationID := getLocationIDFromEnv()
 
+	requestHandler, err := NewRequestHandler(defaultLocationID, natsClient)
+	if err != nil {
+		return nil, err
+	}
+
 	return NewProxyletDetailed(
 		natsClient,
 		defaultLocationID,
-		NewRequestHandler(defaultLocationID, natsClient),
+		requestHandler,
 	), nil
 
 }
@@ -156,7 +161,10 @@ func (p *proxylet) configureNatsSyncLocationID() {
 		log.WithError(err).Fatalf("Unable to talk to NATS")
 	}
 
-	_ = p.natsClient.Publish(server.RequestForLocationID, []byte(""))
+	err = p.natsClient.Publish(server.RequestForLocationID, []byte(""))
+	if err != nil {
+		log.WithError(err).Errorf("failed to send request for locationID")
+	}
 }
 
 func (p *proxylet) RunHttpProxylet() {

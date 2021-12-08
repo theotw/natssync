@@ -11,11 +11,13 @@ import (
 	"os"
 )
 
-const CLOUD_ID = "cloud-master"
-const NATS_MSG_PREFIX = "natssyncmsg"
-const HTTP_PROXY_API_ID = "httpproxy"
-const HTTPS_PROXY_API_ID = "httpsproxy"
-const HTTPS_PROXY_CONNECTION_REQUEST = "httpsproxy-connection"
+const (
+	NATS_MSG_PREFIX                = "natssyncmsg"
+	HTTP_PROXY_API_ID              = "httpproxy"
+	HTTPS_PROXY_API_ID             = "httpsproxy"
+	HTTPS_PROXY_CONNECTION_REQUEST = "httpsproxy-connection"
+	TestRandomReplyMessageUUID     = "08026b1a-7341-4d69-880b-7db9897a8a17"
+)
 
 func GetEnvWithDefaults(envKey string, defaultVal string) string {
 	val := os.Getenv(envKey)
@@ -25,22 +27,18 @@ func GetEnvWithDefaults(envKey string, defaultVal string) string {
 	return val
 }
 
-//makes a random reploy subject that will route from the client (south side) to the server side
-func MakeReplyMessageSubject() string {
-	locationID := GetMyLocationID()
+//makes a random reply subject that will route from the client (south side) to the server side
+func MakeReplyMessageSubject(locationID string, test bool) string {
 	randomClientUUID := uuid.New().String()
+
+	if test {
+		randomClientUUID = TestRandomReplyMessageUUID
+	}
+
 	ret := fmt.Sprintf("%s.%s.%s.*", NATS_MSG_PREFIX, locationID, randomClientUUID)
 	return ret
 }
 
-var locationID string
-
-func GetMyLocationID() string {
-	return locationID
-}
-func SetMyLocationID(id string) {
-	locationID = id
-}
 func MakeMessageSubject(targetLocationID string, appID string) string {
 	sub := fmt.Sprintf("%s.%s.%s", NATS_MSG_PREFIX, targetLocationID, appID)
 	return sub

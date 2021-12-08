@@ -27,15 +27,20 @@ type tcpClientInterface interface {
 	DialTimeout(address string, timeout time.Duration) (io.ReadWriteCloser, error)
 }
 
-type requestHandler struct {
-	counter    int
-	httpClient httpClientInterface
-	tcpClient  tcpClientInterface
-	natsClient nats.ClientInterface
-	locationID string
+type requestValidatorInterface interface {
+	IsValidRequest(string) error
 }
 
-func NewRequestHandler(LocationID string, natsClient nats.ClientInterface) *requestHandler {
+type requestHandler struct {
+	counter          int
+	httpClient       httpClientInterface
+	tcpClient        tcpClientInterface
+	natsClient       nats.ClientInterface
+	locationID       string
+	requestValidator requestValidatorInterface
+}
+
+func NewRequestHandler(LocationID string, natsClient nats.ClientInterface) (*requestHandler, error) {
 
 	httpClient := &http.Client{
 		Transport: &http.Transport{
@@ -47,16 +52,29 @@ func NewRequestHandler(LocationID string, natsClient nats.ClientInterface) *requ
 
 	tcpClient := net.NewTcpClient()
 
-	return NewRequestHandlerDetailed(0, httpClient, tcpClient, natsClient, LocationID)
+	requestValidator, err := NewRequestValidator()
+	if err != nil {
+		return nil, err
+	}
+
+	return NewRequestHandlerDetailed(0, httpClient, tcpClient, natsClient, LocationID, requestValidator), nil
 }
 
-func NewRequestHandlerDetailed(counter int, httpClient httpClientInterface, tcpClient tcpClientInterface, natsClient nats.ClientInterface, locationID string) *requestHandler {
+func NewRequestHandlerDetailed(
+	counter int,
+	httpClient httpClientInterface,
+	tcpClient tcpClientInterface,
+	natsClient nats.ClientInterface,
+	locationID string,
+	validator requestValidatorInterface,
+) *requestHandler {
 	return &requestHandler{
-		counter:    counter,
-		httpClient: httpClient,
-		tcpClient:  tcpClient,
-		natsClient: natsClient,
-		locationID: locationID,
+		counter:          counter,
+		httpClient:       httpClient,
+		tcpClient:        tcpClient,
+		natsClient:       natsClient,
+		locationID:       locationID,
+		requestValidator: validator,
 	}
 }
 
@@ -86,12 +104,18 @@ func (rh *requestHandler) HttpHandler(m *nats.Msg) {
 		return
 	}
 
-	httpResp, err := rh.httpClient.Do(req.ToHttpRequest())
-	if err != nil {
-		log.WithError(err).Errorf("Error decoding http message")
+	if err := rh.requestValidator.IsValidRequest(req.Target); err != nil {
+		log.WithError(err).WithField("target", req.Target).Errorf("target not configured")
 		resp = server.NewHttpApiResponseMessageFromError(err)
+
 	} else {
-		resp = server.NewHttpApiResponseMessageFromHttpResponse(httpResp)
+		httpResp, err := rh.httpClient.Do(req.ToHttpRequest())
+		if err != nil {
+			log.WithError(err).Errorf("Error decoding http message")
+			resp = server.NewHttpApiResponseMessageFromError(err)
+		} else {
+			resp = server.NewHttpApiResponseMessageFromHttpResponse(httpResp)
+		}
 	}
 
 	respBytes, err := json.Marshal(&resp)
@@ -117,8 +141,13 @@ func (rh *requestHandler) HttpsHandler(msg *nats.Msg) {
 	err := json.Unmarshal(msg.Data, &connectionMsg)
 	if err != nil {
 		log.WithError(err).Errorf("Error deicing connection request")
-		connectionResp.State = "failed"
+		connectionResp.State = models.TCPConnectStateFailed
 		connectionResp.StateDetails = err.Error()
+
+	} else if err = rh.requestValidator.IsValidRequest(connectionMsg.Destination); err != nil {
+		connectionResp.State = models.TCPConnectStateFailed
+		connectionResp.StateDetails = err.Error()
+
 	} else {
 		targetSocket, err := rh.tcpClient.DialTimeout(connectionMsg.Destination, 10*time.Second)
 
@@ -126,10 +155,10 @@ func (rh *requestHandler) HttpsHandler(msg *nats.Msg) {
 			log.WithError(err).
 				WithField("destination", connectionMsg.Destination).
 				Errorf("Error dialing connection")
-			connectionResp.State = "failed"
+			connectionResp.State = models.TCPConnectStateFailed
 			connectionResp.StateDetails = err.Error() + " @ " + connectionMsg.Destination
 		} else {
-			connectionResp.State = "ok"
+			connectionResp.State = models.TCPConnectStateOK
 			outBoundSubject := httpproxy.MakeHttpsMessageSubject(
 				connectionMsg.ProxyLocationID,
 				connectionMsg.ConnectionID,

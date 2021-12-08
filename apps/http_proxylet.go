@@ -11,7 +11,24 @@ import (
 	"github.com/theotw/natssync/pkg"
 )
 
+const (
+	logLevelEnvVariable = "LOG_LEVEL"
+)
+
 func main() {
 	log.Infof("Version %s", pkg.VERSION)
-	proxylet.RunProxylet(false)
+	logLevel := httpproxy.GetEnvWithDefaults(logLevelEnvVariable, log.DebugLevel.String())
+	level, levelErr := log.ParseLevel(logLevel)
+	if levelErr != nil {
+		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
+		level = log.DebugLevel
+	}
+	log.SetLevel(level)
+
+	proxyletObject, err := proxylet.NewProxylet()
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create proxylet object")
+	}
+	proxyletObject.RunHttpProxylet()
+	runtime.Goexit()
 }

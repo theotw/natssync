@@ -621,7 +621,7 @@ func healthCheckGetUnversioned(c *gin.Context) {
 }
 
 func swaggerUIGetHandler(c *gin.Context) {
-	c.Redirect(302, "/bridge-server/api/index_bridge_server_v1.html")
+	c.Redirect(http.StatusFound, "/bridge-server/api/index_bridge_server_v1.html")
 }
 
 func metricGetHandlers(c *gin.Context) {
@@ -644,7 +644,7 @@ func natsMsgPostHandler(c *gin.Context) {
 		return
 	}
 	if !response.Success {
-		c.JSON(401, "")
+		c.JSON(http.StatusUnauthorized, "")
 		return
 	}
 
