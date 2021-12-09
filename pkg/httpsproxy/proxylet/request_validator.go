@@ -105,7 +105,8 @@ func (rv *requestValidator) IsValidRequest(target string) error {
 
 	targetExists := false
 	targetValue := false
-	defaultBehavior := defaultBehaviorBlock
+	// defaultBehavior := defaultBehaviorBlock
+	defaultBehavior := defaultBehaviorAllow
 
 	func() {
 		rv.RWMutex.RLock()
