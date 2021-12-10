@@ -61,10 +61,18 @@ func InitProxyletMetrics() {
 }
 
 func IncTotalRequests() {
+	if totalRequests == nil {
+		return
+	}
+
 	totalRequests.Inc()
 }
 
 func IncTotalRestrictedIPRequests(host, url, method string) {
+	if totalRestrictedIPRequests == nil {
+		return
+	}
+
 	totalRestrictedIPRequests.With(
 		prometheus.Labels{
 			labelUrl:    url,
@@ -75,6 +83,10 @@ func IncTotalRestrictedIPRequests(host, url, method string) {
 }
 
 func IncTotalFailedRequests(statusCode string) {
+	if totalFailedRequests == nil {
+		return
+	}
+
 	totalFailedRequests.With(
 		prometheus.Labels{
 			labelStatusCode: statusCode,
@@ -83,5 +95,9 @@ func IncTotalFailedRequests(statusCode string) {
 }
 
 func IncTotalNonRestrictedIPRequests() {
+	if totalNonRestrictedIPRequests == nil {
+		return
+	}
+
 	totalNonRestrictedIPRequests.Inc()
 }

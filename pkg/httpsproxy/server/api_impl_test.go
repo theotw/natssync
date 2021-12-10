@@ -77,7 +77,7 @@ func TestServer_RouteHandler_Metrics(t *testing.T) {
 
 	serverObj.RouteHandler(dummyGinCxt)
 	// TODO Update this test
-	assert.Equal(t, resWriter.GetStatus(), http.StatusNotImplemented)
+	assert.Equal(t, resWriter.GetStatus(), http.StatusOK)
 }
 
 func TestServer_RouteHandler_BadUrl(t *testing.T) {
