@@ -24,7 +24,7 @@ func TestServer_RouteHandler_About(t *testing.T) {
 	natsConn := utres.NewMockNats(utres.NewDefaultMockNatsInput())
 	serverObj := server.NewServerDetailed("dummyLocationID", natsConn, true)
 
-	resWriter := utils.NewResponseWriter()
+	resWriter := utils.NewResponseWriter(nil)
 
 	dummyGinCxt := &gin.Context{
 		Request: &http.Request{
@@ -47,7 +47,7 @@ func TestServer_RouteHandler_HealthCheck(t *testing.T) {
 	natsConn := utres.NewMockNats(utres.NewDefaultMockNatsInput())
 	serverObj := server.NewServerDetailed("dummyLocationID", natsConn, true)
 
-	resWriter := utils.NewResponseWriter()
+	resWriter := utils.NewResponseWriter(nil)
 
 	dummyGinCxt := &gin.Context{
 		Request: &http.Request{
@@ -65,7 +65,7 @@ func TestServer_RouteHandler_Metrics(t *testing.T) {
 	natsConn := utres.NewMockNats(utres.NewDefaultMockNatsInput())
 	serverObj := server.NewServerDetailed("dummyLocationID", natsConn, true)
 
-	resWriter := utils.NewResponseWriter()
+	resWriter := utils.NewResponseWriter(nil)
 
 	dummyGinCxt := &gin.Context{
 		Request: &http.Request{
@@ -84,7 +84,7 @@ func TestServer_RouteHandler_BadUrl(t *testing.T) {
 	natsConn := utres.NewMockNats(utres.NewDefaultMockNatsInput())
 	serverObj := server.NewServerDetailed("dummyLocationID", natsConn, true)
 
-	resWriter := utils.NewResponseWriter()
+	resWriter := utils.NewResponseWriter(nil)
 
 	dummyGinCxt := &gin.Context{
 		Request: &http.Request{
@@ -103,7 +103,7 @@ func TestServer_RouteHandler(t *testing.T) {
 	natsConn := utres.NewMockNats(utres.NewDefaultMockNatsInput())
 	serverObj := server.NewServerDetailed(locationID, natsConn, true)
 
-	resWriter := utils.NewResponseWriter()
+	resWriter := utils.NewResponseWriter(nil)
 
 	headers := http.Header{}
 	base64EncodedCred := base64.StdEncoding.EncodeToString([]byte("testLocationID:"))

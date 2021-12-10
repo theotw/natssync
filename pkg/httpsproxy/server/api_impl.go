@@ -16,6 +16,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/theotw/natssync/pkg/httpsproxy"
@@ -216,7 +217,7 @@ func (s *server) RouteHandler(c *gin.Context) {
 		}
 
 		if strings.HasSuffix(tmp, "/metrics/") {
-			metricsEndpoint(c)
+			metricsHandler(c)
 			return
 		}
 
@@ -313,7 +314,6 @@ func healthCheckGetUnversioned(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
-// TODO write this endpoint out
-func metricsEndpoint(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, "")
+func metricsHandler(c *gin.Context) {
+	promhttp.Handler().ServeHTTP(c.Writer, c.Request)
 }

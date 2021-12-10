@@ -1,20 +1,23 @@
 package metrics
 
 import (
+	"fmt"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 const (
-	labelUrl        = "url"
-	labelMethod     = "method"
-	labelStatusCode = "statusCode"
+	labelUrl              = "url"
+	labelMethod           = "method"
+	labelHost             = "host"
+	labelStatusCode       = "statusCode"
+	proxyServerSystemName = "httpsproxyserver"
+	proxyletSystemName    = "httpspoxylet"
 )
 
 var (
-	// Number of request in per second hitting the system
-	totalRequestsPerSecond prometheus.Gauge
-
+	// Number of request hitting the system
 	totalRequests prometheus.Counter
 
 	// Number of failed  requests (histogram by error code)
@@ -27,43 +30,46 @@ var (
 	totalNonRestrictedIPRequests prometheus.Counter
 )
 
-func init() {
-	totalRequestsPerSecond = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "httpsproxy_total_requests_per_second",
-		Help: "the total number of requests per second hitting the system",
-	})
-
-	totalFailedRequests = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "httpsproxy_failed_requests",
-		Help: "histogram of all the failed requests",
-	}, []string{labelStatusCode})
-
+func initCommonMetrics(systemName string) {
 	totalRequests = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "httpsproxy_total_requests",
+		Name: fmt.Sprintf("%s_total_requests", systemName),
 		Help: "The total number of request hitting the system",
 	})
 
+	totalFailedRequests = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: fmt.Sprintf("%s_failed_requests", systemName),
+		Help: "histogram of all the failed requests",
+	}, []string{labelStatusCode})
+}
+
+func InitProxyServerMetrics() {
+	initCommonMetrics(proxyServerSystemName)
+}
+
+func InitProxyletMetrics() {
+	initCommonMetrics(proxyletSystemName)
+
 	totalRestrictedIPRequests = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "httpsproxy_total_restricted_IP_requests",
+		Name: fmt.Sprintf("%s_total_restricted_IP_requests", proxyletSystemName),
 		Help: "The total number of requests hitting the system for restricted IP/Domains",
-	}, []string{labelUrl, labelMethod})
+	}, []string{labelUrl, labelMethod, labelHost})
 
 	totalNonRestrictedIPRequests = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "https_total_non_restricted_IP_requests",
+		Name: fmt.Sprintf("%s_total_non_restricted_IP_requests", proxyletSystemName),
 		Help: "The total number of requests hitting the system with a valid IP/Domain",
 	})
-
 }
 
 func IncTotalRequests() {
 	totalRequests.Inc()
 }
 
-func IncTotalRestrictedIPRequests(url, method string) {
+func IncTotalRestrictedIPRequests(host, url, method string) {
 	totalRestrictedIPRequests.With(
 		prometheus.Labels{
 			labelUrl:    url,
 			labelMethod: method,
+			labelHost:   host,
 		},
 	).Inc()
 }
