@@ -15,7 +15,7 @@ import (
 
 func newRouter(s *server) *gin.Engine {
 	router := gin.Default()
-	router.Use(loggerMiddleware)
+	router.Use(loggerMiddleware, MetricsMiddleware)
 
 	router.NoRoute(func(c *gin.Context) {
 

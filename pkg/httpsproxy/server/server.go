@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/pkg/httpsproxy/metrics"
 	"github.com/theotw/natssync/pkg/httpsproxy/models"
 	"github.com/theotw/natssync/pkg/httpsproxy/nats"
 	"github.com/theotw/natssync/pkg/testing"
@@ -99,6 +100,8 @@ func (s *server) RunHttpProxyServer(test bool) {
 			log.Fatalf("listen: %s", err)
 		}
 	}()
+
+	metrics.InitProxyServerMetrics()
 
 	// Wait for interrupt signal to gracefully shutdown the server with
 	// a timeout of 5 seconds.

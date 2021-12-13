@@ -22,5 +22,7 @@ func main() {
 		log.WithError(err).Fatal("Failed to create proxylet object")
 	}
 
+	go proxylet.RunMetricsServer()
+
 	proxyletObject.RunHttpProxylet(false)
 }
