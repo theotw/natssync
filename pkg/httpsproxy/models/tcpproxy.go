@@ -9,11 +9,18 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
+	httpproxy "github.com/theotw/natssync/pkg/httpsproxy"
 	"github.com/theotw/natssync/pkg/httpsproxy/nats"
+)
+
+const (
+	maxBytesToReadTCPEnvVariableKey = "MAX_BYTES_TCP"
+	defaultMaxBytesToReadTCP        = 1024
 )
 
 func EncodeTCPData(data []byte, connectionID string, sequenceID int) []byte {
@@ -76,10 +83,27 @@ func StartBiDiNatsTunnel(nc nats.ClientInterface, outBoundSubject, inBoundSubjec
 func TransferTcpDataToNats(subject string, connectionID string, src io.ReadCloser) {
 	nc := GetNatsClient()
 
+	maxBytesToReadString := httpproxy.GetEnvWithDefaults(
+		maxBytesToReadTCPEnvVariableKey,
+		strconv.Itoa(defaultMaxBytesToReadTCP),
+	)
+
+	maxBytesToRead, err := strconv.Atoi(maxBytesToReadString)
+	if err != nil {
+		log.WithError(err).
+			WithField(maxBytesToReadTCPEnvVariableKey, maxBytesToReadString).
+			Errorf(
+				"failed to get max bytes to read from environment, setting to default value of %v",
+				defaultMaxBytesToReadTCP,
+			)
+
+		maxBytesToRead = defaultMaxBytesToReadTCP
+	}
+
 	sequenceID := 0
 	for {
 		log.Debug("Reading Data from socket")
-		buf := make([]byte, 1024)
+		buf := make([]byte, maxBytesToRead)
 		bufferLen, readErr := src.Read(buf)
 		log.Debugf("Read %d bytes ", bufferLen)
 		if bufferLen > 0 {
