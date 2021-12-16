@@ -25,6 +25,7 @@ type Configuration struct {
 	LogLevel          string
 	KeystoreUrl       string
 	ListenString      string
+	ConfigmapName     string
 	CloudEvents       bool
 	SkipTlsValidation bool
 }
@@ -42,6 +43,7 @@ func (c *Configuration) LoadValues() {
 		{&c.LogLevel, "LOG_LEVEL", "debug"},
 		{&c.KeystoreUrl, "KEYSTORE_URL", "file:///tmp"},
 		{&c.ListenString, "LISTEN_STRING", ":8080"},
+		{&c.ConfigmapName, "CONFIGMAP_NAME", ""},
 		{&c.CloudEvents, "CLOUDEVENTS_ENABLED", false},
 		{&c.SkipTlsValidation, "SKIP_TLS_VALIDATION", false},
 	}
