@@ -8,11 +8,13 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	httpproxy "github.com/theotw/natssync/pkg/httpsproxy"
+	"github.com/theotw/natssync/pkg/httpsproxy/metrics"
 	"github.com/theotw/natssync/pkg/httpsproxy/models"
 	"github.com/theotw/natssync/pkg/httpsproxy/nats"
 	"github.com/theotw/natssync/pkg/httpsproxy/net"
@@ -83,6 +85,8 @@ func (rh *requestHandler) SetLocationID(locationID string) {
 }
 
 func (rh *requestHandler) HttpHandler(m *nats.Msg) {
+	metrics.IncTotalRequests()
+
 	if string(m.Data) == "" {
 		return
 	}
@@ -95,6 +99,8 @@ func (rh *requestHandler) HttpHandler(m *nats.Msg) {
 	if err != nil {
 		log.WithError(err).Errorf("Error decoding http message")
 		resp = server.NewHttpApiResponseMessageFromError(err)
+		metrics.IncTotalFailedRequests(strconv.Itoa(resp.HttpStatusCode))
+
 		if err = rh.natsClient.Publish(m.Reply, []byte("ack")); err != nil {
 			log.WithError(err).
 				WithField("subject", m.Reply).
@@ -108,13 +114,19 @@ func (rh *requestHandler) HttpHandler(m *nats.Msg) {
 		log.WithError(err).WithField("target", req.Target).Errorf("target not configured")
 		resp = server.NewHttpApiResponseMessageFromError(err)
 
+		metrics.IncTotalFailedRequests(strconv.Itoa(resp.HttpStatusCode))
+		metrics.IncTotalRestrictedIPRequests(req.Target, req.HttpPath, req.HttpMethod)
+
 	} else {
 		httpResp, err := rh.httpClient.Do(req.ToHttpRequest())
 		if err != nil {
 			log.WithError(err).Errorf("Error decoding http message")
 			resp = server.NewHttpApiResponseMessageFromError(err)
+			metrics.IncTotalFailedRequests(strconv.Itoa(resp.HttpStatusCode))
+
 		} else {
 			resp = server.NewHttpApiResponseMessageFromHttpResponse(httpResp)
+			metrics.IncTotalNonRestrictedIPRequests()
 		}
 	}
 
@@ -136,6 +148,8 @@ func (rh *requestHandler) HttpHandler(m *nats.Msg) {
 // We attempt to establish a socket to the target host:port.  If we can connect, we then setup two channels.
 // One listener for packets to write to a socket and then a publisher to send packets read from the socket
 func (rh *requestHandler) HttpsHandler(msg *nats.Msg) {
+	metrics.IncTotalRequests()
+
 	var connectionMsg models.TCPConnectRequest
 	var connectionResp models.TCPConnectResponse
 	err := json.Unmarshal(msg.Data, &connectionMsg)
@@ -143,10 +157,14 @@ func (rh *requestHandler) HttpsHandler(msg *nats.Msg) {
 		log.WithError(err).Errorf("Error deicing connection request")
 		connectionResp.State = models.TCPConnectStateFailed
 		connectionResp.StateDetails = err.Error()
+		metrics.IncTotalFailedRequests(strconv.Itoa(http.StatusInternalServerError))
 
 	} else if err = rh.requestValidator.IsValidRequest(connectionMsg.Destination); err != nil {
+
 		connectionResp.State = models.TCPConnectStateFailed
 		connectionResp.StateDetails = err.Error()
+		metrics.IncTotalFailedRequests(strconv.Itoa(http.StatusInternalServerError))
+		metrics.IncTotalRestrictedIPRequests(connectionMsg.Destination, "", http.MethodConnect)
 
 	} else {
 		targetSocket, err := rh.tcpClient.DialTimeout(connectionMsg.Destination, 10*time.Second)
@@ -157,8 +175,11 @@ func (rh *requestHandler) HttpsHandler(msg *nats.Msg) {
 				Errorf("Error dialing connection")
 			connectionResp.State = models.TCPConnectStateFailed
 			connectionResp.StateDetails = err.Error() + " @ " + connectionMsg.Destination
+			metrics.IncTotalFailedRequests(strconv.Itoa(http.StatusInternalServerError))
+
 		} else {
 			connectionResp.State = models.TCPConnectStateOK
+			metrics.IncTotalNonRestrictedIPRequests()
 			outBoundSubject := httpproxy.MakeHttpsMessageSubject(
 				connectionMsg.ProxyLocationID,
 				connectionMsg.ConnectionID,
