@@ -95,6 +95,7 @@ build: basebuild
 basebuild:
 	mkdir -p out
 	rm -f  out/bridgeserver_x64_linux
+	go mod tidy
 	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/bridgeserver_${GOARCH}_${GOOS} apps/bridge_server.go
 	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/bridgeclient_${GOARCH}_${GOOS} apps/bridge_client.go
 	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/echo_main_${GOARCH}_${GOOS} apps/echo_main.go
