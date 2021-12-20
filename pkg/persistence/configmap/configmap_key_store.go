@@ -274,7 +274,6 @@ func (c *ConfigmapKeyStore) ListKnownClients() ([]string, error) {
 func (c *ConfigmapKeyStore) removeConfigmapKey(key string) error {
 	k8sClient, err := c.getK8sClientset()
 	if err != nil {
-		log.Errorf("Unable to initialize kubernetes client.\n%s", err.Error()) //todo duplicated
 		return err
 	}
 
@@ -292,7 +291,6 @@ func (c *ConfigmapKeyStore) addConfigmapKeyPair(key string, value []byte) error 
 
 	k8sClient, err := c.getK8sClientset()
 	if err != nil {
-		log.Errorf("Unable to initialize kubernetes client.\n%s", err.Error()) //todo duplicated
 		return err
 	}
 
@@ -339,11 +337,13 @@ func (c *ConfigmapKeyStore) getK8sClientset() (*kubernetes.Clientset, error) {
 	// Use the k8s service account attached to this pod
 	config, err := rest.InClusterConfig()
 	if err != nil {
+		log.Errorf("Unable to initialize Kubernetes client config.\n%s", err.Error())
 		return nil, err
 	}
 	// Create the client
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
+		log.Errorf("Unable to initialize Kubernetes client.\n%s", err.Error())
 		return nil, err
 	}
 	return clientset, nil
