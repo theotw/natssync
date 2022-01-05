@@ -62,11 +62,11 @@ func testFileKeystoreWriteKeyPair(t *testing.T, keystore *configmap.ConfigmapKey
 		assert.Nil(t, err)
 		err = keystore.WriteKeyPair(locationData)
 		assert.Nil(t, err)
+		time.Sleep(120 * time.Second)
 	}
 }
 
 func testFileKeystoreReadKeyPair(t *testing.T, keystore *configmap.ConfigmapKeyStore) {
-	time.Sleep(120 * time.Second)
 	locationData, err := keystore.ReadKeyPair("")
 	assert.Nil(t, err)
 	assert.Equal(t, "pubkey2", string(locationData.GetPublicKey()))
@@ -102,7 +102,6 @@ func testFileKeyStoreReadLocation(t *testing.T, keystore *configmap.ConfigmapKey
 	locationData, err := keystore.ReadLocation("foo")
 	assert.Nil(t, err)
 	key := locationData.GetPublicKey()
-	assert.Nil(t, err)
 	assert.Equal(t, "This is definitely a key", string(key))
 	assert.Equal(t, metadata, locationData.GetMetadata())
 	locationData, err = keystore.ReadLocation("foo2")
