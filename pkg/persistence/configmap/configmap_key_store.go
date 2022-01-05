@@ -13,7 +13,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -40,7 +39,7 @@ type ConfigmapKeyStore struct {
 
 func (c *ConfigmapKeyStore) GetExistingKeys() ([]*utils.UUIDv1, error) {
 	keys := make([]*utils.UUIDv1, 0)
-	existingKeyInfo, err := c.getExistingKeyMetadata()
+	existingKeyInfo, err := c.getExistingKeysMetadata()
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +94,7 @@ func (c *ConfigmapKeyStore) WriteKeyPair(locationData *types.LocationData) error
 	return nil
 }
 
-func (c *ConfigmapKeyStore) getExistingKeyMetadata() ([]*KeyMetadata, error) {
+func (c *ConfigmapKeyStore) getExistingKeysMetadata() ([]*KeyMetadata, error) {
 	existingKeys := make([]*KeyMetadata, 0)
 	dir, err := ioutil.ReadDir(c.configmapMountPath)
 	if err != nil {
@@ -105,23 +104,43 @@ func (c *ConfigmapKeyStore) getExistingKeyMetadata() ([]*KeyMetadata, error) {
 	for _, f := range dir {
 		if strings.HasSuffix(f.Name(), serviceKeyFileNameSuffix) {
 			mountPath := fmt.Sprintf("%s/%s", c.configmapMountPath, f.Name())
+			fmt.Printf("Splitting %s\n", f.Name())
 			split := strings.Split(f.Name(), "_")
 			id, err := utils.ParseUUIDv1(split[0])
 			if err != nil {
 				log.WithError(err).Error("failed to parse keyID from key file name")
 			}
+			fmt.Printf("Got ID: %s\n", id.String())
 			timestamp, err := strconv.ParseInt(split[1], 10, 64)
+			fmt.Printf("Got timestamp: %d\n", timestamp)
 			if err != nil {
 				log.WithError(err).Error("failed to parse keyID timestamp from key file name")
 			}
-			existingKeys = append(existingKeys, NewKeyMetadata(mountPath, timestamp, id))
+			keyData := NewKeyMetadata(mountPath, timestamp, id)
+			fmt.Printf("Found service key: %v\n", keyData)
+			fmt.Printf("Found service key path: %s\n", keyData.mountPath)
+			existingKeys = append(existingKeys, keyData)
 		}
 	}
 	return existingKeys, nil
 }
 
+func (c *ConfigmapKeyStore) getKeyMetadata(keyID string) (*KeyMetadata, error) {
+	existingKeys, err := c.getExistingKeysMetadata()
+	if err != nil {
+		return nil, err
+	}
+	for _, key := range existingKeys {
+		if key.uuid.String() == keyID {
+			return key, nil
+		}
+	}
+	log.WithError(err).Error("failed to find key")
+	return nil, fmt.Errorf("keyID %s not found", keyID)
+}
+
 func (c *ConfigmapKeyStore) getLatestKeyMetadata() (*KeyMetadata, error) {
-	existingKeys, err := c.getExistingKeyMetadata()
+	existingKeys, err := c.getExistingKeysMetadata()
 	if err != nil {
 		return nil, err
 	}
@@ -140,18 +159,25 @@ func (c *ConfigmapKeyStore) getLatestKeyMetadata() (*KeyMetadata, error) {
 }
 
 func (c *ConfigmapKeyStore) ReadKeyPair(keyID string) (*types.LocationData, error) {
+	var keyMeta *KeyMetadata
 	if keyID == "" {
 		var err error
-		keyMeta, err := c.getLatestKeyMetadata()
+		keyMeta, err = c.getLatestKeyMetadata()
 		if err != nil {
 			return nil, err
 		}
-		keyID = keyMeta.uuid.String()
+	} else {
+		var err error
+		keyMeta, err = c.getKeyMetadata(keyID)
+		if err != nil {
+			return nil, err
+		}
 	}
+	fmt.Printf("Key meta: %v\n", keyMeta)
 
 	locationData := &types.LocationData{}
-	serviceKeyFileName := fmt.Sprintf("%s/%s", c.configmapMountPath, c.makeServiceKeyFileName(keyID))
-	locationDataBytes, err := c.readFile(serviceKeyFileName)
+	fmt.Printf("Reading: %s\n", keyMeta.mountPath)
+	locationDataBytes, err := c.readFile(keyMeta.mountPath)
 	if err != nil {
 		return nil, err
 	}
@@ -164,16 +190,22 @@ func (c *ConfigmapKeyStore) ReadKeyPair(keyID string) (*types.LocationData, erro
 }
 
 func (c *ConfigmapKeyStore) RemoveKeyPair(keyID string) error {
+	var keyMeta *KeyMetadata
 	if keyID == "" {
-		keyMeta, err := c.getLatestKeyMetadata()
+		var err error
+		keyMeta, err = c.getLatestKeyMetadata()
 		if err != nil {
 			return err
 		}
-		keyID = keyMeta.uuid.String()
+	} else {
+		var err error
+		keyMeta, err = c.getKeyMetadata(keyID)
+		if err != nil {
+			return err
+		}
 	}
 
-	serviceKeyFileName := c.makeServiceKeyFileName(keyID)
-	err := c.removeConfigmapKey(serviceKeyFileName)
+	err := c.removeConfigmapKey(keyMeta.mountPath)
 	if err != nil {
 		return err
 	}
@@ -233,7 +265,7 @@ func (c *ConfigmapKeyStore) removeLocationData(locationID string, allowCloudMast
 		return err
 	}
 
-	filename := c.makeLocationDataFileName(locationID)
+	filename := fmt.Sprintf("%s/%s", c.configmapMountPath, c.makeLocationDataFileName(locationID))
 	if err = c.removeConfigmapKey(filename); err != nil {
 		return err
 	}
@@ -272,13 +304,20 @@ func (c *ConfigmapKeyStore) ListKnownClients() ([]string, error) {
 }
 
 func (c *ConfigmapKeyStore) removeConfigmapKey(key string) error {
+	escapedKeyBytes, err := json.Marshal(key)
+	if err != nil {
+		return err
+	}
+
 	k8sClient, err := c.getK8sClientset()
 	if err != nil {
 		return err
 	}
 
-	payloadBytes := []byte(fmt.Sprintf("[{\"op\": \"remove\", \"path\": \"/data/%s\"}]", key))
-	_, err = k8sClient.CoreV1().ConfigMaps("").Patch(context.TODO(), c.configmapName, k8sTypes.JSONPatchType, payloadBytes, metav1.PatchOptions{})
+	payloadBytes := []byte(fmt.Sprintf("[{\"op\": \"remove\", \"path\": %s}]", string(escapedKeyBytes)))
+	fmt.Printf("Payload: %s", string(payloadBytes))
+	//todo fix hardcoded ns
+	_, err = k8sClient.CoreV1().ConfigMaps("pcloud").Patch(context.TODO(), c.configmapName, k8sTypes.JSONPatchType, payloadBytes, metav1.PatchOptions{})
 	if err != nil {
 		log.Errorf("Unable to remove configmap key.\n%s", err.Error())
 		return err
@@ -288,14 +327,29 @@ func (c *ConfigmapKeyStore) removeConfigmapKey(key string) error {
 
 func (c *ConfigmapKeyStore) addConfigmapKeyPair(key string, value []byte) error {
 	log.Tracef("Updating key '%s' in configmap '%s'", key, c.configmapName)
+	fmt.Printf("Updating key '%s' in configmap '%s'", key, c.configmapName)
 
 	k8sClient, err := c.getK8sClientset()
 	if err != nil {
 		return err
 	}
 
-	payloadBytes := []byte(fmt.Sprintf("{\"data\":{\"%s\": \"%s\"}}", key, string(value)))
-	_, err = k8sClient.CoreV1().ConfigMaps("").Patch(context.TODO(), c.configmapName, k8sTypes.MergePatchType, payloadBytes, metav1.PatchOptions{})
+	escapedKeyBytes, err := json.Marshal(key)
+	if err != nil {
+		return err
+	}
+
+	escapedValueBytes, err := json.Marshal(string(value))
+	if err != nil {
+		return err
+	}
+
+	payloadString := fmt.Sprintf("{\"data\": {%s: %s}}", string(escapedKeyBytes), string(escapedValueBytes))
+	fmt.Printf("Patch: %s\n", payloadString)
+	payloadBytes := []byte(payloadString)
+
+	//payloadBytes := []byte(fmt.Sprintf("{\"data\":{\"%s\": \"ok\"}}", key)) // worked
+	_, err = k8sClient.CoreV1().ConfigMaps("pcloud").Patch(context.TODO(), c.configmapName, k8sTypes.MergePatchType, payloadBytes, metav1.PatchOptions{})
 	if err != nil {
 		log.Errorf("Unable to patch configmap.\n%s", err.Error())
 		return err
@@ -304,9 +358,8 @@ func (c *ConfigmapKeyStore) addConfigmapKeyPair(key string, value []byte) error 
 }
 
 func (c *ConfigmapKeyStore) readFile(fileName string) ([]byte, error) {
-	pathToFile := path.Join(c.configmapMountPath, fileName)
-	log.Tracef("Reading from file %s", pathToFile)
-	f, err := os.Open(pathToFile)
+	log.Debug("Reading from file %s", fileName)
+	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
 	}
@@ -325,12 +378,12 @@ func (c *ConfigmapKeyStore) makeLocationDataFileName(locationID string) string {
 }
 
 func (c *ConfigmapKeyStore) getTimestampSuffix() string {
-	secs := time.Now().Unix()
-	return fmt.Sprintf("_%d", secs)
+	microSecs := time.Now().UnixNano()
+	return fmt.Sprintf("_%d", microSecs)
 }
 
 func (c *ConfigmapKeyStore) makeServiceKeyFileName(keyID string) string {
-	return fmt.Sprintf("%s%s%s", keyID, serviceKeyFileNameSuffix, c.getTimestampSuffix())
+	return fmt.Sprintf("%s%s%s", keyID, c.getTimestampSuffix(), serviceKeyFileNameSuffix)
 }
 
 func (c *ConfigmapKeyStore) getK8sClientset() (*kubernetes.Clientset, error) {

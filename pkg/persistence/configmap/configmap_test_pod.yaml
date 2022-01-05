@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: configmap-keystore-test
+spec:
+  serviceAccountName: configmap-service-account
+  containers:
+    - name: configmap-keystore-test
+      image: docker.repo.eng.netapp.com/jharrod/astra/theotw/natssync-tests:jeremy32
+      env:
+        - name: CONFIGMAP_NAME
+          value: "cluster-agent-configmap"
+      volumeMounts:
+        - name: cluster-agent-configmap-volume
+          mountPath: /data
+      command: [ "/bin/sh", "-c", "--" ]
+      args: [ "while true; do sleep 30; done;" ]
+  volumes:
+    - name: cluster-agent-configmap-volume
+      configMap:
+        name: cluster-agent-configmap
