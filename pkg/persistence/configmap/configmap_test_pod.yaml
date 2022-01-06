@@ -6,7 +6,7 @@ spec:
   serviceAccountName: configmap-service-account
   containers:
     - name: configmap-keystore-test
-      image: docker.repo.eng.netapp.com/jharrod/astra/theotw/natssync-tests:jeremy39
+      image: <test image goes here>
       env:
         - name: CONFIGMAP_NAME
           value: "cluster-agent-configmap"
