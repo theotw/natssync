@@ -2,8 +2,42 @@
  * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
-// This was taken from file_key_store_test.go and adapted to work with the configmap keystore.
-// These are not unit tests. The k8s client interface needs to be mocked to make these unit tests.
+/*
+These tests were taken from file_key_store_test.go and adapted to work with the configmap keystore.
+These are not unit tests.
+These tests are very useful for the developer to run (similar to unit tests) to ensure everything still works.
+
+Note: Changes to the configmap (E.g. using keystore.WriteKeyPair()) are not reflected in the pod immediately. These
+	  tests are using a fairly long sleep after writes to ensure everything works. This can be modified to be a
+	  polling type wait instead of sleep if someone has the time and motivation to implement it.
+
+How to run these tests:
+
+These tests currently exercise the real K8s API and must be run inside a pod with correct Pod securityContext. It sounds
+confusing, but the easy way is to just run the PrivateClusterAgent install, and then run the test pod inside that namespace.
+
+1. Install the PrivateClusterAgent helm chart. See https://github.com/NetApp/privateclusteragent.
+2. Build and push the test image:
+	a. From the root of the repo:
+	   'make baseimage &&  make testimage  IMAGE_TAG=<yourTag> IMAGE_REPO=docker.repo.eng.netapp.com/<yourRepo>'
+	b. Push the image you just built. 'docker push <your-image-repo>/natssync-tests:<yourTag>'
+3. Edit pkg/persistence/configmap/configmap_test_pod.yaml. Update 'image:' to point to the image you just pushed ^.
+4. From the root of the repo:
+   'kubectl apply -f pkg/persistence/configmap/configmap_test_pod.yaml -n <private cluster agent namespace>'
+
+At this point, the pod will begin starting. Once it is running you can exec into the pod
+
+5. Exec into the test pod:
+	'kubectl exec -it configmap-keystore-test -n <namespace> -- /bin/sh'
+6. ls the configmap mount dir. 'ls /<mount-path>' E.g. 'ls /data'
+7. Exit the pod with 'exit'
+8. Remove each file that was listed from 'f' using:
+   kubectl patch configmap cluster-agent-configmap -n <namespace> --type=json -p='[{"op": "remove", "path": "/data/<filename>"}]
+   E.g. 'kubectl patch configmap cluster-agent-configmap -n my-namespace --type=json -p='[{"op": "remove", "path": "/data/foo_locationData.json"}]''
+9. Exec back into the pod with 'kubectl exec -it configmap-keystore-test -n <namespace> -- /bin/sh'
+10. Repeat step 6, make sure the files are now gone. Fyi, the files can take a minute to clear after the last kubectl patch command.
+11. Run the tests with './configmap_keystore_amd64_linux.test'
+*/
 
 package configmap_test
 
@@ -26,6 +60,7 @@ type testCase struct {
 }
 
 func TestFileKeyStore(t *testing.T) {
+	// Set to the configmap mount location
 	configmapMountPath := "/data"
 
 	store, err := configmap.NewConfigmapKeyStore(configmapMountPath)
