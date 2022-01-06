@@ -6,10 +6,14 @@ spec:
   serviceAccountName: configmap-service-account
   containers:
     - name: configmap-keystore-test
-      image: <test image goes here>
+      image: docker.repo.eng.netapp.com/jharrod/astra/theotw/natssync-tests:jer2
       env:
         - name: CONFIGMAP_NAME
           value: "cluster-agent-configmap"
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
       volumeMounts:
         - name: cluster-agent-configmap-volume
           mountPath: /data

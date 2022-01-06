@@ -306,8 +306,7 @@ func (c *ConfigmapKeyStore) removeConfigmapKey(key string) error {
 	}
 
 	payloadBytes := []byte(fmt.Sprintf("[{\"op\": \"remove\", \"path\": %s}]", string(escapedKeyBytes)))
-	//todo fix hardcoded ns
-	_, err = k8sClient.CoreV1().ConfigMaps("pcloud").Patch(context.TODO(), c.configmapName, k8sTypes.JSONPatchType, payloadBytes, metav1.PatchOptions{})
+	_, err = k8sClient.CoreV1().ConfigMaps(pkg.Config.PodNamespace).Patch(context.TODO(), c.configmapName, k8sTypes.JSONPatchType, payloadBytes, metav1.PatchOptions{})
 	if err != nil {
 		log.Errorf("Unable to remove configmap key.\n%s", err.Error())
 		return err
@@ -336,8 +335,7 @@ func (c *ConfigmapKeyStore) addConfigmapKeyPair(key string, value []byte) error 
 	payloadString := fmt.Sprintf("{\"data\": {%s: %s}}", string(escapedKeyBytes), string(escapedValueBytes))
 	payloadBytes := []byte(payloadString)
 
-	//payloadBytes := []byte(fmt.Sprintf("{\"data\":{\"%s\": \"ok\"}}", key)) // worked
-	_, err = k8sClient.CoreV1().ConfigMaps("pcloud").Patch(context.TODO(), c.configmapName, k8sTypes.MergePatchType, payloadBytes, metav1.PatchOptions{})
+	_, err = k8sClient.CoreV1().ConfigMaps(pkg.Config.PodNamespace).Patch(context.TODO(), c.configmapName, k8sTypes.MergePatchType, payloadBytes, metav1.PatchOptions{})
 	if err != nil {
 		log.Errorf("Unable to patch configmap.\n%s", err.Error())
 		return err
