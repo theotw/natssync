@@ -16,7 +16,7 @@ spec:
               fieldPath: metadata.namespace
       volumeMounts:
         - name: cluster-agent-configmap-volume
-          mountPath: /data
+          mountPath: /configmap-data
       command: [ "/bin/sh", "-c", "--" ]
       args: [ "while true; do sleep 30; done;" ]
   volumes:

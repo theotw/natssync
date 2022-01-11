@@ -344,7 +344,6 @@ func (c *ConfigmapKeyStore) addConfigmapKeyPair(key string, value []byte) error 
 }
 
 func (c *ConfigmapKeyStore) readFile(fileName string) ([]byte, error) {
-	log.Debug("Reading from file %s", fileName)
 	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
@@ -364,8 +363,8 @@ func (c *ConfigmapKeyStore) makeLocationDataFileName(locationID string) string {
 }
 
 func (c *ConfigmapKeyStore) getTimestampSuffix() string {
-	microSecs := time.Now().UnixNano()
-	return fmt.Sprintf("_%d", microSecs)
+	nanoSecs := time.Now().UnixNano()
+	return fmt.Sprintf("_%d", nanoSecs)
 }
 
 func (c *ConfigmapKeyStore) makeServiceKeyFileName(keyID string) string {
