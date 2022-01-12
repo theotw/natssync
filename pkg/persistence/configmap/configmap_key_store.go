@@ -8,20 +8,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"os"
-	"strconv"
-	"strings"
-	"time"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/types"
 	"github.com/theotw/natssync/pkg/utils"
+	"io/ioutil"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sTypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 )
 
 const (
@@ -200,7 +200,8 @@ func (c *ConfigmapKeyStore) RemoveKeyPair(keyID string) error {
 		}
 	}
 
-	err := c.removeConfigmapKey(keyMeta.mountPath)
+	_, filename := filepath.Split(keyMeta.mountPath)
+	err := c.removeConfigmapKey(filename)
 	if err != nil {
 		return err
 	}
@@ -260,7 +261,7 @@ func (c *ConfigmapKeyStore) removeLocationData(locationID string, allowCloudMast
 		return err
 	}
 
-	filename := fmt.Sprintf("%s/%s", c.configmapMountPath, c.makeLocationDataFileName(locationID))
+	filename := fmt.Sprintf("%s", c.makeLocationDataFileName(locationID))
 	if err = c.removeConfigmapKey(filename); err != nil {
 		return err
 	}
@@ -295,7 +296,8 @@ func (c *ConfigmapKeyStore) ListKnownClients() ([]string, error) {
 }
 
 func (c *ConfigmapKeyStore) removeConfigmapKey(key string) error {
-	escapedKeyBytes, err := json.Marshal(key)
+	// Note: "/data" is not a file/dir. This is specific to k8s configmaps.
+	escapedKeyBytes, err := json.Marshal(fmt.Sprintf("/data/%s", key))
 	if err != nil {
 		return err
 	}
