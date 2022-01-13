@@ -39,7 +39,7 @@ At this point, the pod will begin starting. Once it is running you can exec into
 11. Run the tests with './configmap_keystore_amd64_linux.test'
 */
 
-package integration
+package main
 
 import (
 	"fmt"

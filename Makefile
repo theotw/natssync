@@ -121,7 +121,7 @@ buildtest:
 	go test ${LDFLAGS} ${COVERPKG} -c -o out/bridge_server_${GOARCH}_${GOOS}.test tests/apps/bridge_server_test.go
 	go test ${LDFLAGS} ${COVERPKG} -c -o out/http_proxylet_${GOARCH}_${GOOS}.test tests/apps/http_proxylet_test.go
 	go test ${LDFLAGS} ${COVERPKG} -c -o out/httpproxy_server_${GOARCH}_${GOOS}.test tests/apps/httpproxy_server_test.go
-	go test ${LDFLAGS} ${COVERPKG} -c -o out/configmap_keystore_${GOARCH}_${GOOS}.test tests/integration/configmap_key_store_test.go
+	go test ${LDFLAGS} ${COVERPKG} -c -o out/configmap_keystore_${GOARCH}_${GOOS}.test tests/misc/configmap_key_store_test.go
 
 clean:
 	rm -r -f tmp
