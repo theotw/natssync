@@ -5,9 +5,11 @@
 package pkg
 
 import (
+	"io/ioutil"
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -25,6 +27,8 @@ type Configuration struct {
 	LogLevel          string
 	KeystoreUrl       string
 	ListenString      string
+	ConfigmapName     string
+	PodNamespace      string
 	CloudEvents       bool
 	SkipTlsValidation bool
 }
@@ -42,6 +46,7 @@ func (c *Configuration) LoadValues() {
 		{&c.LogLevel, "LOG_LEVEL", "debug"},
 		{&c.KeystoreUrl, "KEYSTORE_URL", "file:///tmp"},
 		{&c.ListenString, "LISTEN_STRING", ":8080"},
+		{&c.ConfigmapName, "CONFIGMAP_NAME", ""},
 		{&c.CloudEvents, "CLOUDEVENTS_ENABLED", false},
 		{&c.SkipTlsValidation, "SKIP_TLS_VALIDATION", false},
 	}
@@ -53,6 +58,26 @@ func (c *Configuration) LoadValues() {
 			*option.value.(*string) = GetEnvWithDefaults(option.name, option.defaultValue.(string))
 		}
 	}
+
+	c.PodNamespace = PodNamespace()
+}
+
+func PodNamespace() string {
+	// See https://github.com/kubernetes/kubernetes/pull/63707. This is currently the best way to get the k8s namespace.
+	// This way assumes you've set the POD_NAMESPACE environment variable using the downward API.
+	// This check has to be done first for backwards compatibility with the way InClusterConfig was originally set up
+	if ns, ok := os.LookupEnv("POD_NAMESPACE"); ok {
+		return ns
+	}
+
+	// Fall back to the namespace associated with the service account token, if available
+	if data, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace"); err == nil {
+		if ns := strings.TrimSpace(string(data)); len(ns) > 0 {
+			return ns
+		}
+	}
+
+	return "default"
 }
 
 func GetEnvWithDefaults(envKey string, defaultVal string) string {

@@ -3,6 +3,7 @@ package persistence
 import (
 	"context"
 	"fmt"
+	"github.com/theotw/natssync/pkg/persistence/configmap"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -14,8 +15,9 @@ import (
 )
 
 const (
-	fileKeyStoreTypePrefix  = "file://"
-	mongoKeyStoreTypePrefix = "mongodb://"
+	fileKeyStoreTypePrefix      = "file://"
+	mongoKeyStoreTypePrefix     = "mongodb://"
+	configmapKeyStoreTypePrefix = "configmap://"
 )
 
 type LocationKeyStore interface {
@@ -70,6 +72,13 @@ func CreateLocationKeyStore(keystoreUrl string) (LocationKeyStore, error) {
 			newReaper(mongoKeyStore).RunCleanupJob(context.TODO())
 		}
 		return mongoKeyStore, err
+
+	case configmapKeyStoreTypePrefix:
+		configmapKeyStore, err := configmap.NewConfigmapKeyStore(keystoreUri)
+		if err == nil {
+			newReaper(configmapKeyStore).RunCleanupJob(context.TODO())
+		}
+		return configmapKeyStore, err
 	}
 
 	return nil, fmt.Errorf("unsupported keystore types %s", keystoreType)
