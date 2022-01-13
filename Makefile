@@ -95,6 +95,7 @@ build: basebuild
 basebuild:
 	mkdir -p out
 	rm -f  out/bridgeserver_x64_linux
+	go mod tidy
 	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/bridgeserver_${GOARCH}_${GOOS} apps/bridge_server.go
 	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/bridgeclient_${GOARCH}_${GOOS} apps/bridge_client.go
 	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/echo_main_${GOARCH}_${GOOS} apps/echo_main.go
@@ -120,6 +121,7 @@ buildtest:
 	go test ${LDFLAGS} ${COVERPKG} -c -o out/bridge_server_${GOARCH}_${GOOS}.test tests/apps/bridge_server_test.go
 	go test ${LDFLAGS} ${COVERPKG} -c -o out/http_proxylet_${GOARCH}_${GOOS}.test tests/apps/http_proxylet_test.go
 	go test ${LDFLAGS} ${COVERPKG} -c -o out/httpproxy_server_${GOARCH}_${GOOS}.test tests/apps/httpproxy_server_test.go
+	go test ${LDFLAGS} ${COVERPKG} -c -o out/configmap_keystore_${GOARCH}_${GOOS}.test tests/misc/configmap_key_store_test.go
 
 clean:
 	rm -r -f tmp

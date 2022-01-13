@@ -1,4 +1,4 @@
-FROM bmason42/fullstackdev:latest as build
+FROM theotw/devstack:latest as build
 LABEL stage=build
 WORKDIR /build
 RUN mkdir -p web
