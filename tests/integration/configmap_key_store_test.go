@@ -36,10 +36,10 @@ At this point, the pod will begin starting. Once it is running you can exec into
    E.g. 'kubectl patch configmap cluster-agent-configmap -n my-namespace --type=json -p='[{"op": "remove", "path": "/data/foo_locationData.json"}]''
 9. Exec back into the pod with 'kubectl exec -it configmap-keystore-test -n <namespace> -- /bin/sh'
 10. Repeat step 6, make sure the files are now gone. Fyi, the files can take a minute to clear after the last kubectl patch command.
-11. Run the tests with './other-tests/configmap_keystore_amd64_linux.test'
+11. Run the tests with './configmap_keystore_amd64_linux.test'
 */
 
-package configmap_test
+package integration
 
 import (
 	"fmt"

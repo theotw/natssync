@@ -9,8 +9,6 @@ ENV GOSUMDB=off
 COPY --from=base /build/third_party/swaggerui/ ./third_party/swaggerui/
 COPY --from=base /build/openapi/bridge_server_v1.yaml ./openapi/
 COPY --from=base /build/out/*.test ./
-# note: configmap-keystore-test is not a unit test. It needs special setup, so it goes in its own folder for now
-COPY --from=base /build/out/other-tests/*.test ./other-tests/
 
 # Bridge server
 FROM alpine:3.14 as natssync-server
