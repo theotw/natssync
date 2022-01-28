@@ -1,8 +1,15 @@
 # Base image
 FROM natssync-base:latest as base
 
+# Alpine base
+FROM alpine:3.14 as alpine-base
+# Go doesn't use /etc/hosts so we need to create this /etc/nsswitch.conf file to redirect to /etc/hosts in case we ever
+# use kubernetes' hostAliases (which uses /etc/hosts)
+RUN echo 'hosts: files dns' > /etc/nsswitch.conf
+
+
 # Test image
-FROM alpine:3.14 as natssync-tests
+FROM alpine-base as natssync-tests
 WORKDIR /build
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
@@ -11,7 +18,7 @@ COPY --from=base /build/openapi/bridge_server_v1.yaml ./openapi/
 COPY --from=base /build/out/*.test ./
 
 # Bridge server
-FROM alpine:3.14 as natssync-server
+FROM alpine-base as natssync-server
 WORKDIR /build
 COPY --from=base /build/LICENSE /data/
 COPY --from=base /build/web /build/web
@@ -25,9 +32,10 @@ ENV GIN_MODE=release
 ENTRYPOINT ["./bridgeserver_amd64_linux"]
 
 # Bridge client
-FROM alpine:3.14 as natssync-client
+FROM alpine-base as natssync-client
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
+
 WORKDIR /build
 COPY --from=base /build/LICENSE /data/
 #when running with scratch, this needs to go away
@@ -48,28 +56,28 @@ RUN go get github.com/go-delve/delve/cmd/dlv
 ENTRYPOINT ["dlv","--listen=:2345","--headless=true","--api-version=2","--accept-multiclient","exec" ,"out/bridgeserver_amd64_linux"]
 
 # Echo proxylet
-FROM alpine:3.14 as echo-proxylet
+FROM alpine-base as echo-proxylet
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 COPY --from=base /build/out/echo_main_amd64_linux ./echo_main_amd64_linux
 ENTRYPOINT ["./echo_main_amd64_linux"]
 
 # Simple auth
-FROM alpine:3.14 as simple-reg-auth
+FROM alpine-base as simple-reg-auth
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 COPY --from=base /build/out/simple_auth_amd64_linux ./simple_auth_amd64_linux
 ENTRYPOINT ["./simple_auth_amd64_linux"]
 
 # http proxy
-FROM alpine:3.14 as http_proxy
+FROM alpine-base as http_proxy
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 COPY --from=base /build/out/http_proxy_amd64_linux ./http_proxy_amd64_linux
 ENTRYPOINT ["./http_proxy_amd64_linux"]
 
 # http proxylet
-FROM alpine:3.14 as http_proxylet
+FROM alpine-base as http_proxylet
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 COPY --from=base /build/out/http_proxylet_amd64_linux ./http_proxylet_amd64_linux
