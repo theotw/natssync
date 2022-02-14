@@ -42,10 +42,14 @@ func GetKeyStore() LocationKeyStore {
 }
 
 func parseKeystoreUrl(keystoreUrl string) (string, string, error) {
-	log.Debugf("Parsing keystore URL: %s", keystoreUrl)
+	log.Tracef("Parsing keystore URL: %s", keystoreUrl)
 	ksTypeUrl := strings.SplitAfterN(keystoreUrl, "://", 2)
 	if len(ksTypeUrl) != 2 {
-		return "", "", fmt.Errorf("unable to parse url '%s'", keystoreUrl)
+		if log.IsLevelEnabled(log.TraceLevel) {
+			return "", "", fmt.Errorf("unable to parse url '%s'", keystoreUrl)
+		} else {
+			return "", "", fmt.Errorf("unable to parse url")
+		}
 	}
 	ksType := ksTypeUrl[0]
 	ksUrl := ksTypeUrl[1]
@@ -86,6 +90,25 @@ func CreateLocationKeyStore(keystoreUrl string) (LocationKeyStore, error) {
 
 func InitLocationKeyStore() error {
 	var err error
-	keystore, err = CreateLocationKeyStore(pkg.Config.KeystoreUrl)
+	keystoreUrl := pkg.Config.KeystoreUrl
+
+	// Check if MongoDB should be used instead of KeystoreUrl
+	log.Debug("Checking if we should use MongoDB")
+	if pkg.Config.MongodbServer != "" {
+		if pkg.Config.MongodbUsername != "" {
+			log.Debug("MongodbServer and MongodbUsername provided, using MongoDB")
+			keystoreUrl = fmt.Sprintf(
+				"%s%s:%s@%s:%s",
+				mongoKeyStoreTypePrefix,
+				pkg.Config.MongodbUsername,
+				pkg.Config.MongodbPassword,
+				pkg.Config.MongodbServer,
+				pkg.Config.MongodbPort)
+		} else {
+			log.Warnf("MongodbServer was set without MongodbUsername; falling back to KeystoreUrl")
+		}
+	}
+
+	keystore, err = CreateLocationKeyStore(keystoreUrl)
 	return err
 }
