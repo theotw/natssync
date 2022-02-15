@@ -261,7 +261,7 @@ func (m *MongoKeyStore) ListKnownClients() ([]string, error) {
 
 func NewMongoKeyStore(mongoUri string) (*MongoKeyStore, error) {
 	mongoUrl := fmt.Sprintf("mongodb://%s", mongoUri)
-	log.Debugf("Connecting to mongo at %s", mongoUrl)
+	log.Tracef("Connecting to mongo at %s", mongoUrl)
 
 	keyStore := MongoKeyStore{
 		options:                 options.Client().ApplyURI(mongoUrl),
