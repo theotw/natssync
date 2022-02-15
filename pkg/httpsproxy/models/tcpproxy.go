@@ -10,6 +10,7 @@ import (
 	"errors"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -52,7 +53,7 @@ func DecodeTCPData(data []byte) ([]byte, error) {
 	return bits, err
 }
 
-func StartBiDiNatsTunnel(nc nats.ClientInterface, outBoundSubject, inBoundSubject, connectionID string, socket io.ReadWriteCloser) error {
+func StartBiDiNatsTunnel( outBoundSubject, inBoundSubject, connectionID string,inBoundQueue nats.NatsSubscriptionInterface, socket io.ReadWriteCloser) error {
 
 	defer func() {
 		if err := socket.Close(); err != nil {
@@ -67,11 +68,6 @@ func StartBiDiNatsTunnel(nc nats.ClientInterface, outBoundSubject, inBoundSubjec
 		}
 	}()
 
-	//First, setup and subscribe to the inbound Subject
-	inBoundQueue, err := nc.SubscribeSync(inBoundSubject)
-	if err != nil {
-		return err
-	}
 	//kick off the outbound stream tcp in to Nats
 	go TransferTcpDataToNats(outBoundSubject, connectionID, socket)
 	log.Debugf("BIDI connection started  %s <-> %s ", outBoundSubject, inBoundSubject)
@@ -125,7 +121,8 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 		}
 
 		if readErr != nil {
-			if readErr != io.EOF {
+			errorString := readErr.Error()
+			if !(strings.Contains(errorString,"EOF") || strings.Contains(errorString,"use of closed network connection")){
 				log.WithError(readErr).Errorf("Error reading data tcp -> nats")
 			}
 			break

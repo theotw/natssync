@@ -51,6 +51,7 @@ func (c *Configuration) LoadValues() {
 		{&c.SkipTlsValidation, "SKIP_TLS_VALIDATION", false},
 	}
 
+
 	for _, option := range configOptions {
 		if reflect.TypeOf(option.defaultValue).Kind() == reflect.Bool {
 			*option.value.(*bool) = GetEnvWithDefaultsBool(option.name, option.defaultValue.(bool))
