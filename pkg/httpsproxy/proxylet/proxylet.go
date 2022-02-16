@@ -103,11 +103,11 @@ func (p *proxylet) setupQueueSubscriptions() {
 	p.requestHandler.SetLocationID(p.locationID)
 	subj := httpproxy.MakeMessageSubject(p.locationID, httpproxy.HTTP_PROXY_API_ID)
 
-	p.httpSubscription, _ = p.natsClient.Subscribe(subj, p.requestHandler.HttpHandler)
+	p.httpSubscription, _ = p.natsClient.QueueSubscribe(subj,"httphandler", p.requestHandler.HttpHandler)
 	log.Printf("Listening on [%s]", subj)
 
 	conReqSubject := httpproxy.MakeMessageSubject(p.locationID, httpproxy.HTTPS_PROXY_CONNECTION_REQUEST)
-	p.httpsSubscription, _ = p.natsClient.Subscribe(conReqSubject, p.requestHandler.HttpsHandler)
+	p.httpsSubscription, _ = p.natsClient.QueueSubscribe(conReqSubject,"httpshandler", p.requestHandler.HttpsHandler)
 
 	if err := p.natsClient.LastError(); err != nil {
 		log.Fatal(err)

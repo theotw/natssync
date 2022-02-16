@@ -26,6 +26,10 @@ type Configuration struct {
 	CloudBridgeUrl    string
 	LogLevel          string
 	KeystoreUrl       string
+	MongodbServer     string
+	MongodbPort       string
+	MongodbUsername   string
+	MongodbPassword   string
 	ListenString      string
 	ConfigmapName     string
 	PodNamespace      string
@@ -45,11 +49,16 @@ func (c *Configuration) LoadValues() {
 		{&c.CloudBridgeUrl, "CLOUD_BRIDGE_URL", "http://localhost:8081"},
 		{&c.LogLevel, "LOG_LEVEL", "debug"},
 		{&c.KeystoreUrl, "KEYSTORE_URL", "file:///tmp"},
+		{&c.MongodbServer, "MONGODB_SERVER", ""},
+		{&c.MongodbPort, "MONGODB_PORT", "27017"},
+		{&c.MongodbUsername, "MONGODB_USERNAME", ""},
+		{&c.MongodbPassword, "MONGODB_PASSWORD", ""},
 		{&c.ListenString, "LISTEN_STRING", ":8080"},
 		{&c.ConfigmapName, "CONFIGMAP_NAME", ""},
 		{&c.CloudEvents, "CLOUDEVENTS_ENABLED", false},
 		{&c.SkipTlsValidation, "SKIP_TLS_VALIDATION", false},
 	}
+
 
 	for _, option := range configOptions {
 		if reflect.TypeOf(option.defaultValue).Kind() == reflect.Bool {

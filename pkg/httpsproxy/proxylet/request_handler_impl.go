@@ -185,13 +185,19 @@ func (rh *requestHandler) HttpsHandler(msg *nats.Msg) {
 				connectionMsg.ConnectionID,
 			)
 			inBoundSubject := httpproxy.MakeHttpsMessageSubject(rh.locationID, connectionMsg.ConnectionID)
-
+			//First, setup and subscribe to the inbound Subject
+			inBoundQueue, err := rh.natsClient.SubscribeSync(inBoundSubject)
+			if err != nil {
+				metrics.IncTotalFailedRequests(strconv.Itoa(http.StatusInternalServerError))
+				return
+			}
 			go func() {
+				//time.Sleep(20*time.Second)
 				err := models.StartBiDiNatsTunnel(
-					rh.natsClient,
 					outBoundSubject,
 					inBoundSubject,
 					connectionMsg.ConnectionID,
+					inBoundQueue,
 					targetSocket,
 				)
 				if err != nil {

@@ -45,6 +45,7 @@ func connect() error {
 
 		return err
 	}
+	
 	nc = tmpnc
 	return nil
 }

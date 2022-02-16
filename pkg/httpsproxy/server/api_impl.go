@@ -101,6 +101,10 @@ func (s *server) connectHandlerNats(c *gin.Context) {
 	clientID := FetchClientIDFromProxyAuthHeader(c)
 	connectionUUID := uuid.New().String()
 
+
+	outBoundSubject := httpproxy.MakeHttpsMessageSubject(clientID, connectionUUID)
+	inBoundSubject := httpproxy.MakeHttpsMessageSubject(s.locationID, connectionUUID)
+
 	if err := s.sendConnectionRequest(connectionUUID, clientID, c.Request.Host); err != nil {
 		log.WithError(err).
 			WithField("clientID", clientID).
@@ -109,23 +113,27 @@ func (s *server) connectHandlerNats(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "unable to make tunnel %s", err.Error())
 		return
 	}
-
-	outBoundSubject := httpproxy.MakeHttpsMessageSubject(clientID, connectionUUID)
-	inBoundSubject := httpproxy.MakeHttpsMessageSubject(s.locationID, connectionUUID)
+	//First, setup and subscribe to the inbound Subject
+	inBoundQueue, err := s.natsClient.SubscribeSync(inBoundSubject)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "unable to subscribe to inbound queue %s", err.Error())
+	}
 	c.JSON(http.StatusOK, "")
 
 	sourceConnection, _, err := c.Writer.Hijack()
 	if err != nil {
 		c.String(http.StatusInternalServerError, "unable hijack connection %s", err.Error())
+		log.WithError(err).Error("Unable to hijack connection")
 		return
 	}
 
+
 	go func() {
 		if err := models.StartBiDiNatsTunnel(
-			s.natsClient,
 			outBoundSubject,
 			inBoundSubject,
 			connectionUUID,
+			inBoundQueue,
 			sourceConnection,
 		); err != nil {
 			log.WithError(err).Error("failed to start bidi nats tunnel")
