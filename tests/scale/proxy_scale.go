@@ -15,14 +15,14 @@ import (
 
 func main() {
 	fmt.Printf("MAX Procs: %d \n",runtime.GOMAXPROCS(0))
-	proxyStr := "http://proxylet:@localhost:8080"
+	proxyStr := "http://proxylet:@localhost:30080"
 	proxyURL, _ := url.Parse(proxyStr)
 
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	http.DefaultTransport.(*http.Transport).Proxy= http.ProxyURL(proxyURL)
 
 	var wg sync.WaitGroup
-	threads:=1000
+	threads:=10
 	rounds:=10
 	wg.Add(threads)
 	for i:=0;i<threads;i++{
@@ -42,7 +42,7 @@ func DoBunchOGets(tag,n int){
 	}
 }
 func DoGet() {
-	resp, err := http.Get("https://localhost/john-work.jpeg")
+	resp, err := http.Get("https://192.168.65.4/john-work.jpeg")
 	if err != nil {
 		fmt.Printf("Error %s \n", err.Error())
 	}else {
