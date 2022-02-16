@@ -65,6 +65,24 @@ func (m *mockNats) Subscribe(subj string, cb nats.MsgHandler) (nats.NatsSubscrip
 
 	return nil, m.subscribeError
 }
+func (m *mockNats) QueueSubscribe(subj, queue string, cb nats.MsgHandler) (nats.NatsSubscriptionInterface, error) {
+	var subscription *mockSubscription
+	var ok bool
+	func() {
+		m.lock.Lock()
+		defer m.lock.Unlock()
+		subscription, ok = m.Queues[subj]
+	}()
+
+	if ok {
+		for _, msg := range subscription.Queue {
+			subscription.counter++
+			cb(&msg)
+		}
+	}
+
+	return nil, m.subscribeError
+}
 
 func (m *mockNats) Publish(subj string, data []byte) error {
 	m.lock.Lock()
