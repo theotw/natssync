@@ -101,8 +101,6 @@ func (rv *requestValidator) IsValidRequest(target string) error {
 
 	targetHost := getTargetHost(target)
 
-	rv.refreshConfigIfRequired()
-
 	targetExists := false
 	targetValue := false
 	// defaultBehavior := defaultBehaviorBlock

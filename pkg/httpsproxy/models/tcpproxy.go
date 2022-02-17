@@ -156,10 +156,11 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 			log.Debug("Got package from nats")
 			tcpData, readErr := DecodeTCPData(natsMsg.Data)
 			if readErr == nil {
-				log.Debugf("Got valid package from nats len %d", len(tcpData))
-				if len(tcpData) > 0 {
+				tcpDataLen := len(tcpData)
+				log.Debugf("Got valid package from nats len %d", tcpDataLen)
+				if tcpDataLen > 0 {
 					if _, err := dest.Write(tcpData); err != nil {
-						log.WithError(err).Errorf("failed to write tcp data to socket")
+						log.WithError(err).Errorf("failed to write tcp data to socket %d",tcpDataLen)
 					}
 				} else {
 					//if we got 0 length data, we are done, bail

@@ -17,7 +17,7 @@ func MetricsMiddleware(c *gin.Context) {
 			"uri":    c.Request.RequestURI,
 			"method": c.Request.Method,
 		},
-	).Info("metrics middleware")
+	).Debug("metrics middleware info" )
 
 	existingContextWriter := c.Writer
 	resWriter := utils.NewResponseWriter(existingContextWriter)
@@ -31,5 +31,5 @@ func MetricsMiddleware(c *gin.Context) {
 		metrics.IncTotalFailedRequests(strconv.Itoa(resWriter.GetStatus()))
 	}
 
-	resWriter.WriteDataOut()
+	//resWriter.WriteDataOut()
 }

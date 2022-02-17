@@ -7,10 +7,12 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"runtime"
 	"sync"
+	"time"
 )
 
 func main() {
@@ -24,8 +26,8 @@ func main() {
 	http.DefaultTransport.(*http.Transport).Proxy= http.ProxyURL(proxyURL)
 
 	var wg sync.WaitGroup
-
-	threads:=10
+	t1:=time.Now()
+	threads:=50
 	rounds:=10
 	wg.Add(threads)
 	for i:=0;i<threads;i++{
@@ -36,7 +38,12 @@ func main() {
 		}()
 	}
 
+
+
 	wg.Wait()
+	t2:=time.Now()
+	diff:=t2.Unix() - t1.Unix()
+	fmt.Printf("** Total Time %d \n",diff)
 }
 func DoBunchOGets(tag,n int){
 	for i:=0;i<n;i++ {
@@ -53,6 +60,12 @@ func DoGet() {
 	}else {
 		if resp.StatusCode != 200 {
 			fmt.Printf("Code %s \n", resp.Status)
+		}else{
+			_, err := ioutil.ReadAll(resp.Body)
+			if err != nil{
+				fmt.Printf("Error reading body %s",err.Error())
+			}
+
 		}
 		//fmt.Printf("Success %s \n", resp.Status)
 	}
