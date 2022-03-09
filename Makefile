@@ -209,22 +209,28 @@ tag:
 tagAndPushToDockerHub: tag
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-server:latest
+	docker push ${IMAGE_REPO}/natssync-server:${BASE_VERSION}
 	docker push ${IMAGE_REPO}/natssync-client:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-client:latest
+	docker push ${IMAGE_REPO}/natssync-client:${BASE_VERSION}
 	docker push ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/echo-proxylet:latest
+	docker push ${IMAGE_REPO}/echo-proxylet:${BASE_VERSION}
 	docker push ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/simple-reg-auth:latest
+	docker push ${IMAGE_REPO}/simple-reg-auth:${BASE_VERSION}
 	docker push ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-tests:latest
+	docker push ${IMAGE_REPO}/natssync-tests:${BASE_VERSION}
 	docker push ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/httpproxy-server:latest
+	docker push ${IMAGE_REPO}/httpproxy-server:${BASE_VERSION}
 	docker push ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/httpproxylet:latest
+	docker push ${IMAGE_REPO}/httpproxylet:${BASE_VERSION}
 	docker push ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-server-debug:latest
-	docker push ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG}
-	docker push ${IMAGE_REPO}/natssync-server-debug:latest
+	docker push ${IMAGE_REPO}/natssync-server-debug:${BASE_VERSION}
 
 
 pushall:
