@@ -197,14 +197,23 @@ loopover:
 buildAndTag: allimages tag
 tag:
 	docker tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} ${IMAGE_REPO}/natssync-server:latest
+	docker tag ${IMAGE_REPO}/natssync-server:${IMAGE_TAG} ${IMAGE_REPO}/natssync-server:${BASE_VERSION}
 	docker tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} ${IMAGE_REPO}/natssync-client:latest
+	docker tag ${IMAGE_REPO}/natssync-client:${IMAGE_TAG} ${IMAGE_REPO}/natssync-client:${BASE_VERSION}
 	docker tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} ${IMAGE_REPO}/echo-proxylet:latest
+	docker tag ${IMAGE_REPO}/echo-proxylet:${IMAGE_TAG} ${IMAGE_REPO}/echo-proxylet:${BASE_VERSION}
 	docker tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} ${IMAGE_REPO}/simple-reg-auth:latest
+	docker tag ${IMAGE_REPO}/simple-reg-auth:${IMAGE_TAG} ${IMAGE_REPO}/simple-reg-auth:${BASE_VERSION}
 	docker tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} ${IMAGE_REPO}/natssync-tests:latest
+	docker tag ${IMAGE_REPO}/natssync-tests:${IMAGE_TAG} ${IMAGE_REPO}/natssync-tests:${BASE_VERSION}
 	docker tag ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG} ${IMAGE_REPO}/natssync-server-debug:latest
+	docker tag ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG} ${IMAGE_REPO}/natssync-server-debug:${BASE_VERSION}
 	docker tag ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG} ${IMAGE_REPO}/httpproxy-server:latest
+	docker tag ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG} ${IMAGE_REPO}/httpproxy-server:${BASE_VERSION}
 	docker tag ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG} ${IMAGE_REPO}/httpproxy-server:latest
+	docker tag ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG} ${IMAGE_REPO}/httpproxy-server:${BASE_VERSION}
 	docker tag ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG} ${IMAGE_REPO}/httpproxylet:latest
+	docker tag ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG} ${IMAGE_REPO}/httpproxylet:${BASE_VERSION}
 
 tagAndPushToDockerHub: tag
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
