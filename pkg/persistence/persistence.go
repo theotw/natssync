@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/theotw/natssync/pkg/persistence/configmap"
+	"net/url"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -62,7 +63,7 @@ func buildMongoUrl(config pkg.Configuration, scrubPassword bool) string {
 	if scrubPassword {
 		password = "****"
 	} else {
-		password = config.MongodbPassword
+		password = url.QueryEscape(config.MongodbPassword)
 	}
 
 	return fmt.Sprintf(
