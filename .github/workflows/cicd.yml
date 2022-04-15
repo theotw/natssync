@@ -97,9 +97,10 @@ jobs:
         docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
         make tagAndPushToDockerHub
 
-    - name: Collect Logs
-      if: always()
-      # commented out because it keeps failing run: single_cluster_test/docker-logs.sh logs
+#took out because it keeps failing with no good log data
+#    - name: Collect Logs
+#      if: always()
+#        single_cluster_test/docker-logs.sh logs
 
     - name: Upload Logs
       if: always()
