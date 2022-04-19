@@ -257,7 +257,7 @@ pushall:
 
 l1:
 	SUCCESS=0; \
-	go get github.com/jstemmer/go-junit-report; \
+	go install github.com/jstemmer/go-junit-report@latest; \
 	mkdir -p out; \
 	go test -v -coverpkg=github.com/theotw/natssync/pkg/... -coverprofile=out/unit_coverage.out github.com/theotw/natssync/pkg/... > out/l1_out.txt 2>&1 || SUCCESS=1; \
 	cat out/l1_out.txt | go-junit-report > out/l1_report.xml || echo "Failure generating report xml"; \
