@@ -13,89 +13,89 @@ jobs:
     name: CICD tests
     runs-on: ubuntu-latest
     steps:
-    - name: Set up Go 1.x
-      uses: actions/setup-go@v2
-      with:
-        go-version: ^1.14
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ^1.14
 
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
 
-    - name: Get dependencies
-      run: |
-        make justgenerate
-        go get -v -t -d ./...
-        if [ -f Gopkg.toml ]; then
-            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            dep ensure
-        fi
+      - name: Get dependencies
+        run: |
+          make justgenerate
+          go get -v -t -d ./...
+          if [ -f Gopkg.toml ]; then
+              curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+              dep ensure
+          fi
 
-    - name: Unit / L1 Test
-      run: make l1
+      - name: Unit / L1 Test
+        run: make l1
 
-    - name: Publish Unit Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v1.32
-      if: always()
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        files: out/*_report.xml
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v1.32
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          files: out/*_report.xml
 
-    - name: Build Images
-      run: |
-        BASE_VERSION=$(cat version.txt)
-        export IMAGE_TAG=$BASE_VERSION.$(date -u '+%Y%m%d%H%M')
-        echo $BASE_VERSION
-        echo $IMAGE_TAG
-        echo $IMAGE_TAG > IMAGE_TAG
-        make cicd
+      - name: Build Images
+        run: |
+          BASE_VERSION=$(cat version.txt)
+          export IMAGE_TAG=$BASE_VERSION.$(date -u '+%Y%m%d%H%M')
+          echo $BASE_VERSION
+          echo $IMAGE_TAG
+          echo $IMAGE_TAG > IMAGE_TAG
+          make cicd
 
-    - name: Integration Tests (test mode off)
-      run: |
-        make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
+      - name: Integration Tests (test mode off)
+        run: |
+          make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
 
-    - name: Integration Tests (test mode on)
-      env:
-        TEST_MODE: true
-      run: |
-        make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
-        scripts/exit_apps_gracefully.sh
+      - name: Integration Tests (test mode on)
+        env:
+          TEST_MODE: true
+        run: |
+          make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
+          scripts/exit_apps_gracefully.sh
 
-    - name: Collect Coverage
-      env:
-        COVERAGE_FILES: out/*_coverage.out
-        OUT_FILE: out/unit_and_integration_cobertura.xml
-      run: make mergecoverage
+        #    - name: Collect Coverage
+        #      env:
+        #        COVERAGE_FILES: out/*_coverage.out
+        #        OUT_FILE: out/unit_and_integration_cobertura.xml
+        #      run: make mergecoverage
 
-    - name: Publish Cobertura Report (integration)
-      uses: 5monkeys/cobertura-action@v12
-      if: always()
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        minimum_coverage: 0
-        fail_below_threshold: false
-        only_changed_files: false
-        path: out/*cobertura.xml
+        #    - name: Publish Cobertura Report (integration)
+        #      uses: 5monkeys/cobertura-action@v12
+        #      if: always()
+        #      with:
+        #        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        #        minimum_coverage: 0
+        #        fail_below_threshold: false
+        #        only_changed_files: false
+        #        path: out/*cobertura.xml
 
-    - name: Upload Coverage Files
-      uses: actions/upload-artifact@v2
-      if: always()
-     with:
-       name: code-coverage
-       path: |
-         out/*cobertura.xml
-         out/*report.xml
-         out/*coverage.out
-       retention-days: 5
+        #    - name: Upload Coverage Files
+        #      uses: actions/upload-artifact@v2
+        ##      if: always()
+        #     with:
+        #       name: code-coverage
+        #       path: |
+        #         out/*cobertura.xml
+        #         out/*report.xml
+        #         out/*coverage.out
+        #       retention-days: 5
 
-    - name: Deploy to DockerHub
-      if: github.ref == 'refs/heads/main'
-      env:
-        DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-        DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
-      run: |
-        export IMAGE_TAG=$(cat IMAGE_TAG)
-        docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
-        make tagAndPushToDockerHub
+      - name: Deploy to DockerHub
+        if: github.ref == 'refs/heads/main'
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+        run: |
+          export IMAGE_TAG=$(cat IMAGE_TAG)
+          docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
+          make tagAndPushToDockerHub
 
 #took out because it keeps failing with no good log data
 #    - name: Collect Logs
