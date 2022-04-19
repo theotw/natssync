@@ -82,9 +82,9 @@ jobs:
         with:
           name: code-coverage
           path: |
-           out/*cobertura.xml
-           out/*report.xml
-           out/*coverage.out
+            out/*cobertura.xml
+            out/*report.xml
+            out/*coverage.out
           retention-days: 5
 
       - name: Deploy to DockerHub
@@ -99,6 +99,7 @@ jobs:
 
       - name: Collect Logs
         if: always()
+        run:
           single_cluster_test/docker-logs.sh logs
 
       - name: Upload Logs
@@ -108,3 +109,4 @@ jobs:
           name: logs
           path: logs
           retention-days: 5
+
