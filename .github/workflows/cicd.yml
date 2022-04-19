@@ -33,12 +33,12 @@ jobs:
     - name: Unit / L1 Test
       run: make l1
 
-#    - name: Publish Unit Test Results
-#      uses: EnricoMi/publish-unit-test-result-action@v1.6
-#      if: always()
-#      with:
-#        github_token: ${{ secrets.GITHUB_TOKEN }}
-#        files: out/*_report.xml
+    - name: Publish Unit Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v1.32
+      if: always()
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        files: out/*_report.xml
 
     - name: Build Images
       run: |
