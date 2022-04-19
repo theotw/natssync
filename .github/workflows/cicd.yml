@@ -98,8 +98,8 @@ jobs:
           make tagAndPushToDockerHub
 
       - name: Collect Logs
-          if: always()
-            single_cluster_test/docker-logs.sh logs
+        if: always()
+          single_cluster_test/docker-logs.sh logs
 
       - name: Upload Logs
         if: always()
