@@ -286,8 +286,8 @@ integrationtests:
 mergecoverage: COVERAGE_FILES ?= out/*_coverage.out
 mergecoverage: OUT_FILE ?= out/cobertura.xml
 mergecoverage:
-	go get github.com/t-yuki/gocover-cobertura
-	go get github.com/wadey/gocovmerge
+	go install github.com/t-yuki/gocover-cobertura@latest
+	go install github.com/wadey/gocovmerge@latest
 	./scripts/exit_apps_gracefully.sh
 	@echo " -- Coverage files to be merged:" && ls ${COVERAGE_FILES}
 	gocovmerge ${COVERAGE_FILES} > out/merged.out
