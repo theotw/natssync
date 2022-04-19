@@ -60,32 +60,32 @@ jobs:
         make deploysingle integrationtests IMAGE_TAG=$(cat IMAGE_TAG)
         scripts/exit_apps_gracefully.sh
 
-        - name: Collect Coverage
-          env:
-            COVERAGE_FILES: out/*_coverage.out
-            OUT_FILE: out/unit_and_integration_cobertura.xml
-          run: make mergecoverage
+    - name: Collect Coverage
+      env:
+        COVERAGE_FILES: out/*_coverage.out
+        OUT_FILE: out/unit_and_integration_cobertura.xml
+      run: make mergecoverage
 
-        - name: Publish Cobertura Report (integration)
-          uses: 5monkeys/cobertura-action@v12
-          if: always()
-          with:
-            repo_token: ${{ secrets.GITHUB_TOKEN }}
-            minimum_coverage: 0
-            fail_below_threshold: false
-            only_changed_files: false
-            path: out/*cobertura.xml
+    - name: Publish Cobertura Report (integration)
+      uses: 5monkeys/cobertura-action@v12
+      if: always()
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        minimum_coverage: 0
+        fail_below_threshold: false
+        only_changed_files: false
+        path: out/*cobertura.xml
 
-        - name: Upload Coverage Files
-          uses: actions/upload-artifact@v2
-          if: always()
-        with:
-          name: code-coverage
-          path: |
-            out/*cobertura.xml
-            out/*report.xml
-            out/*coverage.out
-          retention-days: 5
+    - name: Upload Coverage Files
+      uses: actions/upload-artifact@v2
+      if: always()
+     with:
+       name: code-coverage
+       path: |
+         out/*cobertura.xml
+         out/*report.xml
+         out/*coverage.out
+       retention-days: 5
 
     - name: Deploy to DockerHub
       if: github.ref == 'refs/heads/main'
