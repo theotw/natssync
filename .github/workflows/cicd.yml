@@ -97,15 +97,14 @@ jobs:
           docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
           make tagAndPushToDockerHub
 
-#took out because it keeps failing with no good log data
-#    - name: Collect Logs
-#      if: always()
-#        single_cluster_test/docker-logs.sh logs
+      - name: Collect Logs
+          if: always()
+            single_cluster_test/docker-logs.sh logs
 
-#    - name: Upload Logs
-#      if: always()
-#      uses: actions/upload-artifact@v2
-#      with:
-#        name: logs
-#        path: logs
-#        retention-days: 5
+      - name: Upload Logs
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: logs
+          path: logs
+          retention-days: 5
