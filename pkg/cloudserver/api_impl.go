@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"github.com/theotw/natssync/pkg/utils"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -302,8 +303,8 @@ func handleGetRegisteredLocations(c *gin.Context) {
 		parts := strings.Split(x, "=")
 		if len(parts) == 2 {
 			kv := new(filterKV)
-			kv.k = parts[0]
-			kv.v = parts[1]
+			kv.k = strings.TrimSpace(parts[0])
+			kv.v = strings.TrimSpace(parts[1])
 			filterKeys = append(filterKeys, kv)
 		}
 	}
@@ -322,7 +323,7 @@ func handleGetRegisteredLocations(c *gin.Context) {
 			keymatch := false
 			for _, kv := range filterKeys {
 				actualValue := locationData.Metadata[kv.k]
-				keymatch = (actualValue == value)
+				keymatch = (actualValue == kv.v)
 				if !keymatch {
 					break
 				}
@@ -395,12 +396,18 @@ func handlePostUnRegister(c *gin.Context) {
 func handlePostRegister(c *gin.Context) {
 	log.Tracef("POST Register Handler")
 	var in *v1.RegisterOnPremReq
+	var pubKeyBits []byte
 	if strings.HasPrefix(c.Request.Header.Get("Content-Type"), "multipart/form-data") {
 		var err error
 		in, err = handleMultipartFormRegistration(c)
 		if err != nil {
 			metrics.IncrementClientRegistrationFailure(1)
 			c.JSON(bridgemodel.HandleError(c, err))
+		}
+		pubKeyBits=[]byte(in.PublicKey)
+		if len(in.KeyID)==0{
+			dv1, _ := utils.NewUUIDv1()
+			in.KeyID=dv1.String()
 		}
 	} else {
 		in = new(v1.RegisterOnPremReq)
@@ -411,12 +418,14 @@ func handlePostRegister(c *gin.Context) {
 			c.JSON(code, &ret)
 			return
 		}
-	}
-	pubKeyBits, decoderr := base64.StdEncoding.DecodeString(in.PublicKey)
-	if decoderr != nil {
-		ierr := errors.NewInternalError(errors.BRIDGE_ERROR, errors.INVALID_PUB_KEY, nil)
-		c.JSON(bridgemodel.HandleError(c, ierr))
-		return
+		var decoderr error
+		pubKeyBits, decoderr = base64.StdEncoding.DecodeString(in.PublicKey)
+
+		if decoderr != nil {
+			ierr := errors.NewInternalError(errors.BRIDGE_ERROR, errors.INVALID_PUB_KEY, nil)
+				c.JSON(bridgemodel.HandleError(c, ierr))
+				return
+		}
 	}
 	validPubKey := false
 	pubKeyBlock, _ := pem.Decode(pubKeyBits)
