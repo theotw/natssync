@@ -53,6 +53,7 @@ ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 RUN go build -gcflags "all=-N -l"  -v -o out/bridgeserver_amd64_linux apps/bridge_server.go
 RUN go get github.com/go-delve/delve/cmd/dlv
+RUN go install github.com/go-delve/delve/cmd/dlv
 ENTRYPOINT ["dlv","--listen=:2345","--headless=true","--api-version=2","--accept-multiclient","exec" ,"out/bridgeserver_amd64_linux"]
 
 # Echo proxylet
