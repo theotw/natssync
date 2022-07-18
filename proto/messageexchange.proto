@@ -22,5 +22,6 @@ message PushMessageOut{
 }
 service MessageService {
   rpc GetMessage(RequestMessagesIn) returns (BridgeMessage);
+  rpc GetMessages(RequestMessagesIn) returns (stream BridgeMessage) ;
   rpc PushMessage(BridgeMessage) returns (PushMessageOut);
 }

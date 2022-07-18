@@ -6,6 +6,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"github.com/theotw/natssync/pkg/pbgen"
 )
 
@@ -20,6 +21,16 @@ func (t *MessageServerImpl) GetMessage(context.Context, *pbgen.RequestMessagesIn
 	ret.ClientID="1"
 	ret.FormatVersion="-1"
 	return ret,nil
+}
+func (t *MessageServerImpl) GetMessages(in *pbgen.RequestMessagesIn,x pbgen.MessageService_GetMessagesServer) error{
+	for i:=0;i<10;i++ {
+		ret := new(pbgen.BridgeMessage)
+		ret.MessageData = fmt.Sprintf("data %d",i)
+		ret.ClientID = "1"
+		ret.FormatVersion = "-1"
+		x.Send(ret)
+	}
+	return nil
 }
 func (t *MessageServerImpl) PushMessage(context.Context, *pbgen.BridgeMessage) (*pbgen.PushMessageOut, error){
 	ret:=new (pbgen.PushMessageOut)

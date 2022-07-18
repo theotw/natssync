@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/theotw/natssync/pkg/pbgen"
 	grpc "google.golang.org/grpc"
+	"io"
 	"testing"
 )
 
@@ -23,8 +24,23 @@ func TestGRPCClient(t *testing.T){
 	in.ClientID="1"
 	message, err := client.GetMessage(context.Background(), in)
 	if err != nil{
-		t.Fatalf("Error fectching messages %s",err.Error())
+		t.Fatalf("Error fectching message %s",err.Error())
 	}
 	fmt.Println(message.MessageData)
 
+	messages, err := client.GetMessages(context.Background(), in)
+	if err != nil{
+		t.Fatalf("Error fectching messages %s",err.Error())
+	}
+	for ;;{
+		m, err := messages.Recv()
+		if err != nil{
+			if err == io.EOF{
+				break
+			}else{
+			 	t.Fatalf("Unable to featch from messgae stream %s",err.Error())
+			}
+		}
+		fmt.Println(m.MessageData)
+	}
 }
