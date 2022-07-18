@@ -1,5 +1,6 @@
 pkg/bridgemodel/generated
 pkg/bridgeclient/generated
+pkg/pbgen
 out
 mods
 dump.rdb

@@ -1,0 +1,26 @@
+
+syntax = "proto3";
+package natssync.messages;
+
+option go_package = "pkg/pbgen;pbgen";
+
+
+message BridgeMessage {
+    string formatVersion = 1;
+    string clientID =2;
+    string messageData =3;
+}
+
+message BridgeMessages {
+  repeated BridgeMessage messages =1;
+}
+message RequestMessagesIn{
+  string clientID=1;
+}
+message PushMessageOut{
+
+}
+service MessageService {
+  rpc GetMessage(RequestMessagesIn) returns (BridgeMessage);
+  rpc PushMessage(BridgeMessage) returns (PushMessageOut);
+}
