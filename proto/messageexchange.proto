@@ -4,6 +4,11 @@ package natssync.messages;
 
 option go_package = "pkg/pbgen;pbgen";
 
+message AuthChallenge{
+  float Version =1;
+  string AuthChallengeA =2;
+  string AuthChallengeB =3;
+}
 
 message BridgeMessage {
     string formatVersion = 1;
@@ -16,12 +21,17 @@ message BridgeMessages {
 }
 message RequestMessagesIn{
   string clientID=1;
+  AuthChallenge auth=2;
+}
+
+message PushMessageIn{
+  AuthChallenge auth=1;
+  BridgeMessage msg =2;
 }
 message PushMessageOut{
 
 }
 service MessageService {
-  rpc GetMessage(RequestMessagesIn) returns (BridgeMessage);
   rpc GetMessages(RequestMessagesIn) returns (stream BridgeMessage) ;
-  rpc PushMessage(BridgeMessage) returns (PushMessageOut);
+  rpc PushMessage(PushMessageIn) returns (PushMessageOut);
 }

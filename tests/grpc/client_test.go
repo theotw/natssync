@@ -14,7 +14,7 @@ import (
 )
 
 func TestGRPCClient(t *testing.T){
-	conn, err := grpc.Dial("localhost:8082",grpc.WithInsecure())
+	conn, err := grpc.Dial("localhost:8084",grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Unable to create client, %s",err.Error())
 	}
@@ -22,11 +22,6 @@ func TestGRPCClient(t *testing.T){
 	client := pbgen.NewMessageServiceClient(conn)
 	in:=new (pbgen.RequestMessagesIn)
 	in.ClientID="1"
-	message, err := client.GetMessage(context.Background(), in)
-	if err != nil{
-		t.Fatalf("Error fectching message %s",err.Error())
-	}
-	fmt.Println(message.MessageData)
 
 	messages, err := client.GetMessages(context.Background(), in)
 	if err != nil{

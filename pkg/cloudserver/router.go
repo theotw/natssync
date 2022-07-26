@@ -58,6 +58,12 @@ func RunBridgeServer(test bool) {
 		log.Info("Post In goroutine list and server")
 	}()
 	log.Info("Web Server running")
+	if len(pkg.Config.GRPCPort)>0{
+		log.Info("Starting gRPC Server")
+		impl := NewGRPCMessageServerImpl()
+		impl.RunServer(pkg.Config.GRPCPort)
+		log.Info("gRPC Server Running")
+	}
 	// Wait for interrupt signal to gracefully shutdown the server with
 	// a timeout of 5 seconds.
 	quit = make(chan os.Signal)

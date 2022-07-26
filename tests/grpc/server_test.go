@@ -5,18 +5,54 @@
 package grpc
 
 import (
+	"context"
 	"fmt"
 	log "github.com/sirupsen/logrus"
-	natssyncgrpc "github.com/theotw/natssync/pkg/grpc"
 	"github.com/theotw/natssync/pkg/pbgen"
 	grpc "google.golang.org/grpc"
 	"net"
 	"testing"
 )
 
+type MessageServerTestImpl struct {
+	pbgen.UnimplementedMessageServiceServer
+}
+
+func (t *MessageServerTestImpl) GetMessages(in *pbgen.RequestMessagesIn, x pbgen.MessageService_GetMessagesServer) error {
+	for i := 0; i < 10; i++ {
+		ret := new(pbgen.BridgeMessage)
+		ret.MessageData = fmt.Sprintf("data %d", i)
+		ret.ClientID = "1"
+		ret.FormatVersion = "-1"
+		x.Send(ret)
+	}
+
+	return nil
+}
+func (t *MessageServerTestImpl) PushMessage(xtc context.Context, msgIn *pbgen.PushMessageIn) (*pbgen.PushMessageOut, error) {
+	ret:=new (pbgen.PushMessageOut)
+	fmt.Println(msgIn.Msg.MessageData)
+	return ret,nil
+}
+
+
+
 func TestGprcServer(t *testing.T) {
-	impl := new(natssyncgrpc.MessageServerImpl)
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:8082"))
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		t.Fatal(fmt.Errorf("localAddresses: %v\n", err.Error()))
+	}
+	for _, i := range ifaces {
+		addrs, err := i.Addrs()
+		if err != nil {
+			continue
+		}
+		for _, a := range addrs {
+			log.Printf("%v - %v,%s\n", i.Name, a.Network(),a.String())
+		}
+	}
+	impl := new(MessageServerTestImpl)
+	lis, err := net.Listen("tcp", fmt.Sprintf(":8084"))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
