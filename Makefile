@@ -92,7 +92,7 @@ buildlinux: basebuild
 
 build: basebuild
 
-basebuild:
+basebuild: protoc
 	mkdir -p out
 	rm -f  out/bridgeserver_x64_linux
 	go mod tidy
