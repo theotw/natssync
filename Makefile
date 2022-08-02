@@ -313,5 +313,5 @@ protoc-install:
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
 
 
-protoc:
+protoc: protoc-install
 	protoc --go_out=. --go_opt=paths=import --go-grpc_out=. --go-grpc_opt=paths=import proto/messageexchange.proto
