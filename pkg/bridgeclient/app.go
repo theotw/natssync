@@ -5,12 +5,15 @@
 package cloudclient
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/theotw/natssync/pkg/pbgen"
 	"github.com/theotw/natssync/pkg/testing"
+	"google.golang.org/grpc"
+	"io"
 	"math"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -199,24 +202,60 @@ func isInvalidCertificateError(err error) bool {
 	return strings.Contains(err.Error(), fmt.Sprintf("status code %v", pkg.StatusCertificateError))
 }
 func getMessagesFromCloud(serverURL, clientID string) ([]v1.BridgeMessage, error) {
-	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
+	//url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
 
-	httpclient := bridgemodel.NewHttpClient()
+	//httpclient := bridgemodel.NewHttpClient()
 	var msglist []v1.BridgeMessage
+	serverURL = pkg.Config.GRPCUrl
+	conn, err := grpc.Dial(serverURL, grpc.WithInsecure())
+	if err != nil {
+		log.Errorf("Error dialling in to the server: %s", err.Error())
+		return nil, err
+	}
+	defer conn.Close()
 
 	for true {
 		ac := msgs.NewAuthChallenge("")
-		err := httpclient.SendAuthorizedRequestWithBodyAndResp(http.MethodGet, url, ac, &msglist)
+
+		auth := &pbgen.AuthChallenge{
+			AuthChallengeA: ac.AuthChallengeA,
+			AuthChallengeB: ac.AuthChellengeB,
+		}
+		payload := &pbgen.RequestMessagesIn{
+			ClientID: clientID,
+			Auth:     auth,
+		}
+
+		client := pbgen.NewMessageServiceClient(conn)
+		messages, err := client.GetMessages(context.Background(), payload)
 		if err != nil {
-			if isInvalidCertificateError(err) {
-				if certRotationErr := NewCertRotationHandler(serverURL, clientID).HandleCertRotation(); certRotationErr != nil {
-					return nil, fmt.Errorf("failed to rotate certificates: %v : %v", certRotationErr, err)
-				}
-				// certificates rotated successfully, retry the original request
-				continue
-			}
+			log.Errorf("Error getting messages: %s", err.Error())
 			return nil, err
 		}
+		//err := httpclient.SendAuthorizedRequestWithBodyAndResp(http.MethodGet, url, ac, &msglist)
+		m, err := messages.Recv()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+
+			//if isInvalidCertificateError(err) {
+			//	if certRotationErr := NewCertRotationHandler(serverURL, clientID).HandleCertRotation(); certRotationErr != nil {
+			//		return nil, fmt.Errorf("failed to rotate certificates: %v : %v", certRotationErr, err)
+			//	}
+			//	// certificates rotated successfully, retry the original request
+			//	continue
+			//}
+			log.Errorf("Error receiving messages: %s", err.Error())
+			return nil, err
+		}
+
+		msg := v1.BridgeMessage{
+			MessageData:   m.MessageData,
+			ClientID:      m.ClientID,
+			FormatVersion: m.FormatVersion,
+		}
+		msglist = append(msglist, msg)
 		break
 	}
 
@@ -258,7 +297,7 @@ func handleOutboundMessages(subscription *nats.Subscription, serverURL, clientID
 		if err != nil {
 			sendWhatWeHave = len(msgList) > 0
 			// bail if it was not a timeout error
-			keepGoing=err == nats.ErrTimeout
+			keepGoing = err == nats.ErrTimeout
 		} else {
 			parsedSubject, err2 := msgs.ParseSubject(msg.Subject)
 			if err2 == nil {
@@ -281,7 +320,13 @@ func handleOutboundMessages(subscription *nats.Subscription, serverURL, clientID
 	log.Infof("Leaving Handle Outbound Messages ")
 }
 func sendMessageToCloud(serverURL string, clientID string, ceEnabled bool, msgsList ...*nats.Msg) {
-	messagesToSend := make([]v1.BridgeMessage, 0)
+	//messagesToSend := make([]v1.BridgeMessage, 0)
+	serverURL = pkg.Config.GRPCUrl
+	conn, err := grpc.Dial(serverURL, grpc.WithInsecure())
+	if err != nil {
+		return
+	}
+	defer conn.Close()
 	for _, msg := range msgsList {
 		msgFormat := msgs.GetMsgFormat()
 		status, err := msgFormat.ValidateMsgFormat(msg.Data, ceEnabled)
@@ -306,44 +351,60 @@ func sendMessageToCloud(serverURL string, clientID string, ceEnabled bool, msgsL
 			continue
 		}
 		bmsg := v1.BridgeMessage{ClientID: clientID, MessageData: string(jsonbits), FormatVersion: "1"}
-		messagesToSend = append(messagesToSend, bmsg)
-
-	}
-	url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
-
-	for true {
-		fullPostReq := v1.BridgeMessagePostReq{
-			AuthChallenge: *msgs.NewAuthChallengeFromStoredKey(),
-			Messages:      messagesToSend,
+		//messagesToSend = append(messagesToSend, bmsg)
+		ac := *msgs.NewAuthChallengeFromStoredKey()
+		bridgeMsg := &pbgen.BridgeMessage{
+			FormatVersion: bmsg.FormatVersion,
+			ClientID:      bmsg.ClientID,
+			MessageData:   bmsg.MessageData,
 		}
+		var payload *pbgen.PushMessageIn
+		payload.Msg = bridgeMsg
+		payload.Auth.AuthChallengeA = ac.AuthChallengeA
+		payload.Auth.AuthChallengeB = ac.AuthChellengeB
 
-		httpclient := bridgemodel.NewHttpClient()
-		postErr := httpclient.SendAuthorizedRequestWithBodyAndResp(http.MethodPost, url, fullPostReq, nil)
-		//resp, postErr := http.DefaultClient.Post(url, "application/json", r)
-		if postErr != nil {
-			log.WithError(postErr).Errorf("Error sending message to server.  Dropping the messages ")
-			if isInvalidCertificateError(postErr) {
-				if certRotationErr := NewCertRotationHandler(serverURL, clientID).HandleCertRotation(); certRotationErr != nil {
-					log.Errorf("failed to rotate certificates")
-					return
-				}
-
-				// cert rotation successful retry the original request
-				continue
-			}
-
-			return
+		client := pbgen.NewMessageServiceClient(conn)
+		_, err = client.PushMessage(context.Background(), payload)
+		if err != nil {
+			log.Errorf("Error pushing the message to the server %s", err.Error())
+			continue
 		}
-		break
 	}
+	//url := fmt.Sprintf("%s/bridge-server/1/message-queue/%s", serverURL, clientID)
+
+	//for true {
+	//fullPostReq := v1.BridgeMessagePostReq{
+	//	AuthChallenge: *msgs.NewAuthChallengeFromStoredKey(),
+	//	Messages:      messagesToSend,
+	//}
+
+	//httpclient := bridgemodel.NewHttpClient()
+	//postErr := httpclient.SendAuthorizedRequestWithBodyAndResp(http.MethodPost, url, fullPostReq, nil)
+	//resp, postErr := http.DefaultClient.Post(url, "application/json", r)
+	//if postErr != nil {
+	//	log.WithError(postErr).Errorf("Error sending message to server.  Dropping the messages ")
+	//	if isInvalidCertificateError(postErr) {
+	//		if certRotationErr := NewCertRotationHandler(serverURL, clientID).HandleCertRotation(); certRotationErr != nil {
+	//			log.Errorf("failed to rotate certificates")
+	//			return
+	//		}
+	//
+	//		// cert rotation successful retry the original request
+	//		continue
+	//	}
+	//
+	//	return
+	//}
+	//break
+	//}
 
 }
 
 func timeToQuit(quitChannel chan os.Signal) bool {
 	select {
-		case <-quitChannel:
-			return true
-		default:
-			return false
+	case <-quitChannel:
+		return true
+	default:
+		return false
 	}
 }

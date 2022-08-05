@@ -35,7 +35,8 @@ type Configuration struct {
 	PodNamespace      string
 	CloudEvents       bool
 	SkipTlsValidation bool
-	GRPCPort 		  string
+	GRPCPort          string
+	GRPCUrl           string
 }
 
 type configOption struct {
@@ -54,13 +55,13 @@ func (c *Configuration) LoadValues() {
 		{&c.MongodbPort, "MONGODB_PORT", "27017"},
 		{&c.MongodbUsername, "MONGODB_USERNAME", ""},
 		{&c.MongodbPassword, "MONGODB_PASSWORD", ""},
-		{&c.ListenString, "LISTEN_STRING", ":8080"},
+		{&c.ListenString, "LISTEN_STRING", ":7070"},
 		{&c.ConfigmapName, "CONFIGMAP_NAME", ""},
 		{&c.CloudEvents, "CLOUDEVENTS_ENABLED", false},
 		{&c.SkipTlsValidation, "SKIP_TLS_VALIDATION", false},
-		{&c.GRPCPort,"GRPC_PORT",""},
+		{&c.GRPCPort, "GRPC_PORT", "9090"},
+		{&c.GRPCUrl, "GRPC_URL", "localhost:9090"},
 	}
-
 
 	for _, option := range configOptions {
 		if reflect.TypeOf(option.defaultValue).Kind() == reflect.Bool {

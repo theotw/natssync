@@ -81,12 +81,14 @@ func CreateLocationKeyStore(keystoreUrl string) (LocationKeyStore, error) {
 		log.Fatal(err)
 	}
 
+	log.Infof("keystoreType: %s", keystoreType)
 	switch keystoreType {
 	case fileKeyStoreTypePrefix:
 		fileKeyStore, err := file.NewFileKeyStore(keystoreUri)
 		if err == nil {
 			newReaper(fileKeyStore).RunCleanupJob(context.TODO())
 		}
+		log.Infof("fileKeyStore: %s", fileKeyStore)
 		return fileKeyStore, err
 
 	case mongoKeyStoreTypePrefix:
@@ -110,6 +112,8 @@ func CreateLocationKeyStore(keystoreUrl string) (LocationKeyStore, error) {
 func InitLocationKeyStore() error {
 	var err error
 	keystoreUrl := pkg.Config.KeystoreUrl
+
+	log.Infof("InitLocationKeyStore: keystoreUrl %s", keystoreUrl)
 
 	// Check if MongoDB should be used instead of KeystoreUrl
 	log.Debug("Checking if we should use MongoDB")

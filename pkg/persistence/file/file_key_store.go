@@ -93,6 +93,7 @@ func (t *FileKeyStore) GetLatestKeyID() (string, error) {
 }
 
 func (t *FileKeyStore) ReadKeyPair(keyID string) (*types.LocationData, error) {
+	log.Infof("FileKeyStore ReadKeyPair: keyID %s", keyID)
 	if keyID == "" {
 		var err error
 		if keyID, err = t.GetLatestKeyID(); err != nil {

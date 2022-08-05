@@ -209,6 +209,7 @@ func (c *ConfigmapKeyStore) RemoveKeyPair(keyID string) error {
 }
 
 func (c *ConfigmapKeyStore) LoadLocationID(keyID string) string {
+	log.Infof("LoadLocationID: keyID %s", keyID)
 	if keyID == "" {
 		keyMeta, err := c.getLatestKeyMetadata()
 		if err != nil {
@@ -239,6 +240,7 @@ func (c *ConfigmapKeyStore) WriteLocation(locationData types.LocationData) error
 
 func (c *ConfigmapKeyStore) ReadLocation(locationID string) (*types.LocationData, error) {
 	locationFile := fmt.Sprintf("%s/%s", c.configmapMountPath, c.makeLocationDataFileName(locationID))
+	log.Infof("Reading location from %s", locationFile)
 	locationDataBytes, err := c.readFile(locationFile)
 	if err != nil {
 		return nil, err
