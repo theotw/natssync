@@ -167,7 +167,8 @@ func (t *MessageServerImpl) PushMessage(xtc context.Context, msgIn *pbgen.PushMe
 	if len(natmsg.Reply) > 0 {
 		nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data)
 	} else {
-		nc.Publish(natmsg.Subject, natmsg.Data)
+		log.Debugf("publishing data %v to subject %s", natmsg.Data, natmsg.Subject)
+		nc.Publish(natmsg.Subject+"local", natmsg.Data)
 	}
 	nc.Flush()
 	return ret, nil
