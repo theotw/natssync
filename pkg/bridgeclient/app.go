@@ -352,17 +352,28 @@ func sendMessageToCloud(serverURL string, clientID string, ceEnabled bool, msgsL
 		}
 		bmsg := v1.BridgeMessage{ClientID: clientID, MessageData: string(jsonbits), FormatVersion: "1"}
 		//messagesToSend = append(messagesToSend, bmsg)
+		//}
+		//for true {
+		//fullPostReq := v1.BridgeMessagePostReq{
+		//	AuthChallenge: *msgs.NewAuthChallengeFromStoredKey(),
+		//	Messages:      messagesToSend,
+		//}
 		ac := *msgs.NewAuthChallengeFromStoredKey()
 		bridgeMsg := &pbgen.BridgeMessage{
 			FormatVersion: bmsg.FormatVersion,
 			ClientID:      bmsg.ClientID,
 			MessageData:   bmsg.MessageData,
 		}
-		var payload *pbgen.PushMessageIn
-		payload.Msg = bridgeMsg
-		payload.Auth.AuthChallengeA = ac.AuthChallengeA
-		payload.Auth.AuthChallengeB = ac.AuthChellengeB
 
+		pushMsgAuthChallenge := &pbgen.AuthChallenge{
+			AuthChallengeA: ac.AuthChallengeA,
+			AuthChallengeB: ac.AuthChellengeB,
+		}
+		payload := &pbgen.PushMessageIn{
+			Msg:  bridgeMsg,
+			Auth: pushMsgAuthChallenge,
+		}
+		log.Debugf("sendMessageToCloud: payload: %v", payload)
 		client := pbgen.NewMessageServiceClient(conn)
 		_, err = client.PushMessage(context.Background(), payload)
 		if err != nil {

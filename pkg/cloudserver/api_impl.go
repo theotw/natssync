@@ -132,6 +132,7 @@ func handlePostMessage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, ret)
 		return
 	}
+	log.Debugf("handlePostMessage: in: %v", in)
 	if !msgs.ValidateAuthChallenge(clientID, &in.AuthChallenge) {
 		log.Errorf("Got invalid message auth request in post messages %s", clientID)
 		c.JSON(http.StatusUnauthorized, "")
