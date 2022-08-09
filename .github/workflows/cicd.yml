@@ -38,7 +38,7 @@ jobs:
         if: always()
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: out/*_report.xml
+          junit_files: out/*_report.xml
 
       - name: Build Images
         run: |
