@@ -257,7 +257,7 @@ pushall:
 
 l1:
 	SUCCESS=0; \
-	go get github.com/jstemmer/go-junit-report; \
+	go install github.com/jstemmer/go-junit-report@latest; \
 	mkdir -p out; \
 	go test -v -coverpkg=github.com/theotw/natssync/pkg/... -coverprofile=out/unit_coverage.out github.com/theotw/natssync/pkg/... > out/l1_out.txt 2>&1 || SUCCESS=1; \
 	cat out/l1_out.txt | go-junit-report > out/l1_report.xml || echo "Failure generating report xml"; \
@@ -286,8 +286,8 @@ integrationtests:
 mergecoverage: COVERAGE_FILES ?= out/*_coverage.out
 mergecoverage: OUT_FILE ?= out/cobertura.xml
 mergecoverage:
-	go get github.com/t-yuki/gocover-cobertura
-	go get github.com/wadey/gocovmerge
+	go install github.com/t-yuki/gocover-cobertura@latest
+	go install github.com/wadey/gocovmerge@latest
 	./scripts/exit_apps_gracefully.sh
 	@echo " -- Coverage files to be merged:" && ls ${COVERAGE_FILES}
 	gocovmerge ${COVERAGE_FILES} > out/merged.out
