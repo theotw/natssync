@@ -28,15 +28,15 @@ type MessageServerImpl struct {
 	pbgen.UnimplementedMessageServiceServer
 }
 
-func (t *MessageServerImpl) RunServer(port string) error{
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%s",port))
+func (t *MessageServerImpl) RunServer(port string) error {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
 	if err != nil {
 		return err
 	}
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
 	pbgen.RegisterMessageServiceServer(grpcServer, t)
-	go func(){
+	go func() {
 		log.Infof("Starting Server")
 		grpcServer.Serve(lis)
 		log.Infof("Server finished")
@@ -59,8 +59,8 @@ func (t *MessageServerImpl) GetMessages(in *pbgen.RequestMessagesIn, x pbgen.Mes
 	clientID := in.ClientID
 	log.Tracef("Handling get message request for clientID %s", clientID)
 	var authData v1.AuthChallenge
-	authData.AuthChallengeA=in.Auth.AuthChallengeA
-	authData.AuthChellengeB=in.Auth.AuthChallengeB
+	authData.AuthChallengeA = in.Auth.AuthChallengeA
+	authData.AuthChellengeB = in.Auth.AuthChallengeB
 	if !msgs.ValidateAuthChallenge(clientID, &authData) {
 		errors.New("invalid auth")
 	}
@@ -125,29 +125,30 @@ func (t *MessageServerImpl) GetMessages(in *pbgen.RequestMessagesIn, x pbgen.Mes
 }
 func (t *MessageServerImpl) PushMessage(xtc context.Context, msgIn *pbgen.PushMessageIn) (*pbgen.PushMessageOut, error) {
 	clientID := msgIn.Msg.ClientID
-	ret:=new (pbgen.PushMessageOut)
+	ret := new(pbgen.PushMessageOut)
 	log.Debug(clientID)
-	var in v1.BridgeMessagePostReq
+	//var in v1.BridgeMessagePostReq
 	var auth v1.AuthChallenge
-	auth.AuthChallengeA=msgIn.Auth.AuthChallengeA
-	auth.AuthChellengeB=msgIn.Auth.AuthChallengeB
-	if !msgs.ValidateAuthChallenge(clientID, &in.AuthChallenge) {
+	auth.AuthChallengeA = msgIn.Auth.AuthChallengeA
+	auth.AuthChellengeB = msgIn.Auth.AuthChallengeB
+	log.Debugf("PushMessage: in: %v", msgIn)
+	if !msgs.ValidateAuthChallenge(clientID, &auth) {
 		log.Errorf("Got invalid message auth request in post messages %s", clientID)
-		return nil,errors.New("auth error")
+		return nil, errors.New("auth error")
 	}
 	nc := bridgemodel.GetNatsConnection()
 	var envl msgs.MessageEnvelope
 	err := json.Unmarshal([]byte(msgIn.Msg.MessageData), &envl)
 	if err != nil {
 		log.Errorf("Error unmarshalling envelope %s", err.Error())
-		return ret,err
+		return ret, err
 	}
 
 	var natmsg bridgemodel.NatsMessage
 	err = msgs.PullObjectFromEnvelope(&natmsg, &envl)
 	if err != nil {
 		log.Errorf("Error decoding envelope %s", err.Error())
-		return ret,err
+		return ret, err
 	}
 	log.Tracef("Posting message to nats sub=%s, repl=%s", natmsg.Subject, natmsg.Reply)
 	if strings.HasSuffix(natmsg.Subject, msgs.ECHO_SUBJECT_BASE) {
@@ -166,10 +167,11 @@ func (t *MessageServerImpl) PushMessage(xtc context.Context, msgIn *pbgen.PushMe
 	if len(natmsg.Reply) > 0 {
 		nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data)
 	} else {
-		nc.Publish(natmsg.Subject, natmsg.Data)
+		log.Debugf("publishing data %v to subject %s", natmsg.Data, natmsg.Subject)
+		nc.Publish(natmsg.Subject+"local", natmsg.Data)
 	}
 	nc.Flush()
-	return ret,nil
+	return ret, nil
 }
 
 func NewGRPCMessageServerImpl() *MessageServerImpl {

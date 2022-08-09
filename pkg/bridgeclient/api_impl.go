@@ -99,10 +99,12 @@ func handlePostRegister(c *gin.Context) {
 	var in v1.RegisterReq
 	e := c.ShouldBindJSON(&in)
 	if e != nil {
+		log.Errorf("error binding json: %s", e.Error())
 		code, ret := bridgemodel.HandleErrors(c, e)
 		c.JSON(code, &ret)
 		return
 	}
+	log.Debug("Generating new key pair")
 	var req serverv1.RegisterOnPremReq
 	pair, err := msgs.GenerateNewKeyPair()
 	if err != nil {
