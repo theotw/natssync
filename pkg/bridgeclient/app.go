@@ -179,6 +179,7 @@ func RunClient(test bool) {
 				if err != nil {
 					log.WithError(err).WithField("message", natmsg).Error("Error attempting to publish message")
 				}
+				log.Info("Published message from websocket to NATS")
 			}
 		}()
 
@@ -186,7 +187,7 @@ func RunClient(test bool) {
 		go func() {
 			subject := fmt.Sprintf("%s.>", msgs.NATSSYNC_MESSAGE_PREFIX)
 			_, err := nc.Subscribe(subject, func(msg *nats.Msg) {
-				log.Info("Sending message to cloud via websocket")
+				log.Info("Received NATS message to send to cloud via websocket")
 				parsedSubject, err := msgs.ParseSubject(msg.Subject)
 				if err != nil {
 					log.WithError(err).Error("Failure to parse subject")
@@ -218,9 +219,15 @@ func RunClient(test bool) {
 					log.Errorf("Error encoding envelope to json bits, wkipping message %s", jsonerr.Error())
 					return
 				}
+				var bmsgs []v1.BridgeMessage
 				bmsg := v1.BridgeMessage{ClientID: clientID, MessageData: string(jsonbits), FormatVersion: "1"}
 
-				msgJSON, err := json.Marshal(bmsg)
+				request := v1.BridgeMessagePostReq{
+					AuthChallenge: *msgs.NewAuthChallengeFromStoredKey(),
+					Messages:      append(bmsgs, bmsg),
+				}
+
+				msgJSON, err := json.Marshal(request)
 				if err != nil {
 					log.WithError(err).Error("Failed to marshal msg to JSON")
 					return
@@ -229,6 +236,7 @@ func RunClient(test bool) {
 					log.WithError(err).Error("Failed to send message to websocket")
 					return
 				}
+				log.Info("Message sent to cloud via websocket")
 			})
 			if err != nil {
 				log.WithError(err).Error("Failed to subscribe to subject")

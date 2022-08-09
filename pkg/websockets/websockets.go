@@ -87,7 +87,7 @@ func messageReceiver(conn *websocket.Conn, clientID string) {
 			return
 		}
 
-		log.WithField("type", messageType).WithField("data", messageBytes).Info("Received WebSocket message")
+		log.WithField("type", messageType).WithField("data", string(messageBytes)).Info("Received message via websocket")
 
 		handleReadMessage(messageBytes, clientID)
 	}
@@ -128,7 +128,9 @@ func handleReadMessage(messageBytes []byte, clientID string) {
 			log.Errorf("Error decoding envelope %s", err.Error())
 			continue
 		}
+
 		log.Tracef("Posting message to nats sub=%s, repl=%s", natmsg.Subject, natmsg.Reply)
+
 		if strings.HasSuffix(natmsg.Subject, msgs.ECHO_SUBJECT_BASE) {
 			if len(natmsg.Reply) == 0 {
 				log.Errorf("Got an echo message with no reply")

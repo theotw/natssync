@@ -6,6 +6,7 @@ require (
 	github.com/gin-contrib/static v0.0.0-20191128031702-f81c604d8ac2
 	github.com/gin-gonic/gin v1.7.4
 	github.com/google/uuid v1.1.2
+	github.com/gorilla/websocket v1.5.0
 	github.com/nats-io/nats.go v1.13.0
 	github.com/prometheus/client_golang v1.9.0
 	github.com/prometheus/common v0.15.0
@@ -37,7 +38,6 @@ require (
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.9.5 // indirect

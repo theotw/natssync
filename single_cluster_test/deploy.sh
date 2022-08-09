@@ -34,6 +34,8 @@ cloudYamls=(
 )
 
 onpremYamls=(
+  "mongo-pod.yml"
+  "mongo-service.yml"
   "redis-pod.yml"
   "redis-service.yml"
   "nats-deployment.yml"

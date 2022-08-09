@@ -22,13 +22,13 @@ spec:
             - name: NATS_SERVER_URL
               value: "nats://nats:4222"
             - name: CLOUD_BRIDGE_URL
-              value: "http://sync-server.cloud.svc.cluster.local:8080"
+              value: "http://sync-server.cloud.svc.cluster.local:7070"
             - name: PREM_ID
               value: "client1"
             - name: REDIS_URL
               value: "redis:6379"
             - name: KEYSTORE_URL
-              value: "redis://redis:6379"
+              value: "mongodb://mongo"
 
   replicas: 1
 
