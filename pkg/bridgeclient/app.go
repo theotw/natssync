@@ -9,15 +9,19 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/theotw/natssync/pkg/pbgen"
-	"github.com/theotw/natssync/pkg/testing"
-	"google.golang.org/grpc"
 	"io"
 	"math"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/theotw/natssync/pkg/pbgen"
+	"google.golang.org/grpc"
+
+	"github.com/gorilla/websocket"
+	"github.com/theotw/natssync/pkg/testing"
 
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
@@ -100,31 +104,147 @@ func RunClient(test bool) {
 	}
 
 	var lastClientID string
+	var clientID string
 	var currentSubscription *nats.Subscription
+
+	nc := bridgemodel.GetNatsConnection()
+
+	for {
+		clientID = store.LoadLocationID("")
+		if len(clientID) != 0 {
+			break
+		}
+		log.Infof("No client ID, sleeping and retrying")
+		time.Sleep(5 * time.Second)
+	}
+
+	//in case we re-register and the client ID changes, change what we listen for
+	if (clientID != lastClientID) && nc != nil {
+		if currentSubscription != nil {
+			currentSubscription.Unsubscribe()
+			currentSubscription = nil
+		}
+		lastClientID = clientID
+		//announce the cloud ID/location ID at startup
+		connection.Publish(bridgemodel.ResponseForLocationID, []byte(clientID))
+	}
+
+	if os.Getenv("TRANSPORTPROTO") == "websocket" {
+		urlSplit := strings.SplitAfterN(serverURL, "://", 2)
+		urlObject := url.URL{
+			Scheme: "ws",
+			Host:   urlSplit[1],
+			Path:   fmt.Sprintf("/bridge-server/1/message-queue/%s/ws", clientID),
+		}
+		websocketURL := urlObject.String()
+		log.WithField("websocketURL", websocketURL).Info("Using websocket transport")
+
+		conn, _, err := websocket.DefaultDialer.Dial(websocketURL, nil)
+		if err != nil {
+			log.WithError(err).WithField("url", websocketURL).Error("Failed to connect to websocket")
+			return
+		}
+
+		// Receiving from the cloud
+		go func() {
+			defer func() { conn.Close() }()
+			for {
+				_, msgBytes, err := conn.ReadMessage()
+				log.Info("Received message from the cloud via websocket")
+
+				if err != nil {
+					log.WithError(err).Error("Failed to read websocket message")
+					continue
+				}
+
+				var bridgeMsg v1.BridgeMessage
+				if err = json.Unmarshal(msgBytes, &bridgeMsg); err != nil {
+					log.WithError(err).Error("Failed to unmarshal message")
+					continue
+				}
+
+				var env msgs.MessageEnvelope
+				if err = json.Unmarshal([]byte(bridgeMsg.MessageData), &env); err != nil {
+					log.Errorf("Error unmarshalling envelope %s", err.Error())
+					continue
+				}
+
+				var natmsg bridgemodel.NatsMessage
+				if err = msgs.PullObjectFromEnvelope(&natmsg, &env); err != nil {
+					log.WithError(err).Error("Failure pulling object from envelope")
+					continue
+				}
+
+				err = nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data)
+				if err != nil {
+					log.WithError(err).WithField("message", natmsg).Error("Error attempting to publish message")
+				}
+			}
+		}()
+
+		// Forwarding to the cloud
+		go func() {
+			subject := fmt.Sprintf("%s.>", msgs.NATSSYNC_MESSAGE_PREFIX)
+			_, err := nc.Subscribe(subject, func(msg *nats.Msg) {
+				log.Info("Sending message to cloud via websocket")
+				parsedSubject, err := msgs.ParseSubject(msg.Subject)
+				if err != nil {
+					log.WithError(err).Error("Failure to parse subject")
+					return
+				}
+				if parsedSubject.LocationID == clientID {
+					return
+				}
+
+				msgFormat := msgs.GetMsgFormat()
+				status, err := msgFormat.ValidateMsgFormat(msg.Data, false)
+				if err != nil {
+					log.Errorf("Error validating the cloud event message: %s", err.Error())
+					return
+				}
+				if !status {
+					log.Errorf("Cloud event message validation failed, ignoring the message...")
+					return
+				}
+
+				natmsg := bridgemodel.NatsMessage{Reply: msg.Reply, Subject: msg.Subject, Data: msg.Data}
+				envelope, enverr := msgs.PutObjectInEnvelope(natmsg, clientID, pkg.CLOUD_ID)
+				if enverr != nil {
+					log.Errorf("Error putting msg in envelope %s", enverr.Error())
+					return
+				}
+				jsonbits, jsonerr := json.Marshal(&envelope)
+				if jsonerr != nil {
+					log.Errorf("Error encoding envelope to json bits, wkipping message %s", jsonerr.Error())
+					return
+				}
+				bmsg := v1.BridgeMessage{ClientID: clientID, MessageData: string(jsonbits), FormatVersion: "1"}
+
+				msgJSON, err := json.Marshal(bmsg)
+				if err != nil {
+					log.WithError(err).Error("Failed to marshal msg to JSON")
+					return
+				}
+				if err = conn.WriteMessage(websocket.TextMessage, msgJSON); err != nil {
+					log.WithError(err).Error("Failed to send message to websocket")
+					return
+				}
+			})
+			if err != nil {
+				log.WithError(err).Error("Failed to subscribe to subject")
+				return
+			}
+		}()
+		for {
+			time.Sleep(1 * time.Second)
+		}
+	}
+
 	for true {
 		if timeToQuit(quitChannel) {
 			log.Info("Quit signal received, exiting app...")
 			return
 		}
-
-		nc := bridgemodel.GetNatsConnection()
-		clientID := store.LoadLocationID("")
-		if len(clientID) == 0 {
-			log.Infof("No client ID, sleeping and retrying")
-			time.Sleep(5 * time.Second)
-			continue
-		}
-		//in case we re-register and the client ID changes, change what we listen for
-		if (clientID != lastClientID) && nc != nil {
-			if currentSubscription != nil {
-				currentSubscription.Unsubscribe()
-				currentSubscription = nil
-			}
-			lastClientID = clientID
-			//announce the cloud ID/location ID at startup
-			connection.Publish(bridgemodel.ResponseForLocationID, []byte(clientID))
-		}
-
 		//same as above, if we re-register, we drop the subscibe and need to resubscribe
 		if currentSubscription == nil {
 			currentSubscription, err = subscribeToOutboundMessages(serverURL, clientID)
@@ -319,6 +439,7 @@ func handleOutboundMessages(subscription *nats.Subscription, serverURL, clientID
 	}
 	log.Infof("Leaving Handle Outbound Messages ")
 }
+
 func sendMessageToCloud(serverURL string, clientID string, ceEnabled bool, msgsList ...*nats.Msg) {
 	//messagesToSend := make([]v1.BridgeMessage, 0)
 	serverURL = pkg.Config.GRPCUrl

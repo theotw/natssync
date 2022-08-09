@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 
@@ -136,4 +137,12 @@ func GetSubscriptionForClient(clientID string) *nats.Subscription {
 	mapSync.RUnlock()
 	log.Tracef("End Get Subscript for client  %s", clientID)
 	return ret
+}
+
+func ClientSubscriptionMiddleware(ctx *gin.Context) {
+	log.Info("Getting client subscription")
+	clientID := ctx.Param("premid")
+	sub := GetSubscriptionForClient(clientID)
+	ctx.Set("subscription", sub)
+	ctx.Next()
 }

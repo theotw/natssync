@@ -59,7 +59,7 @@ func (c *Configuration) LoadValues() {
 		{&c.ConfigmapName, "CONFIGMAP_NAME", ""},
 		{&c.CloudEvents, "CLOUDEVENTS_ENABLED", false},
 		{&c.SkipTlsValidation, "SKIP_TLS_VALIDATION", false},
-		{&c.GRPCPort, "GRPC_PORT", "9090"},
+		{&c.GRPCPort, "GRPC_PORT", ""},
 		{&c.GRPCUrl, "GRPC_URL", "localhost:9090"},
 	}
 

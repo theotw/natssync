@@ -7,7 +7,6 @@ package cloudserver
 import (
 	"bytes"
 	"context"
-	"github.com/theotw/natssync/pkg/testing"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -18,6 +17,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
+	"github.com/theotw/natssync/pkg/testing"
+	"github.com/theotw/natssync/pkg/websockets"
 
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/bridgemodel"
@@ -58,7 +59,7 @@ func RunBridgeServer(test bool) {
 		log.Info("Post In goroutine list and server")
 	}()
 	log.Info("Web Server running")
-	if len(pkg.Config.GRPCPort)>0{
+	if len(pkg.Config.GRPCPort) > 0 {
 		log.Info("Starting gRPC Server")
 		impl := NewGRPCMessageServerImpl()
 		impl.RunServer(pkg.Config.GRPCPort)
@@ -98,6 +99,7 @@ func newRouter() *gin.Engine {
 	v1.Handle(http.MethodPost, "/unregister", handlePostUnRegister)
 	v1.Handle(http.MethodPost, "/message-queue/:premid", certMiddleware.Enforce, handlePostMessage)
 	v1.Handle(http.MethodGet, "/message-queue/:premid", certMiddleware.Enforce, handleGetMessages)
+	v1.Handle(http.MethodGet, "/message-queue/:premid/ws", ClientSubscriptionMiddleware, websockets.HandleConnectionRequest)
 	v1.Handle(http.MethodPost, "/messages", natsMsgPostHandler)
 
 	addUnversionedRoutes(router)
