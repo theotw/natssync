@@ -23,7 +23,7 @@ var clientID string
 var activeSub *nats.Subscription
 
 func main() {
-	log.Infof("Version %s",pkg.VERSION)
+	log.Infof("Version %s", pkg.VERSION)
 	level, levelerr := log.ParseLevel(os.Getenv("LOG_LEVEL"))
 	if levelerr != nil {
 		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
@@ -64,7 +64,7 @@ func main() {
 	runtime.Goexit()
 }
 func msgHandler(msg *nats.Msg) {
-	log.Infof("Got message %s : %s  %s", msg.Subject, msg.Reply, msg.Data)
+	log.Infof("msgHandler: Got message %s : %s  %s", msg.Subject, msg.Reply, msg.Data)
 	tmpstring := time.Now().Format("20060102-15:04:05.000")
 	echoMsg := fmt.Sprintf("%s | %s %s %s", tmpstring, "echoproxylet", clientID, string(msg.Data))
 	replysub := fmt.Sprintf("%s.%s", msg.Reply, msgs.ECHOLET_SUFFIX)
@@ -72,12 +72,13 @@ func msgHandler(msg *nats.Msg) {
 	mSource := "urn:theotw:astra:echolet"
 	msgFormat := msgs.GetMsgFormat()
 	cvMessage, err := msgFormat.GeneratePayload(echoMsg, mType, mSource)
-
 	if err != nil {
 		log.Errorf("Failed to generate cloud events payload: %s", err.Error())
 		return
 	}
+	log.Infof("msgHandler: geenrated payload cvMessage %v", cvMessage)
 	nc := bridgemodel.GetNatsConnection()
+	log.Infof("publishing %v to %s", cvMessage, replysub)
 	if err = nc.Publish(replysub, cvMessage); err != nil {
 		log.Errorf("Error publishing to %s: %s", replysub, err)
 	}

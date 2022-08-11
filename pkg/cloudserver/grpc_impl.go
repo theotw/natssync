@@ -53,7 +53,7 @@ func (t *MessageServerImpl) GetMessages(in *pbgen.RequestMessagesIn, x pbgen.Mes
 	}
 	maxQueueSize, numErr := strconv.ParseInt(maxMsgHoldStr, 10, 16)
 	if numErr != nil {
-		waitTimeout = 512
+		waitTimeout = 5120
 	}
 
 	clientID := in.ClientID
@@ -103,6 +103,7 @@ func (t *MessageServerImpl) GetMessages(in *pbgen.RequestMessagesIn, x pbgen.Mes
 						bridgeMsg.MessageData = string(jsonData)
 						bridgeMsg.FormatVersion = "1"
 						bridgeMsg.ClientID = clientID
+						log.Debugf("GetMessages: sending msg: %v", bridgeMsg)
 						x.Send(&bridgeMsg)
 					} else {
 						log.Errorf("Error marshelling message in envelope %s \n", marshelError.Error())
@@ -168,7 +169,7 @@ func (t *MessageServerImpl) PushMessage(xtc context.Context, msgIn *pbgen.PushMe
 		nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data)
 	} else {
 		log.Debugf("publishing data %v to subject %s", natmsg.Data, natmsg.Subject)
-		nc.Publish(natmsg.Subject+"local", natmsg.Data)
+		nc.Publish(natmsg.Subject, natmsg.Data)
 	}
 	nc.Flush()
 	return ret, nil
