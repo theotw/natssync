@@ -1,9 +1,12 @@
-package websockets
+/*
+ * Copyright (c) The One True Way 2022. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
+ */
+
+package cloudserver
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/theotw/natssync/pkg/cloudserver"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -70,7 +73,7 @@ func HandleConnectionRequest(ctx *gin.Context) {
 	log.Info("WebSocket connection started")
 
 	clientID := ctx.Param("premid")
-	sub := cloudserver.GetSubscriptionForClient(clientID)
+	sub := GetSubscriptionForClient(clientID)
 	subObject, exists := ctx.Get("subscription")
 	sub, ok := subObject.(*nats.Subscription)
 	if !exists || !ok || sub == nil {
@@ -96,7 +99,7 @@ func messageReceiver(conn *websocket.Conn, clientID string) {
 }
 
 func messageSender(conn *websocket.Conn, clientID string, sub *nats.Subscription) {
-	handleGetMessages(conn, clientID, sub)
+	handleGetMessagesWS(conn, clientID, sub)
 }
 
 func handleReadMessage(messageBytes []byte, clientID string) {
@@ -155,7 +158,7 @@ func handleReadMessage(messageBytes []byte, clientID string) {
 	}
 }
 
-func handleGetMessages(conn *websocket.Conn, clientID string, sub *nats.Subscription) {
+func handleGetMessagesWS(conn *websocket.Conn, clientID string, sub *nats.Subscription) {
 	defer func() {
 		if err := conn.Close(); err != nil {
 			log.WithError(err).Warning("Error attempting to close websocket connection")

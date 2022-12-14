@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"github.com/theotw/natssync/pkg/testing"
-	"github.com/theotw/natssync/pkg/websockets"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -94,7 +93,7 @@ func newRouter() *gin.Engine {
 	v1.Handle(http.MethodPost, "/message-queue/:premid", certMiddleware.Enforce, handlePostMessage)
 	v1.Handle(http.MethodGet, "/message-queue/:premid", certMiddleware.Enforce, handleGetMessages)
 	v1.Handle(http.MethodPost, "/messages", natsMsgPostHandler)
-	v1.Handle(http.MethodGet, "/message-queue/:premid/ws", websockets.HandleConnectionRequest)
+	v1.Handle(http.MethodGet, "/message-queue/:premid/ws", HandleConnectionRequest)
 
 	addUnversionedRoutes(router)
 	addOpenApiDefRoutes(router)

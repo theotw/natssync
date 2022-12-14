@@ -29,13 +29,12 @@ kind: Service
 metadata:
   name: nats-syncserver
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     type: nats-syncserver
   ports:
     - protocol: TCP
-      port: 8080
-      nodePort: 30080
+      port: 80
       targetPort: 8080
 
 ---
@@ -44,13 +43,12 @@ kind: Service
 metadata:
   name: httpproxy
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     type: httpproxyserver
   ports:
     - protocol: TCP
-      port: 8081
-      nodePort: 30081
+      port: 80
       targetPort: 8080
 
 ---
@@ -81,7 +79,7 @@ metadata:
 spec:
   containers:
     - name: sync-server
-      image: theotw/natssync-server:latest
+      image: theotw/natssync-server:2.0-ws-beta
       imagePullPolicy: Always
       ports:
         - containerPort: 8080
@@ -116,7 +114,7 @@ metadata:
 spec:
   containers:
     - name: authserver
-      image: theotw/simple-reg-auth:latest
+      image: theotw/simple-reg-auth:2.0-ws-beta
       imagePullPolicy: Always
       env:
         - name: LOG_LEVEL
@@ -142,7 +140,7 @@ metadata:
 spec:
   containers:
     - name: httpproxyserver
-      image: theotw/httpproxy-server:latest
+      image: theotw/httpproxy-server:2.0-ws-beta
       imagePullPolicy: Always
       env:
         - name: LOG_LEVEL
