@@ -3,6 +3,7 @@ package websockets
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/theotw/natssync/pkg/cloudserver"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -69,6 +70,7 @@ func HandleConnectionRequest(ctx *gin.Context) {
 	log.Info("WebSocket connection started")
 
 	clientID := ctx.Param("premid")
+	sub := cloudserver.GetSubscriptionForClient(clientID)
 	subObject, exists := ctx.Get("subscription")
 	sub, ok := subObject.(*nats.Subscription)
 	if !exists || !ok || sub == nil {
