@@ -5,7 +5,7 @@ metadata:
 data:
   # property-like keys; each key maps to a simple value
   nats_url: "nats://nats:4222"
-  cloud_bridge_url: "http://20.226.194.15"
+  cloud_bridge_url: "http://bridgetest.netapphci.cloud"
   key_store: "file:///data"
   log_leve: "trace"
   skip_tls_validation: "false"
@@ -67,10 +67,12 @@ spec:
   containers:
     - name: sync-client
       image: theotw/natssync-client:2.0-ws-beta
-      imagePullPolicy: Never
+      imagePullPolicy: Always
       ports:
         - containerPort: 8080
       env:
+        - name: TRANSPORTPROTO
+          value: websocketX
         - name: LOG_LEVEL
           valueFrom:
             configMapKeyRef:

@@ -6,9 +6,17 @@ package cloudclient
 
 import "os"
 
+// BiDiMessageHandler Generic interface for bi directional message handlers
 type BiDiMessageHandler interface {
+
+	// StartMessageHandler Starts the handler
 	StartMessageHandler(clientID string) error
+
+	// StopMessageHandler stops the handler
 	StopMessageHandler()
+
+	// GetHandlerType gets the type of the handler for debug purposes
+	GetHandlerType() string
 }
 
 

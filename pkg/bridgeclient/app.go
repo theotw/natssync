@@ -122,6 +122,7 @@ func RunClient(test bool) {
 			//announce the cloud ID/location ID at startup and changes
 			connection.Publish(bridgemodel.ResponseForLocationID, []byte(clientID))
 			currentMessageHandler=NewBidiMessageHandler(serverURL)
+			log.Infof("Starting Message Handler of type %s ",currentMessageHandler.GetHandlerType())
 			currentMessageHandler.StartMessageHandler(clientID)
 		}
 	}

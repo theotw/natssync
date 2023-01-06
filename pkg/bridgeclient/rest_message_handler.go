@@ -33,7 +33,9 @@ func NewRestMessageHandler(serverURL string) *RestMessageHandler{
 	ret.stopFlag=false
 	return ret
 }
-
+func (t *RestMessageHandler) GetHandlerType() string{
+	return "rest"
+}
 func (t *RestMessageHandler) StartMessageHandler(clientID string) error {
 	currentSubscription, err := subscribeToOutboundMessages(t.serverURL, clientID)
 	if err != nil {

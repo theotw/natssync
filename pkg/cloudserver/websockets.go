@@ -78,11 +78,15 @@ func HandleConnectionRequest(ctx *gin.Context) {
 	sub, ok := subObject.(*nats.Subscription)
 	if !exists || !ok || sub == nil {
 		log.WithField("clientID", clientID).Error("No subscription for client")
+		return
 	}
-
+	//get messages from web sockets
 	go messageReceiver(conn, clientID)
+
+	//push messages to the socket
 	go messageSender(conn, clientID, sub)
 }
+
 
 func messageReceiver(conn *websocket.Conn, clientID string) {
 	for {

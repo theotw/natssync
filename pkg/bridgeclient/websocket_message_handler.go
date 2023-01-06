@@ -28,7 +28,9 @@ func NewWebSocketMessageHandler(serverURL string) *WebSocketMessageHandler {
 	ret.serverURL=serverURL
 	return ret
 }
-
+func (t *WebSocketMessageHandler) GetHandlerType() string{
+	return "web-socket"
+}
 func (t *WebSocketMessageHandler) StartMessageHandler(clientID string) error {
 	urlSplit := strings.SplitAfterN(t.serverURL, "://", 2)
 	urlObject := url.URL{

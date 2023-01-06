@@ -315,7 +315,7 @@ func aboutGetUnversioned(c *gin.Context) {
 	var resp AboutResponse
 	resp.AppVersion = "1.0.0"
 
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusOK, &resp)
 }
 
 func healthCheckGetUnversioned(c *gin.Context) {
