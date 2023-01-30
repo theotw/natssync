@@ -21,7 +21,7 @@ import (
 
 const (
 	maxBytesToReadTCPEnvVariableKey = "MAX_BYTES_TCP"
-	defaultMaxBytesToReadTCP        = 1024
+	defaultMaxBytesToReadTCP        = 64 * 1024
 )
 
 func EncodeTCPData(data []byte, connectionID string, sequenceID int) []byte {
@@ -36,7 +36,7 @@ func EncodeTCPData(data []byte, connectionID string, sequenceID int) []byte {
 	return bits
 }
 
-//takes in a JSON byte array of the TcpData and returns the byte data
+// takes in a JSON byte array of the TcpData and returns the byte data
 func DecodeTCPData(data []byte) ([]byte, error) {
 	var tcpData TCPData
 	err := json.Unmarshal(data, &tcpData)
@@ -53,9 +53,9 @@ func DecodeTCPData(data []byte) ([]byte, error) {
 	return bits, err
 }
 
-func StartBiDiNatsTunnel( outBoundSubject, inBoundSubject, connectionID string,inBoundQueue nats.NatsSubscriptionInterface, socket io.ReadWriteCloser) error {
-
+func StartBiDiNatsTunnel(outBoundSubject, inBoundSubject, connectionID string, inBoundQueue nats.NatsSubscriptionInterface, socket io.ReadWriteCloser) error {
 	defer func() {
+		log.Debugf("BIDI connection ended  connID %s %s <-> %s ", connectionID, outBoundSubject, inBoundSubject)
 		if err := socket.Close(); err != nil {
 			log.WithError(err).
 				WithFields(
@@ -70,7 +70,7 @@ func StartBiDiNatsTunnel( outBoundSubject, inBoundSubject, connectionID string,i
 
 	//kick off the outbound stream tcp in to Nats
 	go TransferTcpDataToNats(outBoundSubject, connectionID, socket)
-	log.Debugf("BIDI connection started  %s <-> %s ", outBoundSubject, inBoundSubject)
+	log.Debugf("BIDI connection started  connID %s %s <-> %s ", connectionID, outBoundSubject, inBoundSubject)
 	//now read inbound NATS and write it back to the socket
 	TransferNatsToTcpData(inBoundQueue, socket)
 	return nil
@@ -122,7 +122,7 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 
 		if readErr != nil {
 			errorString := readErr.Error()
-			if !(strings.Contains(errorString,"EOF") || strings.Contains(errorString,"use of closed network connection")){
+			if !(strings.Contains(errorString, "EOF") || strings.Contains(errorString, "use of closed network connection")) {
 				log.WithError(readErr).Errorf("Error reading data tcp -> nats")
 			}
 			break
@@ -160,7 +160,7 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 				log.Debugf("Got valid package from nats len %d", tcpDataLen)
 				if tcpDataLen > 0 {
 					if _, err := dest.Write(tcpData); err != nil {
-						log.WithError(err).Errorf("failed to write tcp data to socket %d",tcpDataLen)
+						log.WithError(err).Errorf("failed to write tcp data to socket %d", tcpDataLen)
 					}
 				} else {
 					//if we got 0 length data, we are done, bail
