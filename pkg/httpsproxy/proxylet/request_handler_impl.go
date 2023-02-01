@@ -200,6 +200,7 @@ func (rh *requestHandler) HttpsHandler(msg *nats.Msg) {
 					inBoundQueue,
 					targetSocket,
 				)
+				inBoundQueue.Unsubscribe()
 				if err != nil {
 					log.WithError(err).
 						WithFields(

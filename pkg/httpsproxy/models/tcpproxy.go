@@ -36,7 +36,7 @@ func EncodeTCPData(data []byte, connectionID string, sequenceID int) []byte {
 	return bits
 }
 
-//takes in a JSON byte array of the TcpData and returns the byte data
+// takes in a JSON byte array of the TcpData and returns the byte data
 func DecodeTCPData(data []byte) ([]byte, error) {
 	var tcpData TCPData
 	err := json.Unmarshal(data, &tcpData)
@@ -53,7 +53,7 @@ func DecodeTCPData(data []byte) ([]byte, error) {
 	return bits, err
 }
 
-func StartBiDiNatsTunnel( outBoundSubject, inBoundSubject, connectionID string,inBoundQueue nats.NatsSubscriptionInterface, socket io.ReadWriteCloser) error {
+func StartBiDiNatsTunnel(outBoundSubject, inBoundSubject, connectionID string, inBoundQueue nats.NatsSubscriptionInterface, socket io.ReadWriteCloser) error {
 
 	defer func() {
 		if err := socket.Close(); err != nil {
@@ -108,21 +108,20 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 			dataToSend := EncodeTCPData(writeBuf, connectionID, sequenceID)
 
 			writeErr := nc.Publish(subject, dataToSend)
-			if err := nc.Flush(); err != nil {
-				log.WithError(err).Errorf("failed to flush natssync")
-			}
-
 			if writeErr != nil {
 				log.WithError(writeErr).Errorf("Error writing data to nats")
 				break
 			} else {
 				log.WithField("subject", subject).Debugf("Sent socket data to nats")
 			}
+			if err := nc.Flush(); err != nil {
+				log.WithError(err).Errorf("failed to flush natssync")
+			}
 		}
 
 		if readErr != nil {
 			errorString := readErr.Error()
-			if !(strings.Contains(errorString,"EOF") || strings.Contains(errorString,"use of closed network connection")){
+			if !(strings.Contains(errorString, "EOF") || strings.Contains(errorString, "use of closed network connection")) {
 				log.WithError(readErr).Errorf("Error reading data tcp -> nats")
 			}
 			break
@@ -160,7 +159,7 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 				log.Debugf("Got valid package from nats len %d", tcpDataLen)
 				if tcpDataLen > 0 {
 					if _, err := dest.Write(tcpData); err != nil {
-						log.WithError(err).Errorf("failed to write tcp data to socket %d",tcpDataLen)
+						log.WithError(err).Errorf("failed to write tcp data to socket %d", tcpDataLen)
 					}
 				} else {
 					//if we got 0 length data, we are done, bail
