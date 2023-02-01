@@ -108,15 +108,14 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 			dataToSend := EncodeTCPData(writeBuf, connectionID, sequenceID)
 
 			writeErr := nc.Publish(subject, dataToSend)
-			if err := nc.Flush(); err != nil {
-				log.WithError(err).Errorf("failed to flush natssync")
-			}
-
 			if writeErr != nil {
 				log.WithError(writeErr).Errorf("Error writing data to nats")
 				break
 			} else {
 				log.WithField("subject", subject).Debugf("Sent socket data to nats")
+			}
+			if err := nc.Flush(); err != nil {
+				log.WithError(err).Errorf("failed to flush natssync")
 			}
 		}
 
