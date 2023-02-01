@@ -114,7 +114,6 @@ func handleGetMessages(c *gin.Context) {
 			}
 		}
 	} else {
-		//make this trace because its really just a timeout
 		log.Errorf("Got a request for messages for a client ID that has no subscription %s \n", clientID)
 	}
 
@@ -480,6 +479,7 @@ func handlePostRegister(c *gin.Context) {
 	resp.PremID = locationID
 	nc := bridgemodel.GetNatsConnection()
 	nc.Publish(bridgemodel.REGISTRATION_LIFECYCLE_ADDED, []byte(locationID))
+	AddNewSubscription(locationID,nc)
 	c.JSON(http.StatusCreated, &resp)
 }
 

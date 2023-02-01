@@ -101,7 +101,6 @@ func (s *server) connectHandlerNats(c *gin.Context) {
 	clientID := FetchClientIDFromProxyAuthHeader(c)
 	connectionUUID := uuid.New().String()
 
-
 	outBoundSubject := httpproxy.MakeHttpsMessageSubject(clientID, connectionUUID)
 	inBoundSubject := httpproxy.MakeHttpsMessageSubject(s.locationID, connectionUUID)
 
@@ -127,7 +126,6 @@ func (s *server) connectHandlerNats(c *gin.Context) {
 		return
 	}
 
-
 	go func() {
 		if err := models.StartBiDiNatsTunnel(
 			outBoundSubject,
@@ -138,6 +136,7 @@ func (s *server) connectHandlerNats(c *gin.Context) {
 		); err != nil {
 			log.WithError(err).Error("failed to start bidi nats tunnel")
 		}
+		inBoundQueue.Unsubscribe()
 	}()
 
 }
@@ -315,7 +314,7 @@ func aboutGetUnversioned(c *gin.Context) {
 	var resp AboutResponse
 	resp.AppVersion = "1.0.0"
 
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusOK, &resp)
 }
 
 func healthCheckGetUnversioned(c *gin.Context) {

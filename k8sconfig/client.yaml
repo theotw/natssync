@@ -5,7 +5,7 @@ metadata:
 data:
   # property-like keys; each key maps to a simple value
   nats_url: "nats://nats:4222"
-  cloud_bridge_url: "http://message-bridge.hcieng.com"
+  cloud_bridge_url: "http://bridgetest.netapphci.cloud"
   key_store: "file:///data"
   log_leve: "trace"
   skip_tls_validation: "false"
@@ -66,11 +66,13 @@ spec:
 
   containers:
     - name: sync-client
-      image: theotw/natssync-client:latest
-      imagePullPolicy: Never
+      image: theotw/natssync-client:2.0-ws-beta
+      imagePullPolicy: Always
       ports:
         - containerPort: 8080
       env:
+        - name: TRANSPORTPROTO
+          value: websocketX
         - name: LOG_LEVEL
           valueFrom:
             configMapKeyRef:
@@ -109,7 +111,7 @@ metadata:
 spec:
   containers:
     - name: echo-proxlet
-      image: theotw/echo-proxylet:latest
+      image: theotw/echo-proxylet:2.0-ws-beta
       imagePullPolicy: Always
       env:
         - name: LOG_LEVEL
@@ -134,7 +136,7 @@ metadata:
 spec:
   containers:
     - name: httpproxylet
-      image: theotw/httpproxylet:latest
+      image: theotw/httpproxylet:2.0-ws-beta
       imagePullPolicy: Always
       env:
         - name: LOG_LEVEL

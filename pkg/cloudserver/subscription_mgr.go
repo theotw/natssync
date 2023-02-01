@@ -70,9 +70,14 @@ func handleNewSubscription(msg *nats.Msg) {
 		log.Debugf("Got a new subscription message with no data")
 		return
 	}
-	nc := bridgemodel.GetNatsConnection()
+	// We used to add the new subscription here but we had timing errors with clients getting the ID
+	// back faster than the subscription was registered, so we put the AddNewSubscription syncrounously in the post handler
+	//nc := bridgemodel.GetNatsConnection()
+	//clientID := string(msg.Data)
+	//AddNewSubscription(clientID, nc)
+}
 
-	clientID := string(msg.Data)
+func AddNewSubscription(clientID string, nc *nats.Conn) {
 	log.Tracef("In handle New Subscription %s", clientID)
 	subject := fmt.Sprintf("%s.%s.>", msgs.NATSSYNC_MESSAGE_PREFIX, clientID)
 	sub, err := nc.SubscribeSync(subject)
