@@ -71,7 +71,8 @@ func newNatsClient(natsConn *natspkg.Conn) *natsClient {
 
 func Connect(natsURL string) (ClientInterface, error) {
 
-	natsConn, err := initNats(natsURL, 2*time.Minute)
+	//natsConn, err := initNats(natsURL, 2*time.Minute)
+	natsConn, err := natspkg.Connect(natsURL)
 	if err != nil {
 		return nil, err
 	}
