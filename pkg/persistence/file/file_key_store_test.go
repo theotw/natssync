@@ -49,7 +49,7 @@ func TestFileKeyStore(t *testing.T) {
 		{"Read Location", testFileKeyStoreReadLocation},
 		{"List Clients", testFileKeyStoreListKnownClients},
 		{"Remove Location", testFileKeystoreRemoveLocation},
-		{"Remove Cloud Master Data", testFileKeystoreRemoveCloudMasterData},
+		{"Remove Cloud Master data", testFileKeystoreRemoveCloudMasterData},
 	}
 
 	for _, test := range tests {

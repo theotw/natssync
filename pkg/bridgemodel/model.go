@@ -13,8 +13,8 @@ const REGISTRATION_LIFECYCLE_ADDED = "natssync.registration.lifecyle.added"
 const REGISTRATION_LIFECYCLE_REMOVED = "natssync.registration.lifecyle.removed"
 const ACCOUNT_LIFECYCLE_REMOVED = "account.lifecycle.removed" // TODO: This should probably be configurable
 
-//this is a generic message that will be encrypted and decrypted on the bridge.
-//Its basicly the NATS data
+// this is a generic message that will be encrypted and decrypted on the bridge.
+// Its basicly the NATS data
 type NatsMessage struct {
 	Subject string
 	Reply   string
@@ -55,7 +55,7 @@ type RegistrationResponse struct {
 	Success bool `json:"success"`
 }
 
-//use this when we just need an auth request that has no add on data
+// use this when we just need an auth request that has no add on data
 type GenericAuthRequest struct {
 	AuthToken string `json:"authToken"`
 }

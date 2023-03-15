@@ -98,7 +98,7 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 
 	sequenceID := 0
 	for {
-		log.Debug("Reading Data from socket")
+		log.Debug("Reading data from socket")
 		buf := make([]byte, maxBytesToRead)
 		bufferLen, readErr := src.Read(buf)
 		log.Debugf("Read %d bytes ", bufferLen)
@@ -147,7 +147,7 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 
 func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCloser) {
 	for {
-		log.Debug("waiting for Data from nats")
+		log.Debug("waiting for data from nats")
 		natsMsg, err := queue.NextMsg(10 * time.Minute)
 		if err != nil {
 			log.WithError(err).Errorf("Error reading from NATS")

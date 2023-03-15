@@ -73,7 +73,7 @@ func handleNewSubscription(msg *nats.Msg) {
 	// We used to add the new subscription here but we had timing errors with clients getting the ID
 	// back faster than the subscription was registered, so we put the AddNewSubscription syncrounously in the post handler
 	//nc := bridgemodel.GetNatsConnection()
-	//clientID := string(msg.Data)
+	//clientID := string(msg.data)
 	//AddNewSubscription(clientID, nc)
 }
 
@@ -132,7 +132,7 @@ func handleRemoveAccount(msg *nats.Msg) {
 	}
 }
 
-//gets the subscription for the client ID or returns nil
+// gets the subscription for the client ID or returns nil
 func GetSubscriptionForClient(clientID string) *nats.Subscription {
 	var ret *nats.Subscription
 	log.Tracef("Start Get Subscript for client  %s", clientID)

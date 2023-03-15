@@ -177,7 +177,7 @@ func transferTcpDataToTcp(src io.ReadCloser, dest io.WriteCloser) {
 
 	buf := make([]byte, 1024)
 	for {
-		log.Debug("Reading Data")
+		log.Debug("Reading data")
 		readLen, readErr := src.Read(buf)
 		if readErr != nil {
 			log.WithError(readErr).Errorf("Error reading data")
