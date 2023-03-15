@@ -61,7 +61,10 @@ func TestHttps(t *testing.T) {
 	}
 
 	resp, err := httpClient.Get(httpsGetTestURL)
-	assert.Nil(t, err, "failed to send http request: %v", err)
+	if !assert.Nil(t, err, "failed to send http request: %v", err) {
+		t.Fatalf("Invalid HTTPS Response %s", err.Error())
+		return
+	}
 
 	assert.Equal(t, resp.StatusCode, http.StatusOK)
 	bodyBytes, err := io.ReadAll(resp.Body)
