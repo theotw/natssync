@@ -2,6 +2,10 @@ package nats
 
 import (
 	natspkg "github.com/nats-io/nats.go"
+	"github.com/nats-io/nkeys"
+	log "github.com/sirupsen/logrus"
+	"os"
+	"time"
 )
 
 type MsgHandler func(*Msg)
@@ -66,9 +70,75 @@ func newNatsClient(natsConn *natspkg.Conn) *natsClient {
 }
 
 func Connect(natsURL string) (ClientInterface, error) {
-	natsConn, err := natspkg.Connect(natsURL)
+
+	natsConn, err := initNats(natsURL, 2*time.Minute)
 	if err != nil {
 		return nil, err
 	}
 	return newNatsClient(natsConn), nil
+}
+func initNats(natsUrlList string, timeout time.Duration) (*natspkg.Conn, error) {
+	var ret *natspkg.Conn
+	userName := os.Getenv("NATS_USER")
+	seed := os.Getenv("NATS_SEED")
+
+	start := time.Now()
+	done := false
+	var errToReturn error
+	var i time.Duration
+	for !done {
+		i = i + 1
+		log.Infof("Connecting to NATS on %s", natsUrlList)
+
+		opts := natspkg.Options{
+			Url:  natsUrlList,
+			Nkey: userName,
+		}
+		var sigHandler natspkg.SignatureHandler
+		if len(seed) > 0 {
+			sigHandler = func(nonce []byte) ([]byte, error) {
+				seedBytes := []byte(seed)
+				kp, err := nkeys.FromSeed(seedBytes)
+				if err != nil {
+					return nil, err
+				}
+				signature, err := kp.Sign(nonce)
+				if err != nil {
+					return nil, err
+				}
+				return signature, nil
+			}
+		}
+		opts.SignatureCB = sigHandler
+		opts.DisconnectedErrCB = func(_ *natspkg.Conn, err error) {
+			if err != nil {
+				log.Debugf("Connection disconnect %s", err.Error())
+			} else {
+				log.Debugf("Connection disconnect no error")
+			}
+		}
+		opts.ClosedCB = func(_ *natspkg.Conn) {
+			log.Debugf("NATS Connection closed")
+		}
+		opts.ReconnectedCB = func(_ *natspkg.Conn) {
+			log.Debugf("Connection Reconnect")
+		}
+		nc, err := opts.Connect()
+
+		if err != nil {
+			log.Errorf("Error connecting to nats on URL %s  / Error %s", natsUrlList, err.Error())
+			//increasing sleep longer
+			time.Sleep(5 * time.Second)
+			now := time.Now()
+			done = now.Sub(start) >= timeout
+			errToReturn = err
+		} else {
+			log.Infof("Connected to NATS on %s", natsUrlList)
+			ret = nc
+			done = true
+		}
+		errToReturn = nil
+	}
+	log.Infof("Leaving NATS Init ")
+	return ret, errToReturn
 }
