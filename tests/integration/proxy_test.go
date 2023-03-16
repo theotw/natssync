@@ -3,6 +3,7 @@ package integration
 import (
 	"crypto/tls"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"net/url"
@@ -38,7 +39,7 @@ func TestHttp(t *testing.T) {
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	assert.Nil(t, err, "failed read response body: %v", err)
-
+	log.Infof("Data from HTTP GET %s", string(bodyBytes))
 	assert.NotNil(t, bodyBytes)
 }
 
@@ -61,7 +62,10 @@ func TestHttps(t *testing.T) {
 	}
 
 	resp, err := httpClient.Get(httpsGetTestURL)
-	assert.Nil(t, err, "failed to send http request: %v", err)
+	if !assert.Nil(t, err, "failed to send http request: %v", err) {
+		t.Fatalf("Invalid HTTPS Response %s", err.Error())
+		return
+	}
 
 	assert.Equal(t, resp.StatusCode, http.StatusOK)
 	bodyBytes, err := io.ReadAll(resp.Body)

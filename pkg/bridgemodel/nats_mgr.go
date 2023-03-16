@@ -6,14 +6,19 @@ package bridgemodel
 
 import (
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nkeys"
 	log "github.com/sirupsen/logrus"
+	"os"
 	"time"
 )
 
 var natsConnection *nats.Conn
 
-//takes a comma separated list of NATS urls form of host:port,host:port
+// takes a comma separated list of NATS urls form of host:port,host:port
 func InitNats(natsUrlList string, connectionName string, timeout time.Duration) error {
+	userName := os.Getenv("NATS_USER")
+	seed := os.Getenv("NATS_SEED")
+
 	start := time.Now()
 	done := false
 	var errToReturn error
@@ -21,26 +26,47 @@ func InitNats(natsUrlList string, connectionName string, timeout time.Duration) 
 	for !done {
 		i = i + 1
 		log.Infof("Connecting to NATS on %s", natsUrlList)
-		nc, err := nats.Connect(natsUrlList, nats.ClosedHandler(func(_ *nats.Conn) {
-				log.Debugf("NATS Connection closed")
-			}),
-			nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
+
+		opts := nats.Options{
+			Url:  natsUrlList,
+			Nkey: userName,
+		}
+		var sigHandler nats.SignatureHandler
+		if len(seed) > 0 {
+			sigHandler = func(nonce []byte) ([]byte, error) {
+				seedBytes := []byte(seed)
+				kp, err := nkeys.FromSeed(seedBytes)
 				if err != nil {
-					log.Debugf("Connection disconnect %s", err.Error())
-				} else {
-					log.Debugf("Connection disconnect no error")
+					return nil, err
 				}
-			}),
-			nats.ReconnectHandler(func(_ *nats.Conn) {
-				log.Debugf("Connection Reconnect")
-			}),
-			nats.Name(connectionName),
-		)
+				signature, err := kp.Sign(nonce)
+				if err != nil {
+					return nil, err
+				}
+				return signature, nil
+			}
+		}
+		opts.SignatureCB = sigHandler
+		opts.DisconnectedErrCB = func(_ *nats.Conn, err error) {
+			if err != nil {
+				log.Debugf("Connection disconnect %s", err.Error())
+			} else {
+				log.Debugf("Connection disconnect no error")
+			}
+		}
+		opts.ClosedCB = func(_ *nats.Conn) {
+			log.Debugf("NATS Connection closed")
+		}
+		opts.ReconnectedCB = func(_ *nats.Conn) {
+			log.Debugf("Connection Reconnect")
+		}
+		opts.Name = connectionName
+		nc, err := opts.Connect()
 
 		if err != nil {
 			log.Errorf("Error connecting to nats on URL %s  / Error %s", natsUrlList, err.Error())
 			//increasing sleep longer
-			time.Sleep(5* time.Second)
+			time.Sleep(5 * time.Second)
 			now := time.Now()
 			done = now.Sub(start) >= timeout
 			errToReturn = err
