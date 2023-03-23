@@ -8,6 +8,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/websocket v1.4.2
 	github.com/nats-io/nats.go v1.13.0
+	github.com/nats-io/nkeys v0.3.0
 	github.com/prometheus/client_golang v1.9.0
 	github.com/prometheus/common v0.15.0
 	github.com/sirupsen/logrus v1.6.0
@@ -15,6 +16,7 @@ require (
 	go.mongodb.org/mongo-driver v1.5.1
 	google.golang.org/grpc v1.36.1
 	google.golang.org/protobuf v1.27.1
+	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.23.0
 	k8s.io/client-go v0.23.0
 )
