@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"github.com/theotw/natssync/pkg/natsmodel"
 	"io"
 	"io/ioutil"
 	"mime"
@@ -80,7 +81,7 @@ func handleGetMessages(c *gin.Context) {
 						tmpstring := startpost.Format("20060102-15:04:05.000")
 						echoMsg := fmt.Sprintf("%s | %s", tmpstring, "message-server")
 						echomsg.Data = []byte(echoMsg)
-						bridgemodel.GetNatsConnection().Publish(echomsg.Subject, echomsg.Data)
+						natsmodel.GetNatsConnection().Publish(echomsg.Subject, echomsg.Data)
 					}
 				}
 				plainMsg := new(bridgemodel.NatsMessage)
@@ -136,7 +137,7 @@ func handlePostMessage(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, "")
 		return
 	}
-	nc := bridgemodel.GetNatsConnection()
+	nc := natsmodel.GetNatsConnection()
 	errors := make([]*v1.ErrorResponse, 0)
 	for _, msg := range in.Messages {
 		var envl msgs.MessageEnvelope
@@ -380,7 +381,7 @@ func handlePostUnRegister(c *gin.Context) {
 		c.JSON(code, response)
 		return
 	}
-	nc := bridgemodel.GetNatsConnection()
+	nc := natsmodel.GetNatsConnection()
 	log.Tracef("Publishing subscription remove msg for clientID %s", clientID)
 	if err = nc.Publish(bridgemodel.REGISTRATION_LIFECYCLE_REMOVED, []byte(clientID)); err != nil {
 		log.Error(err)
@@ -477,9 +478,9 @@ func handlePostRegister(c *gin.Context) {
 	}
 	resp.CloudPublicKey = string(locationData.PublicKey)
 	resp.PremID = locationID
-	nc := bridgemodel.GetNatsConnection()
+	nc := natsmodel.GetNatsConnection()
 	nc.Publish(bridgemodel.REGISTRATION_LIFECYCLE_ADDED, []byte(locationID))
-	AddNewSubscription(locationID,nc)
+	AddNewSubscription(locationID, nc)
 	c.JSON(http.StatusCreated, &resp)
 }
 
@@ -550,7 +551,7 @@ func handlePostCertRotation(c *gin.Context) {
 
 func sendRegRequestToAuthServer(in *v1.RegisterOnPremReq) (*bridgemodel.RegistrationResponse, error) {
 	timeout := time.Second * 30
-	nc := bridgemodel.GetNatsConnection()
+	nc := natsmodel.GetNatsConnection()
 	ret := new(bridgemodel.RegistrationResponse)
 	log.Tracef("Posting registration message to nats ")
 	regReq := bridgemodel.RegistrationRequest{AuthToken: in.AuthToken}
@@ -570,7 +571,7 @@ func sendRegRequestToAuthServer(in *v1.RegisterOnPremReq) (*bridgemodel.Registra
 
 func sendGenericAuthRequest(subject string, authToken string) (*bridgemodel.GenericAuthResponse, error) {
 	timeout := time.Second * 30
-	nc := bridgemodel.GetNatsConnection()
+	nc := natsmodel.GetNatsConnection()
 	ret := new(bridgemodel.GenericAuthResponse)
 	log.Tracef("Posting generic auth message to nats ")
 	regReq := bridgemodel.GenericAuthRequest{AuthToken: authToken}
@@ -589,7 +590,7 @@ func sendGenericAuthRequest(subject string, authToken string) (*bridgemodel.Gene
 
 func sendUnRegRequestToAuthServer(in *v1.UnRegisterOnPremReq) (*bridgemodel.UnRegistrationResponse, error) {
 	timeout := time.Second * 30
-	nc := bridgemodel.GetNatsConnection()
+	nc := natsmodel.GetNatsConnection()
 	ret := new(bridgemodel.UnRegistrationResponse)
 	log.Infof("Posting Unregistration message to nats with %s", in.AuthToken)
 	unregReq := bridgemodel.UnRegistrationRequest{AuthToken: in.AuthToken}
@@ -648,7 +649,7 @@ func natsMsgPostHandler(c *gin.Context) {
 		return
 	}
 
-	connection := bridgemodel.GetNatsConnection()
+	connection := natsmodel.GetNatsConnection()
 	if msg.Reply == "generate" {
 		msg.Reply = msgs.MakeNBReplySubject()
 	}

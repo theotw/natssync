@@ -14,6 +14,7 @@ import (
 	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
 	"github.com/theotw/natssync/pkg/metrics"
 	"github.com/theotw/natssync/pkg/msgs"
+	"github.com/theotw/natssync/pkg/natsmodel"
 	"math"
 	"net/http"
 	"strconv"
@@ -23,17 +24,18 @@ import (
 
 // RestMessageHandler A rest based implementation of the BiDiMessageHanadler
 type RestMessageHandler struct {
-	serverURL string
-	stopFlag bool
+	serverURL           string
+	stopFlag            bool
 	currentSubscription *nats.Subscription
 }
-func NewRestMessageHandler(serverURL string) *RestMessageHandler{
-	ret:=new (RestMessageHandler)
-	ret.serverURL=serverURL
-	ret.stopFlag=false
+
+func NewRestMessageHandler(serverURL string) *RestMessageHandler {
+	ret := new(RestMessageHandler)
+	ret.serverURL = serverURL
+	ret.stopFlag = false
 	return ret
 }
-func (t *RestMessageHandler) GetHandlerType() string{
+func (t *RestMessageHandler) GetHandlerType() string {
 	return "rest"
 }
 func (t *RestMessageHandler) StartMessageHandler(clientID string) error {
@@ -41,16 +43,16 @@ func (t *RestMessageHandler) StartMessageHandler(clientID string) error {
 	if err != nil {
 		log.Errorf("Error subscribing to messages, will try again %s", err.Error())
 	}
-	t.currentSubscription=currentSubscription
+	t.currentSubscription = currentSubscription
 	go t.pullMessageFromCloud(clientID)
 	return nil
 }
-func (t *RestMessageHandler) StopMessageHandler(){
-	t.stopFlag=true
+func (t *RestMessageHandler) StopMessageHandler() {
+	t.stopFlag = true
 	t.currentSubscription.Unsubscribe()
 }
-func (t *RestMessageHandler) pullMessageFromCloud(clientID string){
-	for ;!t.stopFlag; {
+func (t *RestMessageHandler) pullMessageFromCloud(clientID string) {
+	for !t.stopFlag {
 		msglist, err := getMessagesFromCloud(t.serverURL, clientID)
 		if err != nil {
 			log.Errorf("Error fetching messages %s", err.Error())
@@ -60,7 +62,7 @@ func (t *RestMessageHandler) pullMessageFromCloud(clientID string){
 		log.Infof("Received %d messages from server", len(msglist))
 
 		for _, m := range msglist {
-			nc:=bridgemodel.GetNatsConnection()
+			nc := natsmodel.GetNatsConnection()
 			var env msgs.MessageEnvelope
 			err = json.Unmarshal([]byte(m.MessageData), &env)
 			if err != nil {
@@ -119,10 +121,8 @@ func (t *RestMessageHandler) pullMessageFromCloud(clientID string){
 	}
 }
 
-
-
 func subscribeToOutboundMessages(serverURL, clientID string) (*nats.Subscription, error) {
-	nc := bridgemodel.GetNatsConnection()
+	nc := natsmodel.GetNatsConnection()
 	subj := fmt.Sprintf("%s.>", msgs.NATSSYNC_MESSAGE_PREFIX)
 	sub, err := nc.SubscribeSync(subj)
 	if err != nil {

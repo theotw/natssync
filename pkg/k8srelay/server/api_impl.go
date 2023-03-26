@@ -5,11 +5,20 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	log "github.com/sirupsen/logrus"
+	models "github.com/theotw/natssync/pkg/k8srelay/model"
+	"github.com/theotw/natssync/pkg/msgs"
+	"github.com/theotw/natssync/pkg/natsmodel"
+	"io"
 	"net/http"
+	"net/url"
 	"strings"
+	"time"
 )
 
 type JsonError struct {
@@ -76,6 +85,77 @@ func metricsHandler(c *gin.Context) {
 	promhttp.Handler().ServeHTTP(c.Writer, c.Request)
 }
 
+const bearer = "Bearer "
+
 func genericHandlerHandler(c *gin.Context) {
-	relaylet.DoCall(c)
+	parse, err := url.Parse(c.Request.RequestURI)
+	var userTokenWhichBecomesRouteID string
+	token := c.Request.Header.Get("Authorization")
+	if strings.HasPrefix(token, bearer) {
+		userTokenWhichBecomesRouteID = token[len(bearer):]
+	} else {
+		userTokenWhichBecomesRouteID = "dev"
+	}
+	log.Infof(userTokenWhichBecomesRouteID)
+	log.Infof("URI %s", c.Request.URL.String())
+	if err != nil {
+		panic(err)
+	}
+
+	var req models.CallRequest
+	req.Path = parse.Path
+	req.Method = c.Request.Method
+	bodyBits, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to read body on call %s - %s error: %s", c.Request.Method, parse.Path, err.Error())
+	}
+	req.InBody = bodyBits
+	nc := natsmodel.GetNatsConnection()
+	replySub := msgs.MakeNBReplySubject()
+	sbMsgSub := msgs.MakeMessageSubject(userTokenWhichBecomesRouteID, models.K8SRelayRequestMessageSubjectSuffix)
+	bits, err := json.Marshal(&req)
+	if err != nil {
+		c.Status(502)
+		c.Header("Content-Type", "text/plain")
+		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+		return
+	}
+	nm := nats.NewMsg(sbMsgSub)
+	nm.Data = bits
+	nm.Reply = replySub
+	sync, err := nc.SubscribeSync(replySub)
+	if err != nil {
+		c.Status(502)
+		c.Header("Content-Type", "text/plain")
+		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+		return
+	}
+	nc.PublishMsg(nm)
+	msg, err := sync.NextMsg(time.Minute * 2)
+	if err != nil {
+		c.Status(502)
+		c.Header("Content-Type", "text/plain")
+		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+		return
+	}
+	var respMsg models.CallResponse
+	err = json.Unmarshal(msg.Data, &respMsg)
+	if err != nil {
+		c.Status(502)
+		c.Header("Content-Type", "text/plain")
+		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+		return
+	}
+
+	log.Infof("Got resp status %d ", respMsg.StatusCode)
+	for k, v := range respMsg.Headers {
+		log.Infof("%s = %s ", k, v[0])
+		c.Header(k, v)
+	}
+	c.Status(respMsg.StatusCode)
+	if respMsg.OutBody != nil {
+		c.Writer.Write(respMsg.OutBody)
+	}
+	c.Writer.Flush()
+
 }

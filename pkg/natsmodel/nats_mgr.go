@@ -1,8 +1,8 @@
 /*
- * Copyright (c) The One True Way 2021. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
+ * Copyright (c) The One True Way 2023. Apache License 2.0. The authors accept no liability, 0 nada for the use of this software.  It is offered "As IS"  Have fun with it!!
  */
 
-package bridgemodel
+package natsmodel
 
 import (
 	"github.com/nats-io/nats.go"
@@ -14,7 +14,7 @@ import (
 
 var natsConnection *nats.Conn
 
-// takes a comma separated list of NATS urls form of host:port,host:port
+// InitNats takes a comma separated list of NATS urls form of host:port,host:port
 func InitNats(natsUrlList string, connectionName string, timeout time.Duration) error {
 	userName := os.Getenv("NATS_USER")
 	seed := os.Getenv("NATS_SEED")

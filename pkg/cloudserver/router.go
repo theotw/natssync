@@ -7,6 +7,7 @@ package cloudserver
 import (
 	"bytes"
 	"context"
+	"github.com/theotw/natssync/pkg/natsmodel"
 	"github.com/theotw/natssync/pkg/testing"
 	"io/ioutil"
 	"net/http"
@@ -42,7 +43,7 @@ func RunBridgeServer(test bool) {
 		Addr:    pkg.Config.ListenString,
 		Handler: r,
 	}
-	connection := bridgemodel.GetNatsConnection()
+	connection := natsmodel.GetNatsConnection()
 	connection.Subscribe(bridgemodel.RequestForLocationID, func(msg *nats.Msg) {
 		connection.Publish(bridgemodel.ResponseForLocationID, []byte(pkg.CLOUD_ID))
 	})
@@ -105,7 +106,7 @@ func addUnversionedRoutes(router *gin.Engine) {
 	router.Handle(http.MethodGet, "/bridge-server/healthcheck", healthCheckGetUnversioned)
 }
 
-//router middle ware
+// router middle ware
 func routeMiddleware(c *gin.Context) {
 	content := c.Request.Header.Get("Content-Type")
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/nats-io/nats.go"
+	"github.com/theotw/natssync/pkg/natsmodel"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,8 +15,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/theotw/natssync/pkg"
-	"github.com/theotw/natssync/pkg/k8srelay/model"
-	"github.com/theotw/natssync/pkg/k8srelay/nats"
 )
 
 const (
@@ -38,34 +38,27 @@ func getRelayPort() string {
 
 type server struct {
 	locationID   string
-	natsClient   nats.ClientInterface
+	natsClient   *nats.Conn
 	unitTestMode bool
 }
 
 func NewServer() (*server, error) {
 	locationID := getLocationIDFromEnv()
-	natsClient, err := getInitializedNatsClient()
+	natsURL := os.Getenv("NATS_URL")
+	err := natsmodel.InitNats(natsURL, "relayserver", time.Minute*2)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get nats client: %v", err)
+		return nil, err
 	}
 
-	server := NewServerDetailed(locationID, natsClient, false)
+	server := newRelayServer(locationID, false)
 	return server, nil
 }
 
-func NewServerDetailed(locationID string, natsClient nats.ClientInterface, unitTestMode bool) *server {
+func newRelayServer(locationID string, unitTestMode bool) *server {
 	return &server{
 		locationID:   locationID,
-		natsClient:   natsClient,
 		unitTestMode: unitTestMode,
 	}
-}
-
-func getInitializedNatsClient() (nats.ClientInterface, error) {
-	if err := models.InitNats(); err != nil {
-		return nil, err
-	}
-	return models.GetNatsClient(), nil
 }
 
 func (s *server) configureNatsSyncLocationID() {
@@ -84,8 +77,13 @@ func (s *server) configureNatsSyncLocationID() {
 }
 
 // Run - configures and starts the web server
-func (s *server) RunRelayServer(test bool) {
-	relaylet.init()
+func (s *server) RunRelayServer(test bool) error {
+	natsurl := os.Getenv("NATS_URL")
+	err := natsmodel.InitNats(natsurl, "relay server", 2*time.Minute)
+	if err != nil {
+		return err
+	}
+	s.natsClient = natsmodel.GetNatsConnection()
 	s.configureNatsSyncLocationID()
 
 	tmp := os.Getenv("TMPDIR")
@@ -156,4 +154,5 @@ func (s *server) RunRelayServer(test bool) {
 	}
 
 	log.Info("Server exiting")
+	return nil
 }

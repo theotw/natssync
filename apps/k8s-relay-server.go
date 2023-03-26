@@ -22,5 +22,8 @@ func main() {
 		log.WithError(err).Fatal("failed to instantiate proxy server")
 	}
 
-	server.RunRelayServer(false)
+	err = server.RunRelayServer(false)
+	if err != nil {
+		log.Errorf("Error starting relay server %s", err.Error())
+	}
 }

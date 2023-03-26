@@ -5,13 +5,13 @@
 package cloudserver
 
 import (
+	"github.com/theotw/natssync/pkg/natsmodel"
 	"os"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/theotw/natssync/pkg"
-	"github.com/theotw/natssync/pkg/bridgemodel"
 	"github.com/theotw/natssync/pkg/metrics"
 	"github.com/theotw/natssync/pkg/msgs"
 )
@@ -36,7 +36,7 @@ func RunBridgeServerApp(test bool) {
 	log.Info("Starting NATSSync Server")
 
 	//if we cannot get to NATS, then we are worthless and should stop
-	natsErr := bridgemodel.InitNats(pkg.Config.NatsServerUrl, "NatsSyncServer Master", 1*time.Minute)
+	natsErr := natsmodel.InitNats(pkg.Config.NatsServerUrl, "NatsSyncServer Master", 1*time.Minute)
 	if natsErr != nil {
 		log.Fatalf("Unable to connect to NATS. Ending app %s", natsErr.Error())
 	}
