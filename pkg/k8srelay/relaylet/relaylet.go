@@ -137,6 +137,9 @@ func (t *Relaylet) DoCall(nm *nats.Msg) {
 	//TODO need to read this from Env Vars
 	hostBase := "https://kubernetes.docker.internal:6443"
 	fullURL := fmt.Sprintf("%s%s", hostBase, req.Path)
+	if len(req.QueryString) != 0 {
+		fullURL = fmt.Sprintf("%s?%s", fullURL, req.QueryString)
+	}
 
 	inReader := bytes.NewReader(req.InBody)
 	relayreq, err := http.NewRequest(req.Method, fullURL, inReader)
@@ -144,29 +147,60 @@ func (t *Relaylet) DoCall(nm *nats.Msg) {
 		panic(err)
 	}
 
+	for k, v := range req.Headers {
+		relayreq.Header.Set(k, v)
+	}
+
 	resp, err := t.client.Do(relayreq)
-	var respBody []byte
 
 	if err != nil {
 		respMsg.StatusCode = 502
 		respMsg.AddHeader("Content-Type", "text/plain")
 		errorstr := fmt.Sprintf("error from relay %s", err.Error())
 		respMsg.OutBody = []byte(errorstr)
+		respBits, err := json.Marshal(respMsg)
+		if err != nil {
+			log.WithError(err).Errorf("Unable to marshal response message %s", err.Error())
+		}
+		merr := nc.Publish(nm.Reply, respBits)
+		if merr != nil {
+			log.WithError(merr).Errorf("Error sending return message %s %s", nm.Reply, merr.Error())
+		}
 	} else {
 		respMsg.StatusCode = resp.StatusCode
 		log.Infof("Got resp status %d - len %d", resp.StatusCode, resp.ContentLength)
 		for k, v := range resp.Header {
 			respMsg.AddHeader(k, v[0])
 		}
-		respBody, err = io.ReadAll(resp.Body)
-		if err == nil {
-			respMsg.OutBody = respBody
+
+		for {
+			buf := make([]byte, 1024*1024)
+			n, err := resp.Body.Read(buf)
+			if err != nil {
+				respMsg.LastMessage = true
+				respMsg.OutBody = nil
+				if err != io.EOF {
+					log.WithError(err).Errorf("Error reading response stream %s", err.Error())
+				}
+			}
+			if n < 0 {
+				respMsg.OutBody = nil
+			} else {
+				respMsg.OutBody = buf[0:n]
+			}
+
+			respBits, err := json.Marshal(respMsg)
+			if err != nil {
+				log.WithError(err).Errorf("Unable to marshal response message %s", err.Error())
+			}
+			merr := nc.Publish(nm.Reply, respBits)
+			if merr != nil {
+				log.WithError(merr).Errorf("Error sending return message %s %s", nm.Reply, merr.Error())
+			}
+			if respMsg.LastMessage {
+				break
+			}
 		}
 	}
-	respBits, err := json.Marshal(respMsg)
-	if err != nil {
-		log.WithError(err).Errorf("Unable to marshal response message %s", err.Error())
-	}
-	nc.Publish(nm.Reply, respBits)
 
 }

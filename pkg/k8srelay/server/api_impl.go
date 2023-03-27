@@ -102,7 +102,13 @@ func genericHandlerHandler(c *gin.Context) {
 		panic(err)
 	}
 
-	var req models.CallRequest
+	req := models.NewCallReq()
+	for k, v := range c.Request.Header {
+		if k != "Authorization" {
+			req.AddHeader(k, v[0])
+		}
+	}
+	req.QueryString = c.Request.URL.RawQuery
 	req.Path = parse.Path
 	req.Method = c.Request.Method
 	bodyBits, err := io.ReadAll(c.Request.Body)
@@ -131,30 +137,40 @@ func genericHandlerHandler(c *gin.Context) {
 		return
 	}
 	nc.PublishMsg(nm)
-	msg, err := sync.NextMsg(time.Minute * 2)
-	if err != nil {
-		c.Status(502)
-		c.Header("Content-Type", "text/plain")
-		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
-		return
-	}
-	var respMsg models.CallResponse
-	err = json.Unmarshal(msg.Data, &respMsg)
-	if err != nil {
-		c.Status(502)
-		c.Header("Content-Type", "text/plain")
-		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
-		return
-	}
+	isFirst := true
+	for {
+		msg, err := sync.NextMsg(time.Minute * 2)
+		if err != nil {
+			c.Status(502)
+			c.Header("Content-Type", "text/plain")
+			c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+			return
+		}
 
-	log.Infof("Got resp status %d ", respMsg.StatusCode)
-	for k, v := range respMsg.Headers {
-		log.Infof("%s = %s ", k, v[0])
-		c.Header(k, v)
-	}
-	c.Status(respMsg.StatusCode)
-	if respMsg.OutBody != nil {
-		c.Writer.Write(respMsg.OutBody)
+		var respMsg models.CallResponse
+		err = json.Unmarshal(msg.Data, &respMsg)
+		if err != nil {
+			c.Status(502)
+			c.Header("Content-Type", "text/plain")
+			c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+			return
+		}
+		if isFirst {
+			log.Infof("Got resp status %d ", respMsg.StatusCode)
+			for k, v := range respMsg.Headers {
+				log.Infof("%s = %s ", k, v[0])
+				c.Header(k, v)
+			}
+			c.Status(respMsg.StatusCode)
+			isFirst = false
+		}
+
+		if respMsg.OutBody != nil {
+			c.Writer.Write(respMsg.OutBody)
+		}
+		if respMsg.LastMessage {
+			break
+		}
 	}
 	c.Writer.Flush()
 
