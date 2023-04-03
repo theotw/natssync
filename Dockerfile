@@ -87,4 +87,13 @@ FROM alpine-base as  k8srelaylet
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 COPY --from=base /build/out/k8srelaylet_amd64_linux ./k8srelaylet_amd64_linux
+
 ENTRYPOINT ["./k8srelaylet_amd64_linux"]
+FROM alpine-base as  k8srelayserver
+ARG IMAGE_TAG=latest
+ENV GOSUMDB=off
+COPY --from=base /build/out/k8srelayserver_amd64_linux ./k8srelayserver_amd64_linux
+RUN mkdir out
+COPY --from=base /build/out/k8srelay.crt ./out/k8srelay.crt
+COPY --from=base /build/out/k8srelay.key ./out/k8srelay.key
+ENTRYPOINT ["./k8srelayserver_amd64_linux"]
