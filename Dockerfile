@@ -82,3 +82,9 @@ ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 COPY --from=base /build/out/http_proxylet_amd64_linux ./http_proxylet_amd64_linux
 ENTRYPOINT ["./http_proxylet_amd64_linux"]
+
+FROM alpine-base as  k8srelaylet
+ARG IMAGE_TAG=latest
+ENV GOSUMDB=off
+COPY --from=base /build/out/k8srelaylet_amd64_linux ./k8srelaylet_amd64_linux
+ENTRYPOINT ["./k8srelaylet_amd64_linux"]

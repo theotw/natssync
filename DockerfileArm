@@ -32,3 +32,4 @@ ENTRYPOINT ["./echo_main_x86_linux_arm"]
 FROM scratch as simple-reg-auth-arm
 COPY --from=base /build/out/simple_auth_x86_linux_arm ./simple_auth_x86_linux_arm
 ENTRYPOINT ["./simple_auth_x86_linux_arm"]
+

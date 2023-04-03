@@ -44,7 +44,7 @@ type server struct {
 
 func NewServer() (*server, error) {
 	locationID := getLocationIDFromEnv()
-	natsURL := os.Getenv("NATS_URL")
+	natsURL := os.Getenv("NATS_SERVER_URL")
 	err := natsmodel.InitNats(natsURL, "relayserver", time.Minute*2)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (s *server) configureNatsSyncLocationID() {
 
 // Run - configures and starts the web server
 func (s *server) RunRelayServer(test bool) error {
-	natsurl := os.Getenv("NATS_URL")
+	natsurl := os.Getenv("NATS_SERVER_URL")
 	err := natsmodel.InitNats(natsurl, "relay server", 2*time.Minute)
 	if err != nil {
 		return err

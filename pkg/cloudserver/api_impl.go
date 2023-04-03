@@ -170,11 +170,13 @@ func handlePostMessage(c *gin.Context) {
 				nc.Publish(echomsg.Subject, echomsg.Data)
 			}
 		}
+		m := nats.NewMsg(natmsg.Subject)
+		m.Header.Set("x-connection-id", clientID)
+		m.Data = natmsg.Data
 		if len(natmsg.Reply) > 0 {
-			nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data)
-		} else {
-			nc.Publish(natmsg.Subject, natmsg.Data)
+			m.Reply = natmsg.Reply
 		}
+		nc.PublishMsg(m)
 		nc.Flush()
 	}
 	if len(errors) > 1 {

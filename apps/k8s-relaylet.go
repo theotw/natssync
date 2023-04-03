@@ -6,12 +6,14 @@ package main
 
 import (
 	log "github.com/sirupsen/logrus"
+	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/k8srelay/relaylet"
 	"os"
 	"os/signal"
 )
 
 func main() {
+	log.Infof("version %s", pkg.VERSION)
 	_, err := relaylet.NewRelaylet()
 	if err != nil {
 		log.WithError(err).Fatalf("Unable to initialize relaylet %s", err.Error())
