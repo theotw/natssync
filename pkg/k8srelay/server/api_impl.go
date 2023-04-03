@@ -158,7 +158,7 @@ func genericHandlerHandler(c *gin.Context) {
 		if isFirst {
 			log.Infof("Got resp status %d ", respMsg.StatusCode)
 			for k, v := range respMsg.Headers {
-				log.Infof("%s = %s ", k, v[0])
+				log.Infof("%s = %s ", k, v)
 				c.Header(k, v)
 			}
 			c.Status(respMsg.StatusCode)
