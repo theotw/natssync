@@ -3,6 +3,9 @@ A distributed bridge system to sync messages from one nats cluster to another.  
 With message encryption
 
 
+
+
+
 ## Environment Variables
 | Env Var | Default | Description |
 | ---- | ------------ | ----------- |
