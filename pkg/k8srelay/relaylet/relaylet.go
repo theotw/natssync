@@ -159,7 +159,7 @@ func (t *Relaylet) init() error {
 	sub := msgs.MakeMessageSubject("*", models.K8SRelayRequestMessageSubjectSuffix)
 	nc := natsmodel.GetNatsConnection()
 	nc.Subscribe(sub, func(msg *nats.Msg) {
-		t.DoCall(msg)
+		go t.DoCall(msg)
 	})
 	return nil
 }
@@ -248,6 +248,7 @@ func (t *Relaylet) DoCall(nm *nats.Msg) {
 			if merr != nil {
 				log.WithError(merr).Errorf("Error sending return message %s %s", nm.Reply, merr.Error())
 			}
+			log.Debugf("Recieveing data size %d last message flag %v", n, respMsg.LastMessage)
 			if respMsg.LastMessage {
 				break
 			}

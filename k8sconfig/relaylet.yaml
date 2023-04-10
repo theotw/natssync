@@ -12,7 +12,7 @@ spec:
   containers:
     - name: relaylet
       image: theotw/k8srelaylet:dev
-      imagePullPolicy: Never
+      imagePullPolicy: Always
       env:
         - name: LOG_LEVEL
           value: trace

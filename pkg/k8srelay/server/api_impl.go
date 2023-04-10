@@ -122,6 +122,7 @@ func genericHandlerHandler(c *gin.Context) {
 	bits, err := json.Marshal(&req)
 	if err != nil {
 		c.Status(502)
+		log.WithError(err).Errorf("Returning a 502, got an error Marshal %s ", err.Error())
 		c.Header("Content-Type", "text/plain")
 		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
 		return
@@ -132,6 +133,7 @@ func genericHandlerHandler(c *gin.Context) {
 	sync, err := nc.SubscribeSync(replySub)
 	if err != nil {
 		c.Status(502)
+		log.WithError(err).Errorf("Returning a 502, got an error Subscribe %s ", err.Error())
 		c.Header("Content-Type", "text/plain")
 		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
 		return
@@ -143,6 +145,7 @@ func genericHandlerHandler(c *gin.Context) {
 		if err != nil {
 			c.Status(502)
 			c.Header("Content-Type", "text/plain")
+			log.WithError(err).Errorf("Returning a 502, got an error next message %s ", err.Error())
 			c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
 			return
 		}
@@ -152,6 +155,7 @@ func genericHandlerHandler(c *gin.Context) {
 		if err != nil {
 			c.Status(502)
 			c.Header("Content-Type", "text/plain")
+			log.WithError(err).Errorf("Returning a 502, got an error on unmarshall %s ", err.Error())
 			c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
 			return
 		}

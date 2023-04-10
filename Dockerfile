@@ -96,4 +96,5 @@ COPY --from=base /build/out/k8srelayserver_amd64_linux ./k8srelayserver_amd64_li
 RUN mkdir out
 COPY --from=base /build/out/k8srelay.crt ./out/k8srelay.crt
 COPY --from=base /build/out/k8srelay.key ./out/k8srelay.key
+COPY --from=base /build/myCA.pem ./out/ca.pem
 ENTRYPOINT ["./k8srelayserver_amd64_linux"]
