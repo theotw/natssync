@@ -5,9 +5,6 @@
 package server
 
 import (
-	"encoding/base64"
-	"strings"
-
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -25,30 +22,15 @@ func newRouter(s *server) *gin.Engine {
 
 	return router
 }
+func newInternalRouter(s *server) *gin.Engine {
+	router := gin.Default()
+	router.GET("/about", aboutGetUnversioned)
+	router.GET("/healthcheck", healthCheckGetUnversioned)
+	router.GET("/metrics", metricsHandler)
 
-const (
-	BASIC_AUTH_PREFIX = "Basic "
-	ProxyAuthHeader   = "Proxy-Authorization"
-)
-
-func FetchClientIDFromProxyAuthHeader(c *gin.Context) string {
-
-	proxyAuth := c.Request.Header.Get(ProxyAuthHeader)
-	if strings.HasPrefix(proxyAuth, BASIC_AUTH_PREFIX) {
-		b64authInfo := proxyAuth[len(BASIC_AUTH_PREFIX):]
-		authInfo, err := base64.StdEncoding.DecodeString(b64authInfo)
-		if err != nil {
-			log.WithError(err).Error("Error decoding auth")
-			return ""
-
-		} else {
-			split := strings.Split(string(authInfo), ":")
-			if len(split) > 0 {
-				return split[0]
-			}
-		}
+	log.Info("registered internal routes: ")
+	for _, routeInfo := range router.Routes() {
+		log.Infof("%s %s", routeInfo.Method, routeInfo.Path)
 	}
-
-	log.Errorf("failed to find clientID from '%s' header", ProxyAuthHeader)
-	return ""
+	return router
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
+	"github.com/theotw/natssync/pkg"
 	models "github.com/theotw/natssync/pkg/k8srelay/model"
 	"github.com/theotw/natssync/pkg/msgs"
 	"github.com/theotw/natssync/pkg/natsmodel"
@@ -33,36 +34,30 @@ func HandleError(_ *gin.Context, err error) (int, interface{}) {
 	return http.StatusInternalServerError, &ret
 }
 
-func (s *server) RouteHandler(c *gin.Context) {
-	//TODO THIS IS WEIRD NEED TO FIGURE OUT IF WE NEED THIS
-	clientID := FetchClientIDFromProxyAuthHeader(c)
+func RouteHandlerForInternalAPI(c *gin.Context) {
+	//normalize out the string
+	tmp := c.Request.RequestURI
+	if !strings.HasSuffix(tmp, "/") {
+		tmp = fmt.Sprintf("%s/", tmp)
+	}
 
-	if clientID == "" {
-
-		//normalize out the string
-		tmp := c.Request.RequestURI
-		if !strings.HasSuffix(tmp, "/") {
-			tmp = fmt.Sprintf("%s/", tmp)
-		}
-
-		if strings.HasSuffix(tmp, "/about/") {
-			aboutGetUnversioned(c)
-			return
-		}
-
-		if strings.HasSuffix(tmp, "/healthcheck/") {
-			healthCheckGetUnversioned(c)
-			return
-		}
-
-		if strings.HasSuffix(tmp, "/metrics/") {
-			metricsHandler(c)
-			return
-		}
-
-		c.JSON(http.StatusServiceUnavailable, "")
+	if strings.HasSuffix(tmp, "/about/") {
+		aboutGetUnversioned(c)
 		return
 	}
+
+	if strings.HasSuffix(tmp, "/healthcheck/") {
+		healthCheckGetUnversioned(c)
+		return
+	}
+
+	if strings.HasSuffix(tmp, "/metrics/") {
+		metricsHandler(c)
+		return
+	}
+
+	c.JSON(http.StatusServiceUnavailable, "")
+	return
 
 }
 
@@ -72,7 +67,7 @@ type AboutResponse struct {
 
 func aboutGetUnversioned(c *gin.Context) {
 	var resp AboutResponse
-	resp.AppVersion = "1.0.0"
+	resp.AppVersion = pkg.VERSION
 
 	c.JSON(http.StatusOK, &resp)
 }
@@ -89,13 +84,7 @@ const bearer = "Bearer "
 
 func genericHandlerHandler(c *gin.Context) {
 	parse, err := url.Parse(c.Request.RequestURI)
-	var userTokenWhichBecomesRouteID string
-	token := c.Request.Header.Get("Authorization")
-	if strings.HasPrefix(token, bearer) {
-		userTokenWhichBecomesRouteID = token[len(bearer):]
-	} else {
-		userTokenWhichBecomesRouteID = "dev"
-	}
+	userTokenWhichBecomesRouteID := GetRouteIDFromAuthHeader(c)
 	log.Infof(userTokenWhichBecomesRouteID)
 	log.Infof("URI %s", c.Request.URL.String())
 	if err != nil {
@@ -178,4 +167,15 @@ func genericHandlerHandler(c *gin.Context) {
 	}
 	c.Writer.Flush()
 
+}
+
+func GetRouteIDFromAuthHeader(c *gin.Context) string {
+	var userTokenWhichBecomesRouteID string
+	token := c.Request.Header.Get("Authorization")
+	if strings.HasPrefix(token, bearer) {
+		userTokenWhichBecomesRouteID = token[len(bearer):]
+	} else {
+		userTokenWhichBecomesRouteID = "dev"
+	}
+	return userTokenWhichBecomesRouteID
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/nats-io/nats.go"
 	"github.com/theotw/natssync/pkg/natsmodel"
+	"github.com/theotw/natssync/pkg/testing"
 	"net/http"
 	"os"
 	"os/signal"
@@ -100,6 +101,20 @@ func (s *server) RunRelayServer(test bool) error {
 		return err
 	}
 
+	ir := newInternalRouter(s)
+	iHostPort := ":1701"
+	internalSrv := &http.Server{
+		Addr:    iHostPort,
+		Handler: ir,
+	}
+	log.WithField("hostPort", iHostPort).Info("Starting server")
+	go func() {
+		err := internalSrv.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %s", err)
+		}
+	}()
+
 	//hostPort := getRelayPort()
 	hostPort := ":8443"
 	r := newRouter(s)
@@ -110,6 +125,7 @@ func (s *server) RunRelayServer(test bool) error {
 
 	log.WithField("hostPort", hostPort).Info("Starting server")
 
+	//fires off the server with metrics endpoint, health check, about
 	go func() {
 		// service connections
 		//err := srv.ListenAndServe()
@@ -129,7 +145,7 @@ func (s *server) RunRelayServer(test bool) error {
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Interrupt)
 	if test {
-		//TODO testing.NotifyOnAppExitMessageGeneric(s.natsClient, quit)
+		testing.NotifyOnAppExitMessageGenericNats(s.natsClient, quit)
 	}
 	<-quit
 

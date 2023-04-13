@@ -7,7 +7,7 @@ import (
 
 func loggerMiddleware(c *gin.Context) {
 
-	clientID := FetchClientIDFromProxyAuthHeader(c)
+	clientID := GetRouteIDFromAuthHeader(c)
 	log.WithFields(log.Fields{
 		"method":   c.Request.Method,
 		"url":      c.Request.RequestURI,
