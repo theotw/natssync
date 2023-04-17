@@ -189,6 +189,8 @@ k8srelayserver:
 	DOCKER_BUILDKIT=1 docker build -f Dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/k8srelayserver:${IMAGE_TAG} --target k8srelayserver .
 
 nginxTest:
+	openssl req -newkey rsa:2048 -subj "/C=US/ST=WA/L=Seattle/O=Eng/CN=test" -nodes -keyout testNginx/selfsigned.key -days 999 -out testNginx/selfsigned.csr
+	openssl x509 -signkey testNginx/selfsigned.key -in testNginx/selfsigned.csr -req -days 999 -out testNginx/selfsigned.crt
 	cd testNginx && docker build --tag ${IMAGE_REPO}/testnginx:${IMAGE_TAG} .
 
 allimages: baseimage testimage cloudimage clientimage echoproxylet simpleauth debugcloudimage httpproxy httpproxylet nginxTest k8srelaylet k8srelayserver

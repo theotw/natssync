@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"github.com/nats-io/nats.go"
 	"github.com/theotw/natssync/pkg/natsmodel"
@@ -22,6 +23,9 @@ const (
 	locationIDEnvVar  = "DEFAULT_LOCATION_ID"
 	proxyPortEnvVar   = "RELAY_PORT"
 	defaultRelayPort  = "8080"
+
+	caCertReq  = "k8srelay.cacert.req"
+	caCertResp = "k8srelay.cacert.resp"
 )
 
 var myserverert = "dev"
@@ -41,6 +45,7 @@ type server struct {
 	locationID   string
 	natsClient   *nats.Conn
 	unitTestMode bool
+	caCertB64    string
 }
 
 func NewServer() (*server, error) {
@@ -100,6 +105,23 @@ func (s *server) RunRelayServer(test bool) error {
 		log.WithError(err).Errorf("Unable to find server cert file at path %s", certFile)
 		return err
 	}
+	caCertFile := path.Join(tmp, "myCA.pem")
+	_, err = os.Stat(caCertFile)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to find CA cert file at path %s", caCertFile)
+		return err
+	}
+	caCertBits, err := os.ReadFile(caCertFile)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to read CA cert file at path %s", caCertFile)
+		return err
+	}
+	//setup a listener and let folks know what the ca Cert data is.
+	s.caCertB64 = base64.StdEncoding.EncodeToString(caCertBits)
+	s.natsClient.Subscribe(caCertReq, func(msg *nats.Msg) {
+		s.natsClient.Publish(caCertResp, []byte(s.caCertB64))
+	})
+	s.natsClient.Publish(caCertResp, []byte(s.caCertB64))
 
 	ir := newInternalRouter(s)
 	iHostPort := ":1701"
