@@ -226,7 +226,7 @@ tag:
 	docker tag ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG} ${IMAGE_REPO}/httpproxylet:latest
 	docker tag ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG} ${IMAGE_REPO}/httpproxylet:${BASE_VERSION}
 	docker tag ${IMAGE_REPO}/k8srelaylet:${IMAGE_TAG} ${IMAGE_REPO}/k8srelaylet:${BASE_VERSION}
-	docker tag ${IMAGE_REPO}/k8srelaylserver:${IMAGE_TAG} ${IMAGE_REPO}/k8srelaylserver:${BASE_VERSION}
+	docker tag ${IMAGE_REPO}/k8srelayserver:${IMAGE_TAG} ${IMAGE_REPO}/k8srelayserver:${BASE_VERSION}
 
 
 tagAndPushToDockerHub: tag
