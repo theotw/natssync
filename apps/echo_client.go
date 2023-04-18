@@ -9,6 +9,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg/bridgemodel"
+	"github.com/theotw/natssync/pkg/natsmodel"
 	"strings"
 	"time"
 
@@ -36,22 +37,22 @@ func getECArguments() Arguments {
 	return args
 }
 
-//Echo is a special message type.
-//its the only message the system looks at and responds to.
-//Instead of a single reply, it is expecting multiple replies.
-//All the replies will have the "reply" subject as its root, and then a last string
-//that indicates which part of the journey has been hit.
-//the loop ends when it sees echolet.
+// Echo is a special message type.
+// its the only message the system looks at and responds to.
+// Instead of a single reply, it is expecting multiple replies.
+// All the replies will have the "reply" subject as its root, and then a last string
+// that indicates which part of the journey has been hit.
+// the loop ends when it sees echolet.
 func main() {
 	log.Infof("Version %s", pkg.VERSION)
 	args := getECArguments()
 
 	log.Printf("Connecting to NATS Server %s", *args.natsURL)
-	err := bridgemodel.InitNats(*args.natsURL, "echo client", 1*time.Minute)
+	err := natsmodel.InitNats(*args.natsURL, "echo client", 1*time.Minute)
 	if err != nil {
 		log.Fatal(err)
 	}
-	nc := bridgemodel.GetNatsConnection()
+	nc := natsmodel.GetNatsConnection()
 	defer nc.Close()
 	sync, err := nc.SubscribeSync(bridgemodel.ResponseForLocationID)
 	if err != nil {

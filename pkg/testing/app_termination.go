@@ -6,6 +6,7 @@ import (
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 
+	natspkg "github.com/nats-io/nats.go"
 	nats2 "github.com/theotw/natssync/pkg/httpsproxy/nats"
 )
 
@@ -41,6 +42,20 @@ func NotifyOnAppExitMessageGeneric(client nats2.ClientInterface, quitChannel cha
 	log.Warn("A testing-only function is being called. If you see this in production, something is very wrong!")
 
 	_, err := client.Subscribe(AppExitTopic, func(msg *nats2.Msg) {
+		log.Info("Termination command received via NATS, sending interrupt signal...")
+		quitChannel <- os.Interrupt
+	})
+
+	if err != nil {
+		log.WithError(err).Fatal("failed to subscribe to the app exit topic")
+	}
+
+	log.Infof("Successfully subscribed to the app exit topic. To exit the app gracefully, send a NATS message to: %s", AppExitTopic)
+}
+func NotifyOnAppExitMessageGenericNats(client *natspkg.Conn, quitChannel chan os.Signal) {
+	log.Warn("A testing-only function is being called. If you see this in production, something is very wrong!")
+
+	_, err := client.Subscribe(AppExitTopic, func(msg *natspkg.Msg) {
 		log.Info("Termination command received via NATS, sending interrupt signal...")
 		quitChannel <- os.Interrupt
 	})

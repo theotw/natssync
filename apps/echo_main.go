@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/theotw/natssync/pkg/natsmodel"
 	"os"
 	"runtime"
 	"time"
@@ -18,12 +19,12 @@ import (
 	"github.com/theotw/natssync/pkg/msgs"
 )
 
-//The client/south side echo proxylet.  Answers echo calls
+// The client/south side echo proxylet.  Answers echo calls
 var clientID string
 var activeSub *nats.Subscription
 
 func main() {
-	log.Infof("Version %s",pkg.VERSION)
+	log.Infof("Version %s", pkg.VERSION)
 	level, levelerr := log.ParseLevel(os.Getenv("LOG_LEVEL"))
 	if levelerr != nil {
 		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
@@ -32,7 +33,7 @@ func main() {
 	clientID = "*"
 	natsURL := pkg.Config.NatsServerUrl
 	log.Infof("Connecting to NATS server %s", natsURL)
-	err := bridgemodel.InitNats(natsURL, "echo Main", 1*time.Minute)
+	err := natsmodel.InitNats(natsURL, "echo Main", 1*time.Minute)
 	if err != nil {
 		log.Errorf("Unable to connect to NATS, exiting %s", err.Error())
 		os.Exit(2)
@@ -44,7 +45,7 @@ func main() {
 		log.Fatalf("Unable to get the message format")
 	}
 
-	nc := bridgemodel.GetNatsConnection()
+	nc := natsmodel.GetNatsConnection()
 	nc.Subscribe(bridgemodel.ResponseForLocationID, func(msg *nats.Msg) {
 		clientID = string(msg.Data)
 		if activeSub != nil {
@@ -77,7 +78,7 @@ func msgHandler(msg *nats.Msg) {
 		log.Errorf("Failed to generate cloud events payload: %s", err.Error())
 		return
 	}
-	nc := bridgemodel.GetNatsConnection()
+	nc := natsmodel.GetNatsConnection()
 	if err = nc.Publish(replysub, cvMessage); err != nil {
 		log.Errorf("Error publishing to %s: %s", replysub, err)
 	}

@@ -48,6 +48,9 @@ jobs:
           echo $IMAGE_TAG
           echo $IMAGE_TAG > IMAGE_TAG
           make cicd
+          git tag $IMAGE_TAG
+          git push origin $IMAGE_TAG
+
 
       - name: Integration Tests (test mode off)
         run: |

@@ -1,0 +1,200 @@
+name: K8S-CICD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: '*'
+  workflow_dispatch:
+    branches: '*'
+
+jobs:
+  build_and_test:
+    name: CDID Build and Test
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+    steps:
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v3
+        with:
+          go-version: ^1.19
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+
+      - name: Get dependencies
+        run: |
+          go mod tidy
+          go install github.com/t-yuki/gocover-cobertura@latest
+          go install github.com/wadey/gocovmerge@latest
+
+      - name: Unit / L1 Test
+        run: make l1
+
+      - name: Build L2 Test Image
+        run: |
+          docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+          make testimage          
+
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.4.0
+        with:
+          config: testfiles/kind-config.yaml
+      - name: Validate Kind Cluster
+        run: |
+          echo "let kind get up and running"
+          sleep 120
+          echo "kubectl get nodes -o wide" 
+          kubectl get nodes -o wide
+          echo "kubectl get storageclasses"
+          kubectl get storageclasses
+          echo "kubectl  get serviceaccount"
+          kubectl  get serviceaccount
+
+      - name: Run L2 Server
+        run: |
+          mkdir -p out
+          echo "Dir " $PWD
+          ls -l
+          docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+          kubectl get ns
+          kubectl create ns astra-connector
+          kubectl -n astra-connector create secret generic regcred --from-file=.dockerconfigjson=$HOME/.docker/config.json --type=kubernetes.io/dockerconfigjson
+          kubectl -n astra-connector apply -f testfiles/sa.yaml
+          kubectl -n astra-connector apply -f testfiles/nats.yaml
+          kubectl -n astra-connector apply -f testfiles/testdata-pvc.yaml
+          kubectl -n astra-connector apply -f testfiles/proxeylet.yaml
+          kubectl get pv
+          kubectl -n astra-connector get all,pvc
+          echo "describe"
+          kubectl -n astra-connector describe pod proxylet
+          
+          sleep 120
+          kubectl -n  astra-connector port-forward service/nats 4222:4222 &
+          kubectl -n  astra-connector port-forward service/proxylet 8080:8080 &
+          
+          echo "**** proxlyet logs kubectl -n astra-connector logs proxylet"
+          kubectl -n astra-connector logs proxylet 
+          echo "**** END proxlyet logs *******"
+
+      - name: Wait for server
+        uses: iFaxity/wait-on-action@v1
+        with:
+          resource: http://localhost:8080/ready
+          timeout: 300000
+          verbose: true
+          interval: 5000
+
+      - name: Run L2 Tests
+        run: |
+          mkdir -p out
+          export NATS_URL=nats://localhost:4222
+          go test -v -coverpkg=github.com/NetApp/astra-connector/pkg/... -coverprofile=out/l2_client_coverage.out github.com/NetApp/astra-connector/tests/client/... > out/l2_client_out.txt 2>&1  
+          echo "Done with L2 Tests, sending kill to server"
+          curl http://localhost:8080/kill
+          echo " Waiting 10 for server to finish curl ret=" $?
+          sleep 10
+          ls -l 
+          ls -l out/
+          echo "Server coverage logs"
+          cat out/l2_servermain_coverage.out
+          echo "server output logs"
+          cat out/l2_server_out.txt
+          echo "converting l2 client out"
+          cat out/l2_client_out.txt | go-junit-report > out/l2_client_report.xml
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: code-coverage
+          path: |
+            out/*
+          retention-days: 5
+
+
+
+
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: |
+            out/**/*_report.xml
+
+      - name: Merge Coverage
+        run: |
+          pwd
+          go install github.com/t-yuki/gocover-cobertura@latest
+          go install github.com/wadey/gocovmerge@latest
+          gocovmerge out/*coverage.out > out/merged.out
+          gocover-cobertura < out/merged.out > out/coverage.cobertura.xml
+
+      - name: Code Coverage Summary Report
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: out/coverage.cobertura.xml
+          badge: true
+          format: markdown
+
+
+  buildnpushRelease:
+    name: Build and Push Docker Package
+    #needs: [test, cross_compile, lint]
+    if: github.ref == 'refs/heads/bob'
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+    steps:
+      - name: Get current date
+        id: date
+        run: |
+          export BASEVERSION=$(cat version.txt)
+          echo "::set-output name=date::$(date +'%Y%m%d%H%M')"
+          export BUILD_VERSION=$BASEVERSION.${{ steps.date.outputs.date }}
+          echo "::set-output name=version::BUILD_VERSION"
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Build image
+        run: make image
+
+      - name: Tag and push image
+        run: |
+          echo "Push commented out"
+          #docker login -u DOCKER_USERNAME -p DOCKER_PASSWORD
+          #make push
+
+
+
+  buildnpushBranch:
+    name: Build and Push Branch Docker Package
+    #needs: [test, cross_compile, lint]
+    if: github.ref == 'refs/heads/bob'
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+    steps:
+      - name: Get current date
+        id: date
+        run: |
+          export BASEVERSION=$(cat version.txt)
+          echo "::set-output name=date::$(date +'%Y%m%d%H%M')"
+          export BUILD_VERSION=beta-$BASEVERSION.${{ steps.date.outputs.date }}
+          echo "::set-output name=version::BUILD_VERSION"
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Build image
+        run: make image
+
+      - name: Tag and push image
+        run: |
+          echo "Push commented out"
+          #docker login -u DOCKER_USERNAME -p DOCKER_PASSWORD
+          #make push

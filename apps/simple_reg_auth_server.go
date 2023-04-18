@@ -10,27 +10,28 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/bridgemodel"
+	"github.com/theotw/natssync/pkg/natsmodel"
 	"os"
 	"runtime"
 	"time"
 )
 
-//the main for an example of a simple auth server.  Authorizes a request if the user ID and secret matches what is set in the env
-//env vars to set are:
-//USER_ID= the valid user ID defaults to natssync
-//SECRET = the valid user secret. defaults to changeit
+// the main for an example of a simple auth server.  Authorizes a request if the user ID and secret matches what is set in the env
+// env vars to set are:
+// USER_ID= the valid user ID defaults to natssync
+// SECRET = the valid user secret. defaults to changeit
 func main() {
-	log.Infof("Version %s",pkg.VERSION)
+	log.Infof("Version %s", pkg.VERSION)
 	natsURL := pkg.Config.NatsServerUrl
 	log.Infof("Connecting to NATS server %s", natsURL)
 
-	err := bridgemodel.InitNats(natsURL, "simple auth server", 5*time.Minute)
+	err := natsmodel.InitNats(natsURL, "simple auth server", 5*time.Minute)
 	if err != nil {
 		log.Errorf("Unable to connect to NATS, exiting %s", err.Error())
 		os.Exit(2)
 
 	}
-	nc := bridgemodel.GetNatsConnection()
+	nc := natsmodel.GetNatsConnection()
 
 	expectedAuthToken := pkg.GetEnvWithDefaults("AUTH_TOKEN", "42")
 	subj := bridgemodel.REGISTRATION_AUTH_WILDCARD

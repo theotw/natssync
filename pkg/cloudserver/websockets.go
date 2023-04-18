@@ -7,6 +7,7 @@ package cloudserver
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/theotw/natssync/pkg/natsmodel"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -87,7 +88,6 @@ func HandleConnectionRequest(ctx *gin.Context) {
 	go messageSender(conn, clientID, sub)
 }
 
-
 func messageReceiver(conn *websocket.Conn, clientID string) {
 	for {
 		messageType, messageBytes, err := conn.ReadMessage()
@@ -122,7 +122,7 @@ func handleReadMessage(messageBytes []byte, clientID string) {
 		return
 	}
 
-	nc := bridgemodel.GetNatsConnection()
+	nc := natsmodel.GetNatsConnection()
 	for _, msg := range request.Messages {
 		var envl msgs.MessageEnvelope
 		err = json.Unmarshal([]byte(msg.MessageData), &envl)
@@ -201,7 +201,7 @@ func handleGetMessagesWS(conn *websocket.Conn, clientID string, sub *nats.Subscr
 				tmpstring := startpost.Format("20060102-15:04:05.000")
 				echoMsg := fmt.Sprintf("%s | %s", tmpstring, "message-server")
 				echomsg.Data = []byte(echoMsg)
-				bridgemodel.GetNatsConnection().Publish(echomsg.Subject, echomsg.Data)
+				natsmodel.GetNatsConnection().Publish(echomsg.Subject, echomsg.Data)
 			}
 		}
 

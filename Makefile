@@ -72,6 +72,8 @@ incontainergenerate:
 
 	rm -rf tmpcloud
 	rm -rf tmpclient
+	#Generate the x509 Certs
+	./cicd_gen_certs.sh
 
 buildall: buildlinux buildmac
 
@@ -103,6 +105,8 @@ basebuild:
 	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/simple_auth_${GOARCH}_${GOOS} apps/simple_reg_auth_server.go
 	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/http_proxy_${GOARCH}_${GOOS} apps/httpproxy-server.go
 	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/http_proxylet_${GOARCH}_${GOOS} apps/http_proxylet.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/k8srelaylet_${GOARCH}_${GOOS} apps/k8s-relaylet.go
+	go build -ldflags "-X github.com/theotw/natssync/pkg.VERSION=${BUILD_VERSION}" -v -o out/k8srelayserver_${GOARCH}_${GOOS} apps/k8s-relay-server.go
 
 buildarm: export GOOS=linux
 buildarm: export GOARCH=arm
@@ -130,7 +134,7 @@ clean:
 	rm go.sum
 
 baseimage:
-	docker build  --no-cache --tag natssync-base:latest -f Dockerfilebase .
+	docker build --build-arg CA_KEY=${CA_KEY} --no-cache --tag natssync-base:latest -f Dockerfilebase .
 baseimagearm:
 	docker build --tag natssync-base:arm-latest -f DockerfilebaseArm .
 
@@ -179,10 +183,17 @@ httpproxy:
 httpproxylet:
 	DOCKER_BUILDKIT=1 docker build -f Dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG} --target http_proxylet .
 
+k8srelaylet:
+	DOCKER_BUILDKIT=1 docker build -f Dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/k8srelaylet:${IMAGE_TAG} --target k8srelaylet .
+k8srelayserver:
+	DOCKER_BUILDKIT=1 docker build -f Dockerfile --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/k8srelayserver:${IMAGE_TAG} --target k8srelayserver .
+
 nginxTest:
+	openssl req -newkey rsa:2048 -subj "/C=US/ST=WA/L=Seattle/O=Eng/CN=test" -nodes -keyout testNginx/selfsigned.key -days 999 -out testNginx/selfsigned.csr
+	openssl x509 -signkey testNginx/selfsigned.key -in testNginx/selfsigned.csr -req -days 999 -out testNginx/selfsigned.crt
 	cd testNginx && docker build --tag ${IMAGE_REPO}/testnginx:${IMAGE_TAG} .
 
-allimages: baseimage testimage cloudimage clientimage echoproxylet simpleauth debugcloudimage httpproxy httpproxylet nginxTest
+allimages: baseimage testimage cloudimage clientimage echoproxylet simpleauth debugcloudimage httpproxy httpproxylet nginxTest k8srelaylet k8srelayserver
 
 allarmimages: baseimagearm cloudimagearm clientimagearm echoproxyletarm simpleautharm
 
@@ -214,6 +225,9 @@ tag:
 	docker tag ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG} ${IMAGE_REPO}/httpproxy-server:${BASE_VERSION}
 	docker tag ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG} ${IMAGE_REPO}/httpproxylet:latest
 	docker tag ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG} ${IMAGE_REPO}/httpproxylet:${BASE_VERSION}
+	docker tag ${IMAGE_REPO}/k8srelaylet:${IMAGE_TAG} ${IMAGE_REPO}/k8srelaylet:${BASE_VERSION}
+	docker tag ${IMAGE_REPO}/k8srelaylserver:${IMAGE_TAG} ${IMAGE_REPO}/k8srelaylserver:${BASE_VERSION}
+
 
 tagAndPushToDockerHub: tag
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
@@ -240,7 +254,12 @@ tagAndPushToDockerHub: tag
 	docker push ${IMAGE_REPO}/natssync-server-debug:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/natssync-server-debug:latest
 	docker push ${IMAGE_REPO}/natssync-server-debug:${BASE_VERSION}
-
+	docker push ${IMAGE_REPO}/k8srelaylet:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/k8srelaylet:latest
+	docker push ${IMAGE_REPO}/k8srelaylet:${BASE_VERSION}
+	docker push ${IMAGE_REPO}/k8srelaylserver:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/k8srelaylserver:latest
+	docker push ${IMAGE_REPO}/k8srelaylserver:${BASE_VERSION}
 
 pushall:
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
@@ -251,6 +270,8 @@ pushall:
 	docker push ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/k8srelaylet:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/k8srelaylserver:${IMAGE_TAG}
 
 ### Testing
 

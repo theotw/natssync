@@ -1,4 +1,4 @@
-FROM theotw/devstack:go1.17.9  as build
+FROM theotw/devstack:go1.19.7  as build
 LABEL stage=build
 WORKDIR /build
 RUN mkdir -p web
@@ -7,6 +7,7 @@ COPY ./ ./
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin/
 ENV GOSUMDB=off
 ARG IMAGE_TAG=latest
+ARG  CA_KEY
 RUN make incontainergenerate
 RUN make buildlinux
 RUN make buildtest
