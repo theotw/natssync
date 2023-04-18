@@ -96,6 +96,8 @@ jobs:
           export IMAGE_TAG=$(cat IMAGE_TAG)
           docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
           make tagAndPushToDockerHub
+          git tag $IMAGE_TAG
+          git push origin $IMAGE_TAG
 
       - name: Collect Logs
         if: always()
