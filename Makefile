@@ -257,9 +257,9 @@ tagAndPushToDockerHub: tag
 	docker push ${IMAGE_REPO}/k8srelaylet:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/k8srelaylet:latest
 	docker push ${IMAGE_REPO}/k8srelaylet:${BASE_VERSION}
-	docker push ${IMAGE_REPO}/k8srelaylserver:${IMAGE_TAG}
-	docker push ${IMAGE_REPO}/k8srelaylserver:latest
-	docker push ${IMAGE_REPO}/k8srelaylserver:${BASE_VERSION}
+	docker push ${IMAGE_REPO}/k8srelayserver:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/k8srelayserver:latest
+	docker push ${IMAGE_REPO}/k8srelayserver:${BASE_VERSION}
 
 pushall:
 	docker push ${IMAGE_REPO}/natssync-server:${IMAGE_TAG}
@@ -271,7 +271,7 @@ pushall:
 	docker push ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG}
 	docker push ${IMAGE_REPO}/k8srelaylet:${IMAGE_TAG}
-	docker push ${IMAGE_REPO}/k8srelaylserver:${IMAGE_TAG}
+	docker push ${IMAGE_REPO}/k8srelayserver:${IMAGE_TAG}
 
 ### Testing
 
