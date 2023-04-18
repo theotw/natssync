@@ -7,6 +7,7 @@ package cloudclient
 import (
 	"flag"
 	"fmt"
+	"github.com/theotw/natssync/pkg/natsmodel"
 	"github.com/theotw/natssync/pkg/testing"
 	"net/http"
 	"os"
@@ -45,7 +46,7 @@ func getClientArguments() Arguments {
 func RunClient(test bool) {
 	log.Info("Starting NATSSync Client")
 	args := getClientArguments()
-	err := bridgemodel.InitNats(*args.natsURL, "echo client", 1*time.Minute)
+	err := natsmodel.InitNats(*args.natsURL, "echo client", 1*time.Minute)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -84,7 +85,7 @@ func RunClient(test bool) {
 
 	serverURL := *args.cloudServerURL
 
-	connection := bridgemodel.GetNatsConnection()
+	connection := natsmodel.GetNatsConnection()
 	connection.Subscribe(bridgemodel.RequestForLocationID, func(msg *nats.Msg) {
 		clientID := store.LoadLocationID("")
 		connection.Publish(bridgemodel.ResponseForLocationID, []byte(clientID))
@@ -104,7 +105,7 @@ func RunClient(test bool) {
 			return
 		}
 
-		nc := bridgemodel.GetNatsConnection()
+		nc := natsmodel.GetNatsConnection()
 		clientID := store.LoadLocationID("")
 		//no client ID yet?  that happens on a new startup before it is registered.  Just hang out and wait for one
 		if len(clientID) == 0 {
@@ -121,13 +122,12 @@ func RunClient(test bool) {
 			lastClientID = clientID
 			//announce the cloud ID/location ID at startup and changes
 			connection.Publish(bridgemodel.ResponseForLocationID, []byte(clientID))
-			currentMessageHandler=NewBidiMessageHandler(serverURL)
-			log.Infof("Starting Message Handler of type %s ",currentMessageHandler.GetHandlerType())
+			currentMessageHandler = NewBidiMessageHandler(serverURL)
+			log.Infof("Starting Message Handler of type %s ", currentMessageHandler.GetHandlerType())
 			currentMessageHandler.StartMessageHandler(clientID)
 		}
 	}
 }
-
 
 func isInvalidCertificateError(err error) bool {
 	return strings.Contains(err.Error(), fmt.Sprintf("status code %v", pkg.StatusCertificateError))
@@ -156,8 +156,6 @@ func getMessagesFromCloud(serverURL, clientID string) ([]v1.BridgeMessage, error
 
 	return msglist, nil
 }
-
-
 
 func timeToQuit(quitChannel chan os.Signal) bool {
 	select {

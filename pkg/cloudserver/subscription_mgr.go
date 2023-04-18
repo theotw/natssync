@@ -7,6 +7,7 @@ package cloudserver
 import (
 	"errors"
 	"fmt"
+	"github.com/theotw/natssync/pkg/natsmodel"
 	"sync"
 
 	"github.com/nats-io/nats.go"
@@ -26,7 +27,7 @@ func InitSubscriptionMgr() error {
 	natsSubscriptions = make(map[string]*nats.Subscription)
 	var err error
 
-	nc := bridgemodel.GetNatsConnection()
+	nc := natsmodel.GetNatsConnection()
 	if nc == nil {
 		return errors.New("uninitialized nats connection")
 	}
@@ -125,14 +126,14 @@ func handleRemoveAccount(msg *nats.Msg) {
 		log.Error(err)
 		return
 	}
-	nc := bridgemodel.GetNatsConnection()
+	nc := natsmodel.GetNatsConnection()
 	log.Tracef("Publishing subscription remove msg for clientID %s", clientID)
 	if err := nc.Publish(bridgemodel.REGISTRATION_LIFECYCLE_REMOVED, msg.Data); err != nil {
 		log.Error(err)
 	}
 }
 
-//gets the subscription for the client ID or returns nil
+// gets the subscription for the client ID or returns nil
 func GetSubscriptionForClient(clientID string) *nats.Subscription {
 	var ret *nats.Subscription
 	log.Tracef("Start Get Subscript for client  %s", clientID)

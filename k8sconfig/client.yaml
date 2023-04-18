@@ -5,7 +5,7 @@ metadata:
 data:
   # property-like keys; each key maps to a simple value
   nats_url: "nats://nats:4222"
-  cloud_bridge_url: "http://bridgetest.netapphci.cloud"
+  cloud_bridge_url:
   key_store: "file:///data"
   log_leve: "trace"
   skip_tls_validation: "false"

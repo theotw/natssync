@@ -14,6 +14,7 @@ import (
 	"github.com/theotw/natssync/pkg/bridgemodel"
 	v1 "github.com/theotw/natssync/pkg/bridgemodel/generated/v1"
 	"github.com/theotw/natssync/pkg/msgs"
+	"github.com/theotw/natssync/pkg/natsmodel"
 	"net/url"
 	"strings"
 )
@@ -25,10 +26,10 @@ type WebSocketMessageHandler struct {
 
 func NewWebSocketMessageHandler(serverURL string) *WebSocketMessageHandler {
 	ret := new(WebSocketMessageHandler)
-	ret.serverURL=serverURL
+	ret.serverURL = serverURL
 	return ret
 }
-func (t *WebSocketMessageHandler) GetHandlerType() string{
+func (t *WebSocketMessageHandler) GetHandlerType() string {
 	return "web-socket"
 }
 func (t *WebSocketMessageHandler) StartMessageHandler(clientID string) error {
@@ -46,7 +47,7 @@ func (t *WebSocketMessageHandler) StartMessageHandler(clientID string) error {
 		log.WithError(err).WithField("url", websocketURL).Error("Failed to connect to websocket")
 		return err
 	}
-	go t.subscribeAndSendMessageToCloud(conn,clientID)
+	go t.subscribeAndSendMessageToCloud(conn, clientID)
 	go t.ReadWSFromCloud(conn)
 	return nil
 }
@@ -54,7 +55,7 @@ func (t *WebSocketMessageHandler) StopMessageHandler() {
 	//TODO Should probably do something here
 }
 func (t *WebSocketMessageHandler) subscribeAndSendMessageToCloud(conn *websocket.Conn, clientID string) {
-	nc := bridgemodel.GetNatsConnection()
+	nc := natsmodel.GetNatsConnection()
 	subject := fmt.Sprintf("%s.>", msgs.NATSSYNC_MESSAGE_PREFIX)
 	_, err := nc.Subscribe(subject, func(msg *nats.Msg) {
 		log.Info("Received NATS message to send to cloud via websocket")
@@ -114,8 +115,8 @@ func (t *WebSocketMessageHandler) subscribeAndSendMessageToCloud(conn *websocket
 	}
 }
 
-func(t *WebSocketMessageHandler) ReadWSFromCloud(conn *websocket.Conn) {
-	nc := bridgemodel.GetNatsConnection()
+func (t *WebSocketMessageHandler) ReadWSFromCloud(conn *websocket.Conn) {
+	nc := natsmodel.GetNatsConnection()
 	defer func() { conn.Close() }()
 	for {
 		_, msgBytes, err := conn.ReadMessage()
