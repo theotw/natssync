@@ -225,7 +225,9 @@ tag:
 	docker tag ${IMAGE_REPO}/httpproxy-server:${IMAGE_TAG} ${IMAGE_REPO}/httpproxy-server:${BASE_VERSION}
 	docker tag ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG} ${IMAGE_REPO}/httpproxylet:latest
 	docker tag ${IMAGE_REPO}/httpproxylet:${IMAGE_TAG} ${IMAGE_REPO}/httpproxylet:${BASE_VERSION}
+	docker tag ${IMAGE_REPO}/k8srelaylet:${IMAGE_TAG} ${IMAGE_REPO}/k8srelaylet:latest
 	docker tag ${IMAGE_REPO}/k8srelaylet:${IMAGE_TAG} ${IMAGE_REPO}/k8srelaylet:${BASE_VERSION}
+	docker tag ${IMAGE_REPO}/k8srelayserver:${IMAGE_TAG} ${IMAGE_REPO}/k8srelayserver:latest
 	docker tag ${IMAGE_REPO}/k8srelayserver:${IMAGE_TAG} ${IMAGE_REPO}/k8srelayserver:${BASE_VERSION}
 
 
