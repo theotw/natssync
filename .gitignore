@@ -1,5 +1,3 @@
-pkg/bridgemodel/generated
-pkg/bridgeclient/generated
 out
 mods
 dump.rdb
