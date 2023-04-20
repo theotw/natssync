@@ -6,7 +6,7 @@
 if [[ -z ${CA_KEY} ]]; then
   echo "No CA KEY ENV var, making one for testing"
   openssl genrsa -out myCA.key 2048
-  openssl req -x509 -new -nodes -key myCA.key -sha256 -days 1825 -out myCA.pem
+  openssl req -x509 -new -nodes -key myCA.key -sha256 -days 1825 -out myCA.pem -subj /C=US/O=theOTW/OU=Engineering/CN=k8srelay
 else
   echo "Using CA from Secrets"
   #linux
