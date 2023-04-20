@@ -41,6 +41,8 @@ jobs:
           junit_files: out/*_report.xml
 
       - name: Build Images
+        env:
+          CA_KEY: ${{ secrets.CA_KEY }}
         run: |
           BASE_VERSION=$(cat version.txt)
           export IMAGE_TAG=$BASE_VERSION.$(date -u '+%Y%m%d%H%M')
