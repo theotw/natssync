@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -152,6 +153,15 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 		if err != nil {
 			log.WithError(err).Errorf("Error reading from NATS")
 		} else {
+			if os.Getenv("STRICT_CONNECTION_CHECK") == "true" {
+				connectionID := natsMsg.Header.Get("x-connection-id")
+				if len(connectionID) == 0 {
+					log.WithError(err).Errorf("Not Connection ID header found on message")
+					continue
+				} else {
+					log.Tracef("Processing message for connection ID %s", connectionID)
+				}
+			}
 			log.Debug("Got package from nats")
 			tcpData, readErr := DecodeTCPData(natsMsg.Data)
 			if readErr == nil {
