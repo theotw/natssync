@@ -159,7 +159,7 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 					log.WithError(err).Errorf("Not Connection ID header found on message")
 					continue
 				} else {
-					log.Tracef("Processing message for connection ID %s", connectionID)
+					log.Infof("Processing message for connection ID %s", connectionID)
 				}
 			}
 			log.Debug("Got package from nats")
