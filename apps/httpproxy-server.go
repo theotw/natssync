@@ -16,6 +16,8 @@ func main() {
 	utils.InitLogging()
 
 	log.Infof("Version %s", pkg.VERSION)
+	log.Debugf("Version %s", pkg.VERSION)
+	log.Tracef("Version %s", pkg.VERSION)
 
 	proxyServer, err := server.NewServer()
 	if err != nil {
