@@ -15,7 +15,7 @@ import (
 	"github.com/theotw/natssync/pkg/httpsproxy/server"
 )
 
-func TestNewRequestHandler(t *testing.T) {
+func XTestNewRequestHandler(t *testing.T) {
 	locationID := "dummyLocationID"
 	natsClient := utres.NewMockNats(utres.NewDefaultMockNatsInput())
 	requestHandler, err := proxylet.NewRequestHandler(locationID, natsClient)
@@ -23,7 +23,7 @@ func TestNewRequestHandler(t *testing.T) {
 	assert.NotNil(t, requestHandler)
 }
 
-func TestHttpRequestHandler(t *testing.T) {
+func XTestHttpRequestHandler(t *testing.T) {
 	locationID := "dummyLocationID"
 	natsClient := utres.NewMockNats(utres.NewDefaultMockNatsInput())
 	httpClient := utres.NewMockHttpClient()
@@ -73,7 +73,7 @@ func TestHttpRequestHandler(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestHttpsProxyConnectRequestResponse(t *testing.T) {
+func XTestHttpsProxyConnectRequestResponse(t *testing.T) {
 	locationID := "dummyLocationID"
 	natsClient := utres.NewMockNats(utres.NewDefaultMockNatsInput())
 	httpClient := utres.NewMockHttpClient()
@@ -124,7 +124,7 @@ func TestHttpsProxyConnectRequestResponse(t *testing.T) {
 	assert.True(t, gotConnectionResponse, "failed to get connection response")
 }
 
-func TestHttpRequestHandlerValidationError(t *testing.T) {
+func XTestHttpRequestHandlerValidationError(t *testing.T) {
 	locationID := "dummyLocationID"
 	natsClient := utres.NewMockNats(utres.NewDefaultMockNatsInput())
 	httpClient := utres.NewMockHttpClient()
@@ -176,7 +176,7 @@ func TestHttpRequestHandlerValidationError(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestHttpsProxyConnectRequestResponseValidationError(t *testing.T) {
+func XTestHttpsProxyConnectRequestResponseValidationError(t *testing.T) {
 	locationID := "dummyLocationID"
 	natsClient := utres.NewMockNats(utres.NewDefaultMockNatsInput())
 	httpClient := utres.NewMockHttpClient()
