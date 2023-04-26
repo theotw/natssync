@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"github.com/theotw/natssync/utils"
 	"net/http"
 	"os"
 	"os/signal"
@@ -82,6 +83,11 @@ func (s *server) configureNatsSyncLocationID() {
 
 // Run - configures and starts the web server
 func (s *server) RunHttpProxyServer(test bool) {
+	utils.InitLogging()
+
+	log.Infof("Version %s", pkg.VERSION)
+	log.Debugf("Version debug %s", pkg.VERSION)
+	log.Tracef("Version trace %s", pkg.VERSION)
 
 	s.configureNatsSyncLocationID()
 

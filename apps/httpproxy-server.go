@@ -7,17 +7,10 @@ package main
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/theotw/natssync/pkg"
 	"github.com/theotw/natssync/pkg/httpsproxy/server"
-	"github.com/theotw/natssync/utils"
 )
 
 func main() {
-	utils.InitLogging()
-
-	log.Infof("Version %s", pkg.VERSION)
-	log.Debugf("Version debug %s", pkg.VERSION)
-	log.Tracef("Version trace %s", pkg.VERSION)
 
 	proxyServer, err := server.NewServer()
 	if err != nil {
