@@ -17,6 +17,6 @@ func InitLogging() {
 		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
 		level = log.DebugLevel
 	}
-	log.Infof("Using log level 2 %s / %d", logLevel, level)
+	log.Infof("2 Using log level  %s / %d", logLevel, level)
 	log.SetLevel(level)
 }

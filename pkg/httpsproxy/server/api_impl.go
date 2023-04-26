@@ -36,7 +36,7 @@ func HandleError(_ *gin.Context, err error) (int, interface{}) {
 }
 
 func (s *server) connectHandler(c *gin.Context) {
-	log.Debugf("Got %s request", c.Request.Method)
+	log.Infof("Got %s request", c.Request.Method)
 	s.connectHandlerNats(c)
 	//connectHandlerLocal(c)
 }
@@ -101,7 +101,7 @@ func (s *server) sendConnectionRequest(connectionID, clientID, host string) erro
 func (s *server) connectHandlerNats(c *gin.Context) {
 	clientID := FetchClientIDFromProxyAuthHeader(c)
 	connectionUUID := uuid.New().String()
-	log.Debugf("Got %s request from client ", c.Request.Method)
+	log.Infof("Got %s request from client ", c.Request.Method)
 
 	outBoundSubject := httpproxy.MakeHttpsMessageSubject(clientID, connectionUUID)
 	inBoundSubject := httpproxy.MakeHttpsMessageSubject(s.locationID, connectionUUID)
