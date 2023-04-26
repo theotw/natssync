@@ -4,6 +4,8 @@
 package proxylet
 
 import (
+	"github.com/theotw/natssync/pkg"
+	"github.com/theotw/natssync/utils"
 	"os"
 	"runtime"
 	"sync"
@@ -103,11 +105,11 @@ func (p *proxylet) setupQueueSubscriptions() {
 	p.requestHandler.SetLocationID(p.locationID)
 	subj := httpproxy.MakeMessageSubject(p.locationID, httpproxy.HTTP_PROXY_API_ID)
 
-	p.httpSubscription, _ = p.natsClient.QueueSubscribe(subj,"httphandler", p.requestHandler.HttpHandler)
+	p.httpSubscription, _ = p.natsClient.QueueSubscribe(subj, "httphandler", p.requestHandler.HttpHandler)
 	log.Printf("Listening on [%s]", subj)
 
 	conReqSubject := httpproxy.MakeMessageSubject(p.locationID, httpproxy.HTTPS_PROXY_CONNECTION_REQUEST)
-	p.httpsSubscription, _ = p.natsClient.QueueSubscribe(conReqSubject,"httpshandler", p.requestHandler.HttpsHandler)
+	p.httpsSubscription, _ = p.natsClient.QueueSubscribe(conReqSubject, "httpshandler", p.requestHandler.HttpsHandler)
 
 	if err := p.natsClient.LastError(); err != nil {
 		log.Fatal(err)
@@ -121,6 +123,9 @@ func (p *proxylet) setupQueueSubscriptions() {
 // that this httpproxy is listening on; this allows configuration of private network to private network
 // communication.
 func (p *proxylet) configureNatsSyncLocationID() {
+	// handle the dev bootstrap case
+	p.locationID = "dev"
+	p.setupQueueSubscriptions()
 	/*
 	 * 1. subscribe to queue to get  natssync client's locationID
 	 * 2. send out request for natsync client's locationID
@@ -147,6 +152,10 @@ func (p *proxylet) configureNatsSyncLocationID() {
 }
 
 func (p *proxylet) RunHttpProxylet(test bool) {
+	utils.InitLogging()
+
+	log.Infof("Version %s", pkg.VERSION)
+
 	p.setupQueueSubscriptions()
 	p.configureNatsSyncLocationID()
 

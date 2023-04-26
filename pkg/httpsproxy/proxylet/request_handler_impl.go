@@ -91,7 +91,7 @@ func (rh *requestHandler) HttpHandler(m *nats.Msg) {
 		return
 	}
 
-	log.Printf("[#%d] Received on [%s]: '%s'", rh.counter, m.Subject, string(m.Data))
+	log.Debugf("[#%d] Received on [%s]: '%s'", rh.counter, m.Subject, string(m.Data))
 
 	var resp *server.HttpApiResponseMessage
 
@@ -120,8 +120,9 @@ func (rh *requestHandler) HttpHandler(m *nats.Msg) {
 	} else {
 		httpResp, err := rh.httpClient.Do(req.ToHttpRequest())
 		if err != nil {
-			log.WithError(err).Errorf("Error decoding http message")
+			log.WithError(err).Errorf("Error response from remote server")
 			resp = server.NewHttpApiResponseMessageFromError(err)
+			log.Debugf(" Sending 1 response [%d]: '%v'", resp.HttpStatusCode, resp.Headers)
 			metrics.IncTotalFailedRequests(strconv.Itoa(resp.HttpStatusCode))
 
 		} else {
@@ -130,7 +131,8 @@ func (rh *requestHandler) HttpHandler(m *nats.Msg) {
 		}
 	}
 
-	respBytes, err := json.Marshal(&resp)
+	log.Debugf(" Sending 2 response [%d]: '%v'", resp.HttpStatusCode, resp.Headers)
+	respBytes, err := json.Marshal(resp)
 	if err != nil {
 		log.WithError(err).Error("Error marshaling response body")
 		return

@@ -30,8 +30,8 @@ jobs:
               dep ensure
           fi
 
-#      - name: Unit / L1 Test
-#        run: make l1
+      - name: Unit / L1 Test
+        run: make l1
 
       - name: Publish Unit Test Results
         uses: EnricoMi/publish-unit-test-result-action@v1.32

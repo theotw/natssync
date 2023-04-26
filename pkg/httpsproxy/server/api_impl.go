@@ -206,7 +206,7 @@ func transferTcpDataToTcp(src io.ReadCloser, dest io.WriteCloser) {
 func (s *server) RouteHandler(c *gin.Context) {
 
 	clientID := FetchClientIDFromProxyAuthHeader(c)
-	log.Debugf("Got %s request from client %s", c.Request.Method, clientID)
+	log.Infof("Got %s request from client %s", c.Request.Method, clientID)
 	if clientID == "" {
 
 		//normalize out the string
@@ -285,13 +285,13 @@ func (s *server) RouteHandler(c *gin.Context) {
 		c.JSON(code, resp)
 		return
 	}
-
+	log.Tracef("Got response from Proxylet %d", k8sResp.HttpStatusCode)
 	contentTypeHeader, gotHeader := k8sResp.Headers["Content-Type"]
 	var contentType string
 	if gotHeader {
 		contentType = contentTypeHeader
 	}
-
+	c.Status(k8sResp.HttpStatusCode)
 	//if the content type is JSON, give it back pretty (Maybe this slows things down.... food for though)
 	if contentType == "application/json" {
 		dataMap := make(map[string]interface{})
@@ -304,6 +304,7 @@ func (s *server) RouteHandler(c *gin.Context) {
 	} else {
 		//else just stream it back to them
 		respLen := int64(len(k8sResp.RespBody))
+		log.Tracef("Sending back response %d", k8sResp.HttpStatusCode)
 		c.DataFromReader(k8sResp.HttpStatusCode, respLen, contentType, strings.NewReader(k8sResp.RespBody), k8sResp.Headers)
 	}
 }
