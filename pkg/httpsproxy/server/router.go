@@ -14,9 +14,9 @@ import (
 )
 
 func newRouter(s *server) *gin.Engine {
-	router := gin.Default()
+	router := gin.New()
 	router.Use(loggerMiddleware, MetricsMiddleware)
-
+	log.Infof("Current Log Level %d", log.GetLevel())
 	router.NoRoute(func(c *gin.Context) {
 
 		if c.Request.Method == http.MethodConnect {

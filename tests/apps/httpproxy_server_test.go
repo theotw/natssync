@@ -7,18 +7,11 @@ package apps
 import (
 	"testing"
 
-	"github.com/theotw/natssync/pkg"
-	"github.com/theotw/natssync/pkg/httpsproxy/server"
-	"github.com/theotw/natssync/utils"
-
 	log "github.com/sirupsen/logrus"
+	"github.com/theotw/natssync/pkg/httpsproxy/server"
 )
 
 func TestHttpProxyServer(t *testing.T) {
-	utils.InitLogging()
-
-	log.Infof("Version %s", pkg.VERSION)
-
 	proxyServer, err := server.NewServer()
 	if err != nil {
 		log.WithError(err).Fatal("failed to instantiate proxy server")

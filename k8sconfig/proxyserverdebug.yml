@@ -1,0 +1,131 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: client-config
+data:
+  # property-like keys; each key maps to a simple value
+  nats_url: "nats://nats:4222"
+  key_store: "file:///data"
+  log_level: "trace"
+  skip_tls_validation: "false"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpproxy
+spec:
+  type: NodePort
+  selector:
+    type: httpproxyserver
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+      nodePort: 30080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  type: ClusterIP
+  selector:
+    type: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      name: http
+      targetPort: 80
+    - protocol: TCP
+      port: 443
+      targetPort: 443
+      name: https
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats
+spec:
+  type: NodePort
+  selector:
+    type: nats
+  ports:
+    - protocol: TCP
+      port: 4222
+      nodePort: 30220
+      targetPort: 4222
+---
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: nginx
+  labels:
+    type: nginx
+    role: nginx
+spec:
+  containers:
+    - name: nats
+      image: theotw/testnginx:dev
+      imagePullPolicy: Never
+---
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: nats
+  labels:
+    type: nats
+    role: nats
+spec:
+  containers:
+    - name: nats
+      image: nats
+---
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: http-proxylet
+spec:
+  containers:
+    - name: httpproxylet
+      image: theotw/httpproxylet:dev
+      imagePullPolicy: Never
+      env:
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: client-config
+              key: log_level
+
+        - name: NATS_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: client-config
+              key: nats_url
+---
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: httpproxyserver
+  labels:
+    type: httpproxyserver
+spec:
+  containers:
+    - name: httpproxyserver
+      image: theotw/httpproxy-server:dev
+      imagePullPolicy: Never
+      env:
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: client-config
+              key: log_level
+
+        - name: NATS_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: client-config
+              key: nats_url
