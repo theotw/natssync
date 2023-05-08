@@ -27,10 +27,9 @@ func InitNats(natsUrlList string, connectionName string, timeout time.Duration) 
 		i = i + 1
 		log.Infof("Connecting to NATS on %s", natsUrlList)
 
-		opts := nats.Options{
-			Url:  natsUrlList,
-			Nkey: userName,
-		}
+		opts := nats.GetDefaultOptions()
+		opts.Url = natsUrlList
+		opts.Nkey = userName
 		var sigHandler nats.SignatureHandler
 		if len(seed) > 0 {
 			sigHandler = func(nonce []byte) ([]byte, error) {
