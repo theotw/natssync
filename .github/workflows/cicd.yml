@@ -34,7 +34,7 @@ jobs:
         run: make l1
 
       - name: Publish Unit Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v1.32
+        uses: EnricoMi/publish-unit-test-result-action@v2.7
         if: always()
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
