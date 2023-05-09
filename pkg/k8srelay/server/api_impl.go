@@ -127,7 +127,15 @@ func genericHandlerHandler(c *gin.Context) {
 		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
 		return
 	}
-	nc.PublishMsg(nm)
+	err = nc.PublishMsg(nm)
+	if err != nil {
+		c.Status(502)
+		c.Header("Content-Type", "text/plain")
+		log.WithError(err).Errorf("Returning a 502, got an error failed to publish message %s ", err.Error())
+		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+		return
+	}
+
 	isFirst := true
 	for {
 		msg, err := sync.NextMsg(time.Minute * 2)
