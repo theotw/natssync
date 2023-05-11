@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: natssync-server-config
+data:
+  # property-like keys; each key maps to a simple value
+  nats_url: "nats://nats:4222"
+  cloud_bridge_url: ""
+  key_store: "file:///data"
+  log_level: "trace"
+  mongo_uid: "root"
+  mongo_pwd: "root"
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats
+spec:
+  type: NodePort
+  selector:
+    type: nats
+  ports:
+    - protocol: TCP
+      port: 4222
+      nodePort: 30221
+      targetPort: 4222
+---
+
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: nats
+  labels:
+    type: nats
+    role: nats
+spec:
+  containers:
+    - name: nats
+      image: nats
+      imagePullPolicy: Always
+
+  hostNetwork: true
+  dnsPolicy: Default
+

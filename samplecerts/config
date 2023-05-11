@@ -15,4 +15,4 @@ preferences: {}
 users:
 - name: relayuser
   user:
-    token: X42
+    token: dev

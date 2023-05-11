@@ -119,7 +119,7 @@ func genericHandlerHandler(c *gin.Context) {
 	nm := nats.NewMsg(sbMsgSub)
 	nm.Data = bits
 	nm.Reply = replySub
-	sync, err := nc.SubscribeSync(replySub)
+	replyChannel, err := nc.SubscribeSync(replySub)
 	if err != nil {
 		c.Status(502)
 		log.WithError(err).Errorf("Returning a 502, got an error Subscribe %s ", err.Error())
@@ -138,7 +138,7 @@ func genericHandlerHandler(c *gin.Context) {
 
 	isFirst := true
 	for {
-		msg, err := sync.NextMsg(time.Minute * 2)
+		msg, err := replyChannel.NextMsg(time.Minute * 2)
 		if err != nil {
 			c.Status(502)
 			c.Header("Content-Type", "text/plain")
