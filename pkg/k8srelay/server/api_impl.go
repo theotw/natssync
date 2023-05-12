@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	uuid2 "github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
@@ -104,9 +105,20 @@ func genericHandlerHandler(c *gin.Context) {
 	if err != nil {
 		log.WithError(err).Errorf("Unable to read body on call %s - %s error: %s", c.Request.Method, parse.Path, err.Error())
 	}
+
+	requestUUID := uuid2.New().String()
+	if strings.HasPrefix(req.Path, "/api/v1/namespaces") &&
+		strings.Contains(req.Path, "pods") &&
+		strings.Contains(req.Path, "log") &&
+		strings.HasSuffix(req.Path, "follow=true") {
+		// looking for log follow /api/v1/namespaces/<ns>/pods/<pod>/log?container=<container>&follow=true
+		req.Stream = true
+		req.UUID = requestUUID
+		log.Infof("starting log streaming")
+	}
 	req.InBody = bodyBits
 	nc := natsmodel.GetNatsConnection()
-	replySub := msgs.MakeNBReplySubject()
+	replySub := msgs.MakeNBReplySubject("")
 	sbMsgSub := msgs.MakeMessageSubject(userTokenWhichBecomesRouteID, models.K8SRelayRequestMessageSubjectSuffix)
 	bits, err := json.Marshal(&req)
 	if err != nil {
@@ -136,6 +148,39 @@ func genericHandlerHandler(c *gin.Context) {
 		return
 	}
 
+	if !req.Stream {
+		receiveMsgs(c, sync)
+	} else {
+		go streamMsgs(c, sync, nc, requestUUID)
+	}
+
+}
+
+func streamMsgs(c *gin.Context, sync *nats.Subscription, nc *nats.Conn, requestUUID string) {
+	for {
+		select {
+		case <-c.Request.Context().Done():
+			// Tell the relaylet to stop the streaming
+			userTokenWhichBecomesRouteID := GetRouteIDFromAuthHeader(c)
+			sbMsgSub := msgs.MakeMessageSubject(userTokenWhichBecomesRouteID, models.K8SRelayRequestMessageSubjectSuffix+requestUUID+".stopStreaming")
+			nm := nats.NewMsg(sbMsgSub)
+			err := nc.PublishMsg(nm)
+			if err != nil {
+				c.Status(502)
+				c.Header("Content-Type", "text/plain")
+				log.WithError(err).Errorf("Returning a 502, got an error failed to publish message %s ", err.Error())
+				c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+				return
+			}
+			log.Infof("ending log streaming")
+			return
+		default:
+			receiveMsgs(c, sync)
+		}
+	}
+}
+
+func receiveMsgs(c *gin.Context, sync *nats.Subscription) {
 	isFirst := true
 	for {
 		msg, err := sync.NextMsg(time.Minute * 2)
@@ -174,7 +219,6 @@ func genericHandlerHandler(c *gin.Context) {
 		}
 	}
 	c.Writer.Flush()
-
 }
 
 func GetRouteIDFromAuthHeader(c *gin.Context) string {

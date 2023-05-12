@@ -20,8 +20,9 @@ const ENVELOPE_VERSION_4 = 4 // v4 is does not encrypt the message, just signs i
 const ECHOLET_SUFFIX = "echolet"
 const ECHO_SUBJECT_BASE = "echo"
 const NATSSYNC_MESSAGE_PREFIX = "natssyncmsg"
-const SKIP_ENCRYPTION_FLAG="noencrypt"  // used in third position of a subject (aka, first app usage position) then encryption is skipped.  Handy for SSL or other encrypted messages
-const BLANK_KEY="this key was intentionally left blank"
+const SKIP_ENCRYPTION_FLAG = "noencrypt" // used in third position of a subject (aka, first app usage position) then encryption is skipped.  Handy for SSL or other encrypted messages
+const BLANK_KEY = "this key was intentionally left blank"
+
 type MessageEnvelope struct {
 	EnvelopeVersion int
 	RecipientID     string
@@ -36,8 +37,11 @@ func MakeReplySubject(replyToLocationID string) string {
 	replySubject := fmt.Sprintf("%s.%s.%s", NATSSYNC_MESSAGE_PREFIX, replyToLocationID, bridgemodel.GenerateUUID())
 	return replySubject
 }
-func MakeNBReplySubject() string {
-	replySubject := fmt.Sprintf("%s.%s.%s", NATSSYNC_MESSAGE_PREFIX, pkg.CLOUD_ID, bridgemodel.GenerateUUID())
+func MakeNBReplySubject(uuid string) string {
+	if len(uuid) == 0 {
+		uuid = bridgemodel.GenerateUUID()
+	}
+	replySubject := fmt.Sprintf("%s.%s.%s", NATSSYNC_MESSAGE_PREFIX, pkg.CLOUD_ID, uuid)
 	return replySubject
 }
 
@@ -56,12 +60,12 @@ type ParsedSubject struct {
 	OriginalSubject string
 	LocationID      string
 	AppData         []string //dotted strings parts after the location ID
-	SkipEncryption 	bool
+	SkipEncryption  bool
 }
 
 func ParseSubject(subject string) (*ParsedSubject, error) {
 	ret := new(ParsedSubject)
-	ret.SkipEncryption=false
+	ret.SkipEncryption = false
 	parts := strings.Split(subject, ".")
 	if len(parts) < 2 || (parts[0] != NATSSYNC_MESSAGE_PREFIX) {
 		return ret, errors.New("invalid.message.subject")
@@ -69,7 +73,7 @@ func ParseSubject(subject string) (*ParsedSubject, error) {
 
 	ret.LocationID = parts[1]
 	ret.AppData = parts[2:]
-	ret.SkipEncryption= len(ret.AppData)>0 && ret.AppData[0]==SKIP_ENCRYPTION_FLAG
+	ret.SkipEncryption = len(ret.AppData) > 0 && ret.AppData[0] == SKIP_ENCRYPTION_FLAG
 	ret.OriginalSubject = subject
 
 	return ret, nil

@@ -202,6 +202,39 @@ func (t *Relaylet) DoCall(nm *nats.Msg) {
 		token := fmt.Sprintf("Bearer %s", t.clientToken)
 		relayreq.Header.Set("Authorization", token)
 	}
+
+	if !req.Stream {
+		t.callAPI(nc, nm, relayreq, respMsg)
+	} else {
+		go t.streamAPIMsgs(nc, nm, relayreq, respMsg, req.UUID)
+	}
+}
+
+func (t *Relaylet) streamAPIMsgs(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, respMsg *models.CallResponse, requestUUID string) {
+	log.Infof("starting streaming of API")
+	locationID := GetLocationID(nc)
+	sbMsgSub := msgs.MakeMessageSubject(locationID, models.K8SRelayRequestMessageSubjectSuffix+requestUUID+".stopStreaming")
+	sync, err := nc.SubscribeSync(sbMsgSub)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to subscribe to %s response message %s", sbMsgSub, err.Error())
+		return
+	}
+	for {
+		msg, err := sync.NextMsg(time.Minute * 1)
+		if err != nil {
+			if err != nats.ErrTimeout {
+				log.Warnf("Error reading NextMsg %s, ignoring", err.Error())
+				continue
+			}
+		} else if msg.Subject == sbMsgSub {
+			log.Infof("stopping streaming of API")
+			return
+		}
+		t.callAPI(nc, nm, relayreq, respMsg)
+	}
+}
+
+func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, respMsg *models.CallResponse) {
 	resp, err := t.client.Do(relayreq)
 
 	if err != nil {
@@ -254,5 +287,28 @@ func (t *Relaylet) DoCall(nm *nats.Msg) {
 			}
 		}
 	}
+}
 
+func GetLocationID(natsConn *nats.Conn) string {
+	// Request for locationID
+	RequestForLocationID := "natssync.location.request"
+	ResponseForLocationID := "natssync.location.response"
+	subLocation, err := natsConn.SubscribeSync(ResponseForLocationID)
+	if err != nil {
+		log.Errorf("error with SubscribeSync to topic %s: %v", ResponseForLocationID, err.Error())
+		return ""
+	}
+	merr := natsConn.Publish(RequestForLocationID, []byte{})
+	if merr != nil {
+		log.WithError(merr).Errorf("Error sending return message %s %s", RequestForLocationID, merr.Error())
+	}
+	replyLocation, err := subLocation.NextMsg(time.Minute * 1)
+	if err != nil {
+		log.WithError(err).Errorf("error waiting on reply for the locationID %s", err.Error())
+		return ""
+	}
+
+	locationID := string(replyLocation.Data)
+	log.Infof("locationID: %s", locationID)
+	return locationID
 }
