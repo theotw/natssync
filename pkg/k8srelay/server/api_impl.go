@@ -107,14 +107,22 @@ func genericHandlerHandler(c *gin.Context) {
 	}
 
 	requestUUID := uuid2.New().String()
-	if strings.HasPrefix(req.Path, "/api/v1/namespaces") &&
-		strings.Contains(req.Path, "pods") &&
-		strings.Contains(req.Path, "log") &&
-		strings.HasSuffix(req.Path, "follow=true") {
+	urlString := c.Request.URL.String()
+	log.Infof("urlString: %s", urlString)
+	log.Infof("parse.Path: %s", parse.Path)
+	log.Infof("parse.RawPath: %s", parse.RawPath)
+	log.Infof("parse.RawQuery: %s", parse.RawQuery)
+	log.Infof("strings.HasPrefix(urlString, /api/v1/namespaces): %v", strings.HasPrefix(urlString, "/api/v1/namespaces"))
+	log.Infof("strings.Contains(urlString, pods): %v", strings.Contains(urlString, "pods"))
+	log.Infof("strings.Contains(urlString, log): %v", strings.Contains(urlString, "log"))
+	log.Infof("strings.HasSuffix(urlString, follow=true): %v", strings.HasSuffix(urlString, "follow=true"))
+	if strings.HasPrefix(urlString, "/api/v1/namespaces") &&
+		strings.Contains(urlString, "pods") &&
+		strings.Contains(urlString, "log") &&
+		strings.HasSuffix(urlString, "follow=true") {
 		// looking for log follow /api/v1/namespaces/<ns>/pods/<pod>/log?container=<container>&follow=true
 		req.Stream = true
 		req.UUID = requestUUID
-		log.Infof("starting log streaming")
 	}
 	req.InBody = bodyBits
 	nc := natsmodel.GetNatsConnection()
@@ -157,6 +165,7 @@ func genericHandlerHandler(c *gin.Context) {
 }
 
 func streamMsgs(c *gin.Context, sync *nats.Subscription, nc *nats.Conn, requestUUID string) {
+	log.Infof("starting log streaming")
 	for {
 		select {
 		case <-c.Request.Context().Done():
@@ -212,13 +221,16 @@ func receiveMsgs(c *gin.Context, sync *nats.Subscription) {
 		}
 
 		if respMsg.OutBody != nil {
-			c.Writer.Write(respMsg.OutBody)
+			_, err = c.Writer.Write(respMsg.OutBody)
+			if err != nil {
+				log.Warnf("error writing respMsg: %s", err.Error())
+			}
+			c.Writer.Flush()
 		}
 		if respMsg.LastMessage {
 			break
 		}
 	}
-	c.Writer.Flush()
 }
 
 func GetRouteIDFromAuthHeader(c *gin.Context) string {
