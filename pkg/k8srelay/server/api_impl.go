@@ -121,6 +121,7 @@ func genericHandlerHandler(c *gin.Context) {
 		strings.Contains(urlString, "log") &&
 		strings.HasSuffix(urlString, "follow=true") {
 		// looking for log follow /api/v1/namespaces/<ns>/pods/<pod>/log?container=<container>&follow=true
+		log.Infof("got log streaming request, setting stream and UUID for the client request")
 		req.Stream = true
 		req.UUID = requestUUID
 	}
@@ -139,7 +140,7 @@ func genericHandlerHandler(c *gin.Context) {
 	nm := nats.NewMsg(sbMsgSub)
 	nm.Data = bits
 	nm.Reply = replySub
-	sync, err := nc.SubscribeSync(replySub)
+	replyChannel, err := nc.SubscribeSync(replySub)
 	if err != nil {
 		c.Status(502)
 		log.WithError(err).Errorf("Returning a 502, got an error Subscribe %s ", err.Error())
@@ -156,54 +157,32 @@ func genericHandlerHandler(c *gin.Context) {
 		return
 	}
 
-	if !req.Stream {
-		receiveMsgs(c, sync)
-	} else {
-		go streamMsgs(c, sync, nc, requestUUID)
-	}
+	c.Done()
+	c.Request.Context().Done()
 
-}
-
-func streamMsgs(c *gin.Context, sync *nats.Subscription, nc *nats.Conn, requestUUID string) {
-	log.Infof("starting log streaming")
-	for {
-		select {
-		case <-c.Request.Context().Done():
-			// Tell the relaylet to stop the streaming
-			userTokenWhichBecomesRouteID := GetRouteIDFromAuthHeader(c)
-			sbMsgSub := msgs.MakeMessageSubject(userTokenWhichBecomesRouteID, models.K8SRelayRequestMessageSubjectSuffix+requestUUID+".stopStreaming")
-			nm := nats.NewMsg(sbMsgSub)
-			err := nc.PublishMsg(nm)
-			if err != nil {
-				c.Status(502)
-				c.Header("Content-Type", "text/plain")
-				log.WithError(err).Errorf("Returning a 502, got an error failed to publish message %s ", err.Error())
-				c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
-				return
-			}
-			log.Infof("ending log streaming")
-			return
-		default:
-			receiveMsgs(c, sync)
-		}
-	}
-}
-
-func receiveMsgs(c *gin.Context, sync *nats.Subscription) {
 	isFirst := true
 	for {
-		msg, err := sync.NextMsg(time.Minute * 2)
+		msg, err := replyChannel.NextMsg(time.Minute * 5)
 		if err != nil {
+			if err == nats.ErrTimeout {
+				continue
+			}
 			c.Status(502)
 			c.Header("Content-Type", "text/plain")
 			log.WithError(err).Errorf("Returning a 502, got an error next message %s ", err.Error())
 			c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+			if req.Stream {
+				endLogStreaming(c, nc, requestUUID)
+			}
 			return
 		}
 
 		var respMsg models.CallResponse
 		err = json.Unmarshal(msg.Data, &respMsg)
 		if err != nil {
+			if req.Stream {
+				endLogStreaming(c, nc, requestUUID)
+			}
 			c.Status(502)
 			c.Header("Content-Type", "text/plain")
 			log.WithError(err).Errorf("Returning a 502, got an error on unmarshall %s ", err.Error())
@@ -223,7 +202,9 @@ func receiveMsgs(c *gin.Context, sync *nats.Subscription) {
 		if respMsg.OutBody != nil {
 			_, err = c.Writer.Write(respMsg.OutBody)
 			if err != nil {
-				log.Warnf("error writing respMsg: %s", err.Error())
+				if err.Error() == "client disconnected" && req.Stream {
+					endLogStreaming(c, nc, requestUUID)
+				}
 			}
 			c.Writer.Flush()
 		}
@@ -242,4 +223,20 @@ func GetRouteIDFromAuthHeader(c *gin.Context) string {
 		userTokenWhichBecomesRouteID = "dev"
 	}
 	return userTokenWhichBecomesRouteID
+}
+
+func endLogStreaming(c *gin.Context, nc *nats.Conn, requestUUID string) {
+	log.Infof("ending log streaming")
+	userTokenWhichBecomesRouteID := GetRouteIDFromAuthHeader(c)
+	sbMsgSub := msgs.MakeMessageSubject(userTokenWhichBecomesRouteID, models.K8SRelayRequestMessageSubjectSuffix+requestUUID+".stopStreaming")
+	log.Infof("endLogStreaming: subject for log streaming end: %s", sbMsgSub)
+	nm := nats.NewMsg(sbMsgSub)
+	err := nc.PublishMsg(nm)
+	if err != nil {
+		c.Status(502)
+		c.Header("Content-Type", "text/plain")
+		log.WithError(err).Errorf("Returning a 502, got an error failed to publish message %s ", err.Error())
+		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+		return
+	}
 }

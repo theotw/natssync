@@ -214,6 +214,7 @@ func (t *Relaylet) streamAPIMsgs(nc *nats.Conn, nm *nats.Msg, relayreq *http.Req
 	log.Infof("starting streaming of API")
 	locationID := GetLocationID(nc)
 	sbMsgSub := msgs.MakeMessageSubject(locationID, models.K8SRelayRequestMessageSubjectSuffix+requestUUID+".stopStreaming")
+	log.Infof("subject for log streaming end: %s", sbMsgSub)
 	sync, err := nc.SubscribeSync(sbMsgSub)
 	if err != nil {
 		log.WithError(err).Errorf("Unable to subscribe to %s response message %s", sbMsgSub, err.Error())
