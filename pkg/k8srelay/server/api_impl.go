@@ -204,6 +204,7 @@ func genericHandlerHandler(c *gin.Context) {
 			if err != nil {
 				if err.Error() == "client disconnected" && req.Stream {
 					endLogStreaming(c, nc, requestUUID)
+					return
 				}
 			}
 			c.Writer.Flush()
@@ -228,7 +229,7 @@ func GetRouteIDFromAuthHeader(c *gin.Context) string {
 func endLogStreaming(c *gin.Context, nc *nats.Conn, requestUUID string) {
 	log.Infof("ending log streaming")
 	userTokenWhichBecomesRouteID := GetRouteIDFromAuthHeader(c)
-	sbMsgSub := msgs.MakeMessageSubject(userTokenWhichBecomesRouteID, models.K8SRelayRequestMessageSubjectSuffix+requestUUID+".stopStreaming")
+	sbMsgSub := msgs.MakeMessageSubject(userTokenWhichBecomesRouteID, models.K8SRelayRequestMessageSubjectSuffix+"."+requestUUID+".stopStreaming")
 	log.Infof("endLogStreaming: subject for log streaming end: %s", sbMsgSub)
 	nm := nats.NewMsg(sbMsgSub)
 	err := nc.PublishMsg(nm)

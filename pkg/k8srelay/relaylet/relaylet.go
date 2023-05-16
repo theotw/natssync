@@ -212,8 +212,8 @@ func (t *Relaylet) DoCall(nm *nats.Msg) {
 
 func (t *Relaylet) streamAPIMsgs(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, respMsg *models.CallResponse, requestUUID string) {
 	log.Infof("starting streaming of API")
-	locationID := GetLocationID(nc)
-	sbMsgSub := msgs.MakeMessageSubject(locationID, models.K8SRelayRequestMessageSubjectSuffix+requestUUID+".stopStreaming")
+	//locationID := GetLocationID(nc)
+	sbMsgSub := msgs.MakeMessageSubject("*", models.K8SRelayRequestMessageSubjectSuffix+"."+requestUUID+".stopStreaming")
 	log.Infof("subject for log streaming end: %s", sbMsgSub)
 	sync, err := nc.SubscribeSync(sbMsgSub)
 	if err != nil {
