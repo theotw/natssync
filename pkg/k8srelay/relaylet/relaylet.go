@@ -282,7 +282,7 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 			if merr != nil {
 				log.WithError(merr).Errorf("Error sending return message %s %s", nm.Reply, merr.Error())
 			}
-			log.Debugf("Recieveing data size %d last message flag %v", n, respMsg.LastMessage)
+			log.Debugf("Receiveing data size %d last message flag %v", n, respMsg.LastMessage)
 			if respMsg.LastMessage {
 				break
 			}
