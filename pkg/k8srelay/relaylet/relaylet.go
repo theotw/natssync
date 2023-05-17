@@ -250,6 +250,20 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 		}
 
 		for {
+			if stream {
+				log.Info("reading NextMsg for stopStreaming")
+				_, err := sync.NextMsg(time.Minute * 1)
+				if err != nil {
+					if err != nats.ErrTimeout {
+						log.Infof("Error reading NextMsg %s, ignoring", err.Error())
+						continue
+					}
+				} else {
+					log.Infof("stopping streaming of API")
+					return
+				}
+			}
+
 			buf := make([]byte, 1024*1024)
 			n, err := resp.Body.Read(buf)
 			if err != nil {
@@ -277,44 +291,6 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 			if respMsg.LastMessage {
 				break
 			}
-
-			if stream {
-				log.Info("reading NextMsg for stopStreaming")
-				_, err := sync.NextMsg(time.Minute * 1)
-				if err != nil {
-					if err != nats.ErrTimeout {
-						log.Infof("Error reading NextMsg %s, ignoring", err.Error())
-						continue
-					}
-				} else {
-					log.Infof("stopping streaming of API")
-					return
-				}
-			}
 		}
 	}
-}
-
-func GetLocationID(natsConn *nats.Conn) string {
-	// Request for locationID
-	RequestForLocationID := "natssync.location.request"
-	ResponseForLocationID := "natssync.location.response"
-	subLocation, err := natsConn.SubscribeSync(ResponseForLocationID)
-	if err != nil {
-		log.Errorf("error with SubscribeSync to topic %s: %v", ResponseForLocationID, err.Error())
-		return ""
-	}
-	merr := natsConn.Publish(RequestForLocationID, []byte{})
-	if merr != nil {
-		log.WithError(merr).Errorf("Error sending return message %s %s", RequestForLocationID, merr.Error())
-	}
-	replyLocation, err := subLocation.NextMsg(time.Minute * 1)
-	if err != nil {
-		log.WithError(err).Errorf("error waiting on reply for the locationID %s", err.Error())
-		return ""
-	}
-
-	locationID := string(replyLocation.Data)
-	log.Infof("locationID: %s", locationID)
-	return locationID
 }

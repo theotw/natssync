@@ -160,59 +160,71 @@ func genericHandlerHandler(c *gin.Context) {
 	isFirst := true
 	for {
 		//TODO check if the client has disconnected
-		msg, err := replyChannel.NextMsg(time.Minute * 2)
-		if err != nil {
-			if err == nats.ErrTimeout {
-				log.Info("ignoring NextMsg timeout")
-				continue
-			}
-			c.Status(502)
-			c.Header("Content-Type", "text/plain")
-			log.WithError(err).Errorf("Returning a 502, got an error next message %s ", err.Error())
-			c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
-			if req.Stream {
-				log.Info("replyChannel.NextMsg err, ending log streaming")
-				endLogStreaming(c, nc, requestUUID)
-			}
+		log.Info("replyChannel.NextMsg")
+		select {
+		case <-c.Request.Context().Done():
+			log.Info("context done, returning")
+			endLogStreaming(c, nc, requestUUID)
 			return
-		}
-
-		var respMsg models.CallResponse
-		err = json.Unmarshal(msg.Data, &respMsg)
-		if err != nil {
-			if req.Stream {
-				log.Info("json.Unmarshal err, ending log streaming")
-				endLogStreaming(c, nc, requestUUID)
-			}
-			c.Status(502)
-			c.Header("Content-Type", "text/plain")
-			log.WithError(err).Errorf("Returning a 502, got an error on unmarshall %s ", err.Error())
-			c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
-			return
-		}
-		if isFirst {
-			log.Infof("Got resp status %d ", respMsg.StatusCode)
-			for k, v := range respMsg.Headers {
-				log.Infof("%s = %s ", k, v)
-				c.Header(k, v)
-			}
-			c.Status(respMsg.StatusCode)
-			isFirst = false
-		}
-
-		if respMsg.OutBody != nil {
-			_, err = c.Writer.Write(respMsg.OutBody)
+		default:
+			msg, err := replyChannel.NextMsg(time.Minute * 2)
 			if err != nil {
-				if err.Error() == "client disconnected" && req.Stream {
-					log.Info("Write err, client disconnected, ending streaming")
-					endLogStreaming(c, nc, requestUUID)
-					return
+				if err == nats.ErrTimeout {
+					log.Info("ignoring NextMsg timeout")
+					continue
 				}
+				c.Status(502)
+				c.Header("Content-Type", "text/plain")
+				log.WithError(err).Errorf("Returning a 502, got an error next message %s ", err.Error())
+				c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+				if req.Stream {
+					log.Info("replyChannel.NextMsg err, ending log streaming")
+					endLogStreaming(c, nc, requestUUID)
+				}
+				return
 			}
-			c.Writer.Flush()
-		}
-		if respMsg.LastMessage {
-			break
+
+			var respMsg models.CallResponse
+			log.Info("json unmarshaling")
+			err = json.Unmarshal(msg.Data, &respMsg)
+			if err != nil {
+				if req.Stream {
+					log.Info("json.Unmarshal err, ending log streaming")
+					endLogStreaming(c, nc, requestUUID)
+				}
+				c.Status(502)
+				c.Header("Content-Type", "text/plain")
+				log.WithError(err).Errorf("Returning a 502, got an error on unmarshall %s ", err.Error())
+				c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+				return
+			}
+			if isFirst {
+				log.Infof("Got resp status %d ", respMsg.StatusCode)
+				for k, v := range respMsg.Headers {
+					log.Infof("%s = %s ", k, v)
+					c.Header(k, v)
+				}
+				c.Status(respMsg.StatusCode)
+				isFirst = false
+			}
+
+			if respMsg.OutBody != nil {
+				log.Info("c.Writer.Write")
+				_, err = c.Writer.Write(respMsg.OutBody)
+				if err != nil {
+					if err.Error() == "client disconnected" && req.Stream {
+						log.Info("Write err, client disconnected, ending streaming")
+						endLogStreaming(c, nc, requestUUID)
+						return
+					}
+				}
+				log.Info("c.Writer.Flush")
+				c.Writer.Flush()
+			}
+			if respMsg.LastMessage {
+				log.Info("LastMessage break")
+				break
+			}
 		}
 	}
 }
