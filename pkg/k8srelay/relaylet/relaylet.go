@@ -237,61 +237,61 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 		for k, v := range resp.Header {
 			respMsg.AddHeader(k, v[0])
 		}
-		var sync *nats.Subscription
-		var sbMsgSub string
+
 		streamStopChan := make(chan bool)
 		if stream {
-			sbMsgSub = msgs.MakeMessageSubject("*", models.K8SRelayRequestMessageSubjectSuffix+"."+requestUUID+".stopStreaming")
-			log.Infof("subject for log streaming end: %s", sbMsgSub)
-			sync, err = nc.SubscribeSync(sbMsgSub)
-			if err != nil {
-				log.WithError(err).Errorf("Unable to subscribe to %s response message %s", sbMsgSub, err.Error())
-				return
-			}
-			go checkForStreamingStop(sync, streamStopChan)
+			go checkForStreamingStop(nc, requestUUID, streamStopChan)
 		}
 
 		for {
-			select {
-			case <-streamStopChan:
-				log.Infof("select stopping streaming of API")
+			streamStop := <-streamStopChan
+			log.Infof("streamStop: %v", streamStop)
+			if streamStop {
+				log.Info("select stopping streaming of API")
 				return
-			default:
-				buf := make([]byte, 1024*1024)
-				n, err := resp.Body.Read(buf)
-				if err != nil {
-					respMsg.LastMessage = true
-					respMsg.OutBody = nil
-					if err != io.EOF {
-						log.WithError(err).Errorf("Error reading response stream %s", err.Error())
-					}
-				}
-				if n < 0 {
-					respMsg.OutBody = nil
-				} else {
-					respMsg.OutBody = buf[0:n]
-				}
+			}
 
-				respBits, err := json.Marshal(respMsg)
-				if err != nil {
-					log.WithError(err).Errorf("Unable to marshal response message %s", err.Error())
+			buf := make([]byte, 1024*1024)
+			n, err := resp.Body.Read(buf)
+			if err != nil {
+				respMsg.LastMessage = true
+				respMsg.OutBody = nil
+				if err != io.EOF {
+					log.WithError(err).Errorf("Error reading response stream %s", err.Error())
 				}
-				merr := nc.Publish(nm.Reply, respBits)
-				if merr != nil {
-					log.WithError(merr).Errorf("Error sending return message %s %s", nm.Reply, merr.Error())
-				}
-				log.Debugf("Receiveing data size %d last message flag %v", n, respMsg.LastMessage)
-				if respMsg.LastMessage {
-					return
-				}
+			}
+			if n < 0 {
+				respMsg.OutBody = nil
+			} else {
+				respMsg.OutBody = buf[0:n]
+			}
+
+			respBits, err := json.Marshal(respMsg)
+			if err != nil {
+				log.WithError(err).Errorf("Unable to marshal response message %s", err.Error())
+			}
+			merr := nc.Publish(nm.Reply, respBits)
+			if merr != nil {
+				log.WithError(merr).Errorf("Error sending return message %s %s", nm.Reply, merr.Error())
+			}
+			log.Debugf("Receiveing data size %d last message flag %v", n, respMsg.LastMessage)
+			if respMsg.LastMessage {
+				return
 			}
 		}
 	}
 }
 
-func checkForStreamingStop(sync *nats.Subscription, streamStopChan chan bool) {
+func checkForStreamingStop(nc *nats.Conn, requestUUID string, streamStopChan chan bool) {
+	sbMsgSub := msgs.MakeMessageSubject("*", models.K8SRelayRequestMessageSubjectSuffix+"."+requestUUID+".stopStreaming")
+	log.Infof("subject for log streaming end: %s", sbMsgSub)
+	sync, err := nc.SubscribeSync(sbMsgSub)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to subscribe to %s response message %s", sbMsgSub, err.Error())
+		return
+	}
 	log.Info("reading NextMsg for stopStreaming")
-	_, err := sync.NextMsg(time.Minute * 1)
+	_, err = sync.NextMsg(time.Minute * 1)
 	if err != nil {
 		if err != nats.ErrTimeout {
 			log.Infof("checkForStreamingStop: Error reading NextMsg %s, ignoring", err.Error())
