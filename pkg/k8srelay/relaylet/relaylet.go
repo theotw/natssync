@@ -204,7 +204,7 @@ func (t *Relaylet) DoCall(nm *nats.Msg) {
 	}
 
 	if !req.Stream {
-		t.callAPI(nc, nm, relayreq, respMsg)
+		t.callAPI(nc, nm, relayreq, respMsg, "", false)
 	} else {
 		go t.streamAPIMsgs(nc, nm, relayreq, respMsg, req.UUID)
 	}
@@ -212,30 +212,10 @@ func (t *Relaylet) DoCall(nm *nats.Msg) {
 
 func (t *Relaylet) streamAPIMsgs(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, respMsg *models.CallResponse, requestUUID string) {
 	log.Infof("starting streaming of API")
-	//locationID := GetLocationID(nc)
-	sbMsgSub := msgs.MakeMessageSubject("*", models.K8SRelayRequestMessageSubjectSuffix+"."+requestUUID+".stopStreaming")
-	log.Infof("subject for log streaming end: %s", sbMsgSub)
-	sync, err := nc.SubscribeSync(sbMsgSub)
-	if err != nil {
-		log.WithError(err).Errorf("Unable to subscribe to %s response message %s", sbMsgSub, err.Error())
-		return
-	}
-	for {
-		msg, err := sync.NextMsg(time.Minute * 1)
-		if err != nil {
-			if err != nats.ErrTimeout {
-				log.Warnf("Error reading NextMsg %s, ignoring", err.Error())
-				continue
-			}
-		} else if msg.Subject == sbMsgSub {
-			log.Infof("stopping streaming of API")
-			return
-		}
-		t.callAPI(nc, nm, relayreq, respMsg)
-	}
+	t.callAPI(nc, nm, relayreq, respMsg, requestUUID, true)
 }
 
-func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, respMsg *models.CallResponse) {
+func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, respMsg *models.CallResponse, requestUUID string, stream bool) {
 	resp, err := t.client.Do(relayreq)
 
 	if err != nil {
@@ -257,8 +237,34 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 		for k, v := range resp.Header {
 			respMsg.AddHeader(k, v[0])
 		}
+		var sync *nats.Subscription
+		var sbMsgSub string
+		if stream {
+			sbMsgSub = msgs.MakeMessageSubject("*", models.K8SRelayRequestMessageSubjectSuffix+"."+requestUUID+".stopStreaming")
+			log.Infof("subject for log streaming end: %s", sbMsgSub)
+			sync, err = nc.SubscribeSync(sbMsgSub)
+			if err != nil {
+				log.WithError(err).Errorf("Unable to subscribe to %s response message %s", sbMsgSub, err.Error())
+				return
+			}
+		}
 
 		for {
+			if stream {
+				log.Info("reading NextMsg for stopStreaming")
+				msg, err := sync.NextMsg(time.Minute * 1)
+				log.Info("msg.Subject: %s", msg.Subject)
+				log.Info("sbMsgSub: %s", sbMsgSub)
+				if err != nil {
+					if err != nats.ErrTimeout {
+						log.Infof("Error reading NextMsg %s, ignoring", err.Error())
+						continue
+					}
+				} else if msg.Subject == sbMsgSub {
+					log.Infof("stopping streaming of API")
+					return
+				}
+			}
 			buf := make([]byte, 1024*1024)
 			n, err := resp.Body.Read(buf)
 			if err != nil {

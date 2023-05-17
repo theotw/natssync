@@ -653,7 +653,7 @@ func natsMsgPostHandler(c *gin.Context) {
 
 	connection := natsmodel.GetNatsConnection()
 	if msg.Reply == "generate" {
-		msg.Reply = msgs.MakeNBReplySubject("")
+		msg.Reply = msgs.MakeNBReplySubject()
 	}
 	var sub *nats.Subscription
 	if len(msg.Reply) > 0 {

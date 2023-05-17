@@ -54,7 +54,7 @@ func TestEcho(t *testing.T) {
 
 	locationID := GetNatsSyncClientLocationID(t)
 	subject := msgs.MakeEchoSubject(locationID)
-	replySubject := msgs.MakeNBReplySubject("")
+	replySubject := msgs.MakeNBReplySubject()
 	replyListenSub := fmt.Sprintf("%s.*", replySubject)
 	sync, err := nc.SubscribeSync(replyListenSub)
 	if err != nil {

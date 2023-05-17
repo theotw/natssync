@@ -37,11 +37,8 @@ func MakeReplySubject(replyToLocationID string) string {
 	replySubject := fmt.Sprintf("%s.%s.%s", NATSSYNC_MESSAGE_PREFIX, replyToLocationID, bridgemodel.GenerateUUID())
 	return replySubject
 }
-func MakeNBReplySubject(uuid string) string {
-	if len(uuid) == 0 {
-		uuid = bridgemodel.GenerateUUID()
-	}
-	replySubject := fmt.Sprintf("%s.%s.%s", NATSSYNC_MESSAGE_PREFIX, pkg.CLOUD_ID, uuid)
+func MakeNBReplySubject() string {
+	replySubject := fmt.Sprintf("%s.%s.%s", NATSSYNC_MESSAGE_PREFIX, pkg.CLOUD_ID, bridgemodel.GenerateUUID())
 	return replySubject
 }
 
