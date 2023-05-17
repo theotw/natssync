@@ -287,9 +287,8 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 						continue
 					}
 				} else {
-						log.Infof("stopping streaming of API")
-						return
-					}
+					log.Infof("stopping streaming of API")
+					return
 				}
 			}
 		}
