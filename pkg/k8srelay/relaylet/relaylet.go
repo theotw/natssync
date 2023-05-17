@@ -280,16 +280,13 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 
 			if stream {
 				log.Info("reading NextMsg for stopStreaming")
-				msg, err := sync.NextMsg(time.Minute * 1)
+				_, err := sync.NextMsg(time.Minute * 1)
 				if err != nil {
 					if err != nats.ErrTimeout {
 						log.Infof("Error reading NextMsg %s, ignoring", err.Error())
 						continue
 					}
 				} else {
-					log.Info("msg.Subject: %s", msg.Subject)
-					log.Info("sbMsgSub: %s", sbMsgSub)
-					if msg.Subject == sbMsgSub {
 						log.Infof("stopping streaming of API")
 						return
 					}
