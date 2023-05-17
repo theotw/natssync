@@ -248,7 +248,7 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 			select {
 			case <-streamStopCtx.Done():
 				log.Info("select stopping streaming of API")
-				break
+				return
 			default:
 				buf := make([]byte, 1024*1024)
 				n, err := resp.Body.Read(buf)
@@ -275,7 +275,7 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 				}
 				log.Debugf("Receiveing data size %d last message flag %v", n, respMsg.LastMessage)
 				if respMsg.LastMessage {
-					break
+					return
 				}
 			}
 		}
