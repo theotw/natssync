@@ -6,6 +6,7 @@ package relaylet
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -238,19 +239,16 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 			respMsg.AddHeader(k, v[0])
 		}
 
-		streamStopChan := make(chan bool)
+		streamStopCtx, streamStopCtxCanceller := context.WithCancel(context.Background())
 		if stream {
-			go checkForStreamingStop(nc, requestUUID, streamStopChan)
+			go checkForStreamingStop(nc, requestUUID, streamStopCtxCanceller)
 		}
 
 		for {
 			select {
-			case stopStream := <-streamStopChan:
-				log.Infof("stopStream: %v", stopStream)
-				if stopStream {
-					log.Info("select stopping streaming of API")
-					return
-				}
+			case <-streamStopCtx.Done():
+				log.Info("select stopping streaming of API")
+				return
 			default:
 				buf := make([]byte, 1024*1024)
 				n, err := resp.Body.Read(buf)
@@ -277,14 +275,14 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 				}
 				log.Debugf("Receiveing data size %d last message flag %v", n, respMsg.LastMessage)
 				if respMsg.LastMessage {
-					return
+					break
 				}
 			}
 		}
 	}
 }
 
-func checkForStreamingStop(nc *nats.Conn, requestUUID string, streamStopChan chan bool) {
+func checkForStreamingStop(nc *nats.Conn, requestUUID string, streamStopCtxCanceller context.CancelFunc) {
 	sbMsgSub := msgs.MakeMessageSubject("*", models.K8SRelayRequestMessageSubjectSuffix+"."+requestUUID+".stopStreaming")
 	log.Infof("subject for log streaming end: %s", sbMsgSub)
 	sync, err := nc.SubscribeSync(sbMsgSub)
@@ -300,7 +298,6 @@ func checkForStreamingStop(nc *nats.Conn, requestUUID string, streamStopChan cha
 		}
 	} else {
 		log.Infof("checkForStreamingStop: stopping streaming of API")
-		streamStopChan <- true
-		close(streamStopChan)
+		streamStopCtxCanceller()
 	}
 }
