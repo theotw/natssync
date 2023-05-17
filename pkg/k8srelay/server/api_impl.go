@@ -159,11 +159,12 @@ func genericHandlerHandler(c *gin.Context) {
 
 	isFirst := true
 	for {
-		//TODO check if the client has disconnected
 		select {
 		case <-c.Request.Context().Done():
 			log.Info("context done, returning")
-			endLogStreaming(c, nc, requestUUID)
+			if req.Stream {
+				endLogStreaming(c, nc, requestUUID)
+			}
 			return
 		default:
 			log.Info("replyChannel.NextMsg")

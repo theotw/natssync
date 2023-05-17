@@ -244,39 +244,41 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 		}
 
 		for {
-			streamStop := <-streamStopChan
-			log.Infof("streamStop: %v", streamStop)
-			if streamStop {
-				log.Info("select stopping streaming of API")
-				return
-			}
-
-			buf := make([]byte, 1024*1024)
-			n, err := resp.Body.Read(buf)
-			if err != nil {
-				respMsg.LastMessage = true
-				respMsg.OutBody = nil
-				if err != io.EOF {
-					log.WithError(err).Errorf("Error reading response stream %s", err.Error())
+			select {
+			case stopStream := <-streamStopChan:
+				log.Infof("stopStream: %v", stopStream)
+				if stopStream {
+					log.Info("select stopping streaming of API")
+					return
 				}
-			}
-			if n < 0 {
-				respMsg.OutBody = nil
-			} else {
-				respMsg.OutBody = buf[0:n]
-			}
+			default:
+				buf := make([]byte, 1024*1024)
+				n, err := resp.Body.Read(buf)
+				if err != nil {
+					respMsg.LastMessage = true
+					respMsg.OutBody = nil
+					if err != io.EOF {
+						log.WithError(err).Errorf("Error reading response stream %s", err.Error())
+					}
+				}
+				if n < 0 {
+					respMsg.OutBody = nil
+				} else {
+					respMsg.OutBody = buf[0:n]
+				}
 
-			respBits, err := json.Marshal(respMsg)
-			if err != nil {
-				log.WithError(err).Errorf("Unable to marshal response message %s", err.Error())
-			}
-			merr := nc.Publish(nm.Reply, respBits)
-			if merr != nil {
-				log.WithError(merr).Errorf("Error sending return message %s %s", nm.Reply, merr.Error())
-			}
-			log.Debugf("Receiveing data size %d last message flag %v", n, respMsg.LastMessage)
-			if respMsg.LastMessage {
-				return
+				respBits, err := json.Marshal(respMsg)
+				if err != nil {
+					log.WithError(err).Errorf("Unable to marshal response message %s", err.Error())
+				}
+				merr := nc.Publish(nm.Reply, respBits)
+				if merr != nil {
+					log.WithError(merr).Errorf("Error sending return message %s %s", nm.Reply, merr.Error())
+				}
+				log.Debugf("Receiveing data size %d last message flag %v", n, respMsg.LastMessage)
+				if respMsg.LastMessage {
+					return
+				}
 			}
 		}
 	}
@@ -299,5 +301,6 @@ func checkForStreamingStop(nc *nats.Conn, requestUUID string, streamStopChan cha
 	} else {
 		log.Infof("checkForStreamingStop: stopping streaming of API")
 		streamStopChan <- true
+		close(streamStopChan)
 	}
 }
