@@ -250,21 +250,6 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 		}
 
 		for {
-			if stream {
-				log.Info("reading NextMsg for stopStreaming")
-				msg, err := sync.NextMsg(time.Minute * 1)
-				log.Info("msg.Subject: %s", msg.Subject)
-				log.Info("sbMsgSub: %s", sbMsgSub)
-				if err != nil {
-					if err != nats.ErrTimeout {
-						log.Infof("Error reading NextMsg %s, ignoring", err.Error())
-						continue
-					}
-				} else if msg.Subject == sbMsgSub {
-					log.Infof("stopping streaming of API")
-					return
-				}
-			}
 			buf := make([]byte, 1024*1024)
 			n, err := resp.Body.Read(buf)
 			if err != nil {
@@ -291,6 +276,24 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 			log.Debugf("Receiveing data size %d last message flag %v", n, respMsg.LastMessage)
 			if respMsg.LastMessage {
 				break
+			}
+
+			if stream {
+				log.Info("reading NextMsg for stopStreaming")
+				msg, err := sync.NextMsg(time.Minute * 1)
+				if err != nil {
+					if err != nats.ErrTimeout {
+						log.Infof("Error reading NextMsg %s, ignoring", err.Error())
+						continue
+					}
+				} else {
+					log.Info("msg.Subject: %s", msg.Subject)
+					log.Info("sbMsgSub: %s", sbMsgSub)
+					if msg.Subject == sbMsgSub {
+						log.Infof("stopping streaming of API")
+						return
+					}
+				}
 			}
 		}
 	}
