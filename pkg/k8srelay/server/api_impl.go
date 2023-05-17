@@ -160,13 +160,13 @@ func genericHandlerHandler(c *gin.Context) {
 	isFirst := true
 	for {
 		//TODO check if the client has disconnected
-		log.Info("replyChannel.NextMsg")
 		select {
 		case <-c.Request.Context().Done():
 			log.Info("context done, returning")
 			endLogStreaming(c, nc, requestUUID)
 			return
 		default:
+			log.Info("replyChannel.NextMsg")
 			msg, err := replyChannel.NextMsg(time.Minute * 2)
 			if err != nil {
 				if err == nats.ErrTimeout {
@@ -222,8 +222,8 @@ func genericHandlerHandler(c *gin.Context) {
 				c.Writer.Flush()
 			}
 			if respMsg.LastMessage {
-				log.Info("LastMessage break")
-				break
+				log.Info("LastMessage return")
+				return
 			}
 		}
 	}
