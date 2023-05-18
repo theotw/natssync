@@ -249,55 +249,66 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 				return
 			}
 			go func() {
-				log.Info("reading NextMsg for stopStreaming")
-				_, err = sync.NextMsg(time.Minute * 1)
-				if err != nil {
-					if err != nats.ErrTimeout {
-						log.Infof("checkForStreamingStop: Error reading NextMsg %s, ignoring", err.Error())
+				for {
+					log.Info("reading NextMsg for stopStreaming")
+					_, err = sync.NextMsg(time.Minute * 1)
+					if err != nil {
+						if err != nats.ErrTimeout {
+							log.Infof("checkForStreamingStop: Error reading NextMsg %s, ignoring", err.Error())
+						}
+					} else {
+						log.Infof("checkForStreamingStop: stopping streaming of API")
+						streamStopChannel <- 0
+						return
 					}
-				} else {
-					log.Infof("checkForStreamingStop: stopping streaming of API")
-					streamStopChannel <- 0
 				}
 			}()
 		}
 
 		for {
-			select {
-			case <-streamStopChannel:
-				log.Info("select stopping streaming of API")
-				//streamStopCtxCanceller()
-				return
-			default:
-				buf := make([]byte, 1024*1024)
-				n, err := resp.Body.Read(buf)
-				if err != nil {
-					respMsg.LastMessage = true
-					respMsg.OutBody = nil
-					if err != io.EOF {
-						log.WithError(err).Errorf("Error reading response stream %s", err.Error())
-					}
-				}
-				if n < 0 {
-					respMsg.OutBody = nil
-				} else {
-					respMsg.OutBody = buf[0:n]
-				}
-
-				respBits, err := json.Marshal(respMsg)
-				if err != nil {
-					log.WithError(err).Errorf("Unable to marshal response message %s", err.Error())
-				}
-				merr := nc.Publish(nm.Reply, respBits)
-				if merr != nil {
-					log.WithError(merr).Errorf("Error sending return message %s %s", nm.Reply, merr.Error())
-				}
-				log.Debugf("Receiveing data size %d last message flag %v", n, respMsg.LastMessage)
-				if respMsg.LastMessage {
-					//streamStopCtxCanceller()
+			//select {
+			//case <-streamStopChannel:
+			//	log.Info("select stopping streaming of API")
+			//	//streamStopCtxCanceller()
+			//	return
+			//default:
+			if stream {
+				streamStop := <-streamStopChannel
+				log.Infof("streamStop: %v", streamStop)
+				if streamStop == 0 {
+					log.Info("select stopping streaming of API")
 					return
 				}
 			}
+			buf := make([]byte, 1024*1024)
+			n, err := resp.Body.Read(buf)
+			if err != nil {
+				respMsg.LastMessage = true
+				respMsg.OutBody = nil
+				if err != io.EOF {
+					log.WithError(err).Errorf("Error reading response stream %s", err.Error())
+				}
+			}
+			if n < 0 {
+				respMsg.OutBody = nil
+			} else {
+				respMsg.OutBody = buf[0:n]
+			}
+
+			respBits, err := json.Marshal(respMsg)
+			if err != nil {
+				log.WithError(err).Errorf("Unable to marshal response message %s", err.Error())
+			}
+			merr := nc.Publish(nm.Reply, respBits)
+			if merr != nil {
+				log.WithError(merr).Errorf("Error sending return message %s %s", nm.Reply, merr.Error())
+			}
+			log.Debugf("Receiveing data size %d last message flag %v", n, respMsg.LastMessage)
+			if respMsg.LastMessage {
+				//streamStopCtxCanceller()
+				return
+			}
+			//}
 		}
 	}
 }
