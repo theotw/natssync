@@ -306,7 +306,7 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 			log.Debugf("Receiveing data size %d last message flag %v", n, respMsg.LastMessage)
 			if respMsg.LastMessage {
 				//streamStopCtxCanceller()
-				return
+				break
 			}
 			//}
 		}
