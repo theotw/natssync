@@ -249,7 +249,7 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 				return
 			}
 			go func() {
-				streamStopChannel <- 1
+				//streamStopChannel <- 1
 				for {
 					log.Info("reading NextMsg for stopStreaming")
 					_, err = sync.NextMsg(time.Minute * 1)
@@ -257,7 +257,7 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 						if err != nats.ErrTimeout {
 							log.Infof("checkForStreamingStop: Error reading NextMsg %s, ignoring", err.Error())
 						}
-						streamStopChannel <- 1
+						//streamStopChannel <- 1
 					} else {
 						log.Infof("checkForStreamingStop: stopping streaming of API")
 						streamStopChannel <- 0
@@ -277,12 +277,9 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 			if stream {
 				log.Info("reading streamStop")
 				select {
-				case streamStop := <-streamStopChannel:
-					log.Infof("streamStop: %v", streamStop)
-					if streamStop == 0 {
-						log.Info("select stopping streaming of API")
-						return
-					}
+				case <-streamStopChannel:
+					log.Info("select stopping streaming of API")
+					return
 				default:
 				}
 			}
