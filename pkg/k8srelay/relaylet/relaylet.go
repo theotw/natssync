@@ -218,7 +218,6 @@ func (t *Relaylet) streamAPIMsgs(nc *nats.Conn, nm *nats.Msg, relayreq *http.Req
 
 func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, respMsg *models.CallResponse, requestUUID string, stream bool) {
 	resp, err := t.client.Do(relayreq)
-
 	if err != nil {
 		respMsg.StatusCode = 502
 		respMsg.AddHeader("Content-Type", "text/plain")
@@ -248,6 +247,7 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 			select {
 			case <-streamStopCtx.Done():
 				log.Info("select stopping streaming of API")
+				streamStopCtxCanceller()
 				return
 			default:
 				buf := make([]byte, 1024*1024)
@@ -275,6 +275,7 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 				}
 				log.Debugf("Receiveing data size %d last message flag %v", n, respMsg.LastMessage)
 				if respMsg.LastMessage {
+					streamStopCtxCanceller()
 					return
 				}
 			}
