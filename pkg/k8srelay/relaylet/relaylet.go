@@ -202,8 +202,21 @@ func (t *Relaylet) DoCall(nm *nats.Msg) {
 		token := fmt.Sprintf("Bearer %s", t.clientToken)
 		relayreq.Header.Set("Authorization", token)
 	}
-	resp, err := t.client.Do(relayreq)
 
+	if !req.Stream {
+		t.callAPI(nc, nm, relayreq, respMsg, "", false)
+	} else {
+		go t.streamAPIMsgs(nc, nm, relayreq, respMsg, req.UUID)
+	}
+}
+
+func (t *Relaylet) streamAPIMsgs(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, respMsg *models.CallResponse, requestUUID string) {
+	log.Infof("starting streaming of API")
+	t.callAPI(nc, nm, relayreq, respMsg, requestUUID, true)
+}
+
+func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, respMsg *models.CallResponse, requestUUID string, stream bool) {
+	resp, err := t.client.Do(relayreq)
 	if err != nil {
 		respMsg.StatusCode = 502
 		respMsg.AddHeader("Content-Type", "text/plain")
@@ -224,7 +237,39 @@ func (t *Relaylet) DoCall(nm *nats.Msg) {
 			respMsg.AddHeader(k, v[0])
 		}
 
+		streamStopChannel := make(chan int)
+		if stream {
+			sbMsgSub := msgs.MakeMessageSubject("*", models.K8SRelayRequestMessageSubjectSuffix+"."+requestUUID+".stopStreaming")
+			sync, err := nc.SubscribeSync(sbMsgSub)
+			if err != nil {
+				log.WithError(err).Errorf("Unable to subscribe to %s response message %s", sbMsgSub, err.Error())
+				return
+			}
+			go func() {
+				for {
+					_, err = sync.NextMsg(time.Minute * 1)
+					if err != nil {
+						if err != nats.ErrTimeout {
+							log.Warnf("timeout reading NextMsg %s, ignoring", err.Error())
+						}
+					} else {
+						log.Info("got a request to stop streaming of API request")
+						streamStopChannel <- 0
+						return
+					}
+				}
+			}()
+		}
+
 		for {
+			if stream {
+				select {
+				case <-streamStopChannel:
+					log.Info("stopping streaming of API request")
+					return
+				default:
+				}
+			}
 			buf := make([]byte, 1024*1024)
 			n, err := resp.Body.Read(buf)
 			if err != nil {
@@ -248,11 +293,10 @@ func (t *Relaylet) DoCall(nm *nats.Msg) {
 			if merr != nil {
 				log.WithError(merr).Errorf("Error sending return message %s %s", nm.Reply, merr.Error())
 			}
-			log.Debugf("Recieveing data size %d last message flag %v", n, respMsg.LastMessage)
+			log.Debugf("Receiveing data size %d last message flag %v", n, respMsg.LastMessage)
 			if respMsg.LastMessage {
 				break
 			}
 		}
 	}
-
 }

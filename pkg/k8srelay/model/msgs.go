@@ -17,6 +17,8 @@ type CallRequest struct {
 	// InBody is the input body for the call, which may be nil
 	InBody      []byte `json:"inBody,omitempty"`
 	QueryString string `json:"queryString"`
+	Stream      bool   `json:"stream,omitempty"`
+	UUID        string `json:"uuid,omitempty"`
 }
 
 func NewCallReq() *CallRequest {
