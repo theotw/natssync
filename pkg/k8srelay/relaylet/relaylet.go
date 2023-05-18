@@ -276,11 +276,14 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 			//default:
 			if stream {
 				log.Info("reading streamStop")
-				streamStop := <-streamStopChannel
-				log.Infof("streamStop: %v", streamStop)
-				if streamStop == 0 {
-					log.Info("select stopping streaming of API")
-					return
+				select {
+				case streamStop := <-streamStopChannel:
+					log.Infof("streamStop: %v", streamStop)
+					if streamStop == 0 {
+						log.Info("select stopping streaming of API")
+						return
+					}
+				default:
 				}
 			}
 			buf := make([]byte, 1024*1024)
