@@ -238,28 +238,22 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 		}
 
 		streamStopChannel := make(chan int)
-		//streamStopCtx, streamStopCtxCanceller := context.WithCancel(context.Background())
 		if stream {
-			//go checkForStreamingStop(nc, requestUUID, streamStopChannel)
 			sbMsgSub := msgs.MakeMessageSubject("*", models.K8SRelayRequestMessageSubjectSuffix+"."+requestUUID+".stopStreaming")
-			log.Infof("subject for log streaming end: %s", sbMsgSub)
 			sync, err := nc.SubscribeSync(sbMsgSub)
 			if err != nil {
 				log.WithError(err).Errorf("Unable to subscribe to %s response message %s", sbMsgSub, err.Error())
 				return
 			}
 			go func() {
-				//streamStopChannel <- 1
 				for {
-					log.Info("reading NextMsg for stopStreaming")
 					_, err = sync.NextMsg(time.Minute * 1)
 					if err != nil {
 						if err != nats.ErrTimeout {
-							log.Infof("checkForStreamingStop: Error reading NextMsg %s, ignoring", err.Error())
+							log.Warnf("timeout reading NextMsg %s, ignoring", err.Error())
 						}
-						//streamStopChannel <- 1
 					} else {
-						log.Infof("checkForStreamingStop: stopping streaming of API")
+						log.Info("got a request to stop streaming of API request")
 						streamStopChannel <- 0
 						return
 					}
@@ -268,17 +262,10 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 		}
 
 		for {
-			//select {
-			//case <-streamStopChannel:
-			//	log.Info("select stopping streaming of API")
-			//	//streamStopCtxCanceller()
-			//	return
-			//default:
 			if stream {
-				log.Info("reading streamStop")
 				select {
 				case <-streamStopChannel:
-					log.Info("select stopping streaming of API")
+					log.Info("stopping streaming of API request")
 					return
 				default:
 				}
@@ -308,30 +295,8 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 			}
 			log.Debugf("Receiveing data size %d last message flag %v", n, respMsg.LastMessage)
 			if respMsg.LastMessage {
-				//streamStopCtxCanceller()
 				break
 			}
-			//}
 		}
 	}
 }
-
-//func checkForStreamingStop(nc *nats.Conn, requestUUID string, streamStopChannel chan int) {
-//	sbMsgSub := msgs.MakeMessageSubject("*", models.K8SRelayRequestMessageSubjectSuffix+"."+requestUUID+".stopStreaming")
-//	log.Infof("subject for log streaming end: %s", sbMsgSub)
-//	sync, err := nc.SubscribeSync(sbMsgSub)
-//	if err != nil {
-//		log.WithError(err).Errorf("Unable to subscribe to %s response message %s", sbMsgSub, err.Error())
-//		return
-//	}
-//	log.Info("reading NextMsg for stopStreaming")
-//	_, err = sync.NextMsg(time.Minute * 1)
-//	if err != nil {
-//		if err != nats.ErrTimeout {
-//			log.Infof("checkForStreamingStop: Error reading NextMsg %s, ignoring", err.Error())
-//		}
-//	} else {
-//		log.Infof("checkForStreamingStop: stopping streaming of API")
-//		streamStopChannel <- 0
-//	}
-//}

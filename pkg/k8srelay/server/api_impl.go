@@ -108,20 +108,12 @@ func genericHandlerHandler(c *gin.Context) {
 
 	requestUUID := uuid2.New().String()
 	urlString := c.Request.URL.String()
-	log.Infof("urlString: %s", urlString)
-	log.Infof("parse.Path: %s", parse.Path)
-	log.Infof("parse.RawPath: %s", parse.RawPath)
-	log.Infof("parse.RawQuery: %s", parse.RawQuery)
-	log.Infof("strings.HasPrefix(urlString, /api/v1/namespaces): %v", strings.HasPrefix(urlString, "/api/v1/namespaces"))
-	log.Infof("strings.Contains(urlString, pods): %v", strings.Contains(urlString, "pods"))
-	log.Infof("strings.Contains(urlString, log): %v", strings.Contains(urlString, "log"))
-	log.Infof("strings.HasSuffix(urlString, follow=true): %v", strings.HasSuffix(urlString, "follow=true"))
 	if strings.HasPrefix(urlString, "/api/v1/namespaces") &&
 		strings.Contains(urlString, "pods") &&
 		strings.Contains(urlString, "log") &&
 		strings.HasSuffix(urlString, "follow=true") {
 		// looking for log follow /api/v1/namespaces/<ns>/pods/<pod>/log?container=<container>&follow=true
-		log.Infof("got log streaming request, setting stream and UUID for the client request")
+		log.Infof("got log streaming request, setting stream and UUID %s for the client request", requestUUID)
 		req.Stream = true
 		req.UUID = requestUUID
 	}
@@ -161,17 +153,15 @@ func genericHandlerHandler(c *gin.Context) {
 	for {
 		select {
 		case <-c.Request.Context().Done():
-			log.Info("context done, returning")
+			log.Info("context done, client might have disconnected, returning")
 			if req.Stream {
 				endLogStreaming(c, nc, requestUUID)
 			}
 			return
 		default:
-			log.Info("replyChannel.NextMsg")
 			msg, err := replyChannel.NextMsg(time.Minute * 2)
 			if err != nil {
 				if err == nats.ErrTimeout {
-					log.Info("ignoring NextMsg timeout")
 					continue
 				}
 				c.Status(502)
@@ -179,18 +169,15 @@ func genericHandlerHandler(c *gin.Context) {
 				log.WithError(err).Errorf("Returning a 502, got an error next message %s ", err.Error())
 				c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
 				if req.Stream {
-					log.Info("replyChannel.NextMsg err, ending log streaming")
 					endLogStreaming(c, nc, requestUUID)
 				}
 				return
 			}
 
 			var respMsg models.CallResponse
-			log.Info("json unmarshaling")
 			err = json.Unmarshal(msg.Data, &respMsg)
 			if err != nil {
 				if req.Stream {
-					log.Info("json.Unmarshal err, ending log streaming")
 					endLogStreaming(c, nc, requestUUID)
 				}
 				c.Status(502)
@@ -210,20 +197,17 @@ func genericHandlerHandler(c *gin.Context) {
 			}
 
 			if respMsg.OutBody != nil {
-				log.Info("c.Writer.Write")
 				_, err = c.Writer.Write(respMsg.OutBody)
 				if err != nil {
 					if err.Error() == "client disconnected" && req.Stream {
-						log.Info("Write err, client disconnected, ending streaming")
+						log.Warn("Write err, client disconnected, ending streaming")
 						endLogStreaming(c, nc, requestUUID)
 						return
 					}
 				}
-				log.Info("c.Writer.Flush")
 				c.Writer.Flush()
 			}
 			if respMsg.LastMessage {
-				log.Info("LastMessage return")
 				return
 			}
 		}
