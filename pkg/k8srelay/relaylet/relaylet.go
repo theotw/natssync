@@ -232,7 +232,7 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 		}
 	} else {
 		respMsg.StatusCode = resp.StatusCode
-		log.Infof("Got resp status %d - len %d", resp.StatusCode, resp.ContentLength)
+		log.Infof("Got resp status %s - %d - len %d", relayreq.URL.Path, resp.StatusCode, resp.ContentLength)
 		for k, v := range resp.Header {
 			respMsg.AddHeader(k, v[0])
 		}
