@@ -104,9 +104,7 @@ func (t *RestMessageHandler) pullMessageFromCloud(clientID string) {
 						return
 					}
 					echomsg.Data = cvMessage
-					sendMessageToCloud(t.serverURL, clientID, pkg.Config.CloudEvents, &echomsg)
-					endpost := time.Now()
-					metrics.RecordTimeToPushMessage(int(math.Round(endpost.Sub(startpost).Seconds())))
+					go sendMessageToCloud(t.serverURL, clientID, pkg.Config.CloudEvents, &echomsg)
 				}
 
 				if err := nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data); err != nil {
@@ -172,7 +170,7 @@ func handleOutboundMessages(subscription *nats.Subscription, serverURL, clientID
 			sendWhatWeHave = len(msgList) > int(maxQueueSize)
 		}
 		if sendWhatWeHave {
-			sendMessageToCloud(serverURL, clientID, false, msgList...)
+			go sendMessageToCloud(serverURL, clientID, false, msgList...)
 			msgList = make([]*nats.Msg, 0)
 		}
 	}
@@ -216,6 +214,7 @@ func sendMessageToCloud(serverURL string, clientID string, ceEnabled bool, msgsL
 		}
 
 		httpclient := bridgemodel.NewHttpClient()
+		startpost := time.Now()
 		postErr := httpclient.SendAuthorizedRequestWithBodyAndResp(http.MethodPost, url, fullPostReq, nil)
 		//resp, postErr := http.DefaultClient.Post(url, "application/json", r)
 		if postErr != nil {
@@ -232,6 +231,8 @@ func sendMessageToCloud(serverURL string, clientID string, ceEnabled bool, msgsL
 
 			return
 		}
+		endpost := time.Now()
+		metrics.RecordTimeToPushMessage(int(math.Round(endpost.Sub(startpost).Seconds())))
 		break
 	}
 
