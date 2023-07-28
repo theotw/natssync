@@ -7,6 +7,12 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	uuid2 "github.com/google/uuid"
 	"github.com/nats-io/nats.go"
@@ -16,11 +22,6 @@ import (
 	models "github.com/theotw/natssync/pkg/k8srelay/model"
 	"github.com/theotw/natssync/pkg/msgs"
 	"github.com/theotw/natssync/pkg/natsmodel"
-	"io"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
 )
 
 type JsonError struct {
@@ -159,15 +160,16 @@ func genericHandlerHandler(c *gin.Context) {
 			}
 			return
 		default:
-			msg, err := replyChannel.NextMsg(time.Minute * 2)
-			if err != nil {
-				if err == nats.ErrTimeout {
+			msg, errMsg := replyChannel.NextMsg(time.Minute * 5)
+			if errMsg != nil {
+				// if err == nats.ErrTimeout doesn't work here for some reason
+				if strings.Contains(errMsg.Error(), "nats: timeout") {
 					continue
 				}
 				c.Status(502)
 				c.Header("Content-Type", "text/plain")
-				log.WithError(err).Errorf("Returning a 502, got an error next message %s ", err.Error())
-				c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+				log.WithError(errMsg).Error("Returning a 502, got an error next message")
+				c.Writer.Write([]byte(fmt.Sprintf("gate way error %s", errMsg.Error())))
 				if req.Stream {
 					endLogStreaming(c, nc, requestUUID)
 				}
