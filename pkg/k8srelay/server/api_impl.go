@@ -168,7 +168,7 @@ func genericHandlerHandler(c *gin.Context) {
 				}
 				c.Status(502)
 				c.Header("Content-Type", "text/plain")
-				log.WithError(errMsg).Errorf("Returning a 502, got an error next message %s", errMsg.Error())
+				log.WithError(errMsg).Error("Returning a 502, got an error next message")
 				c.Writer.Write([]byte(fmt.Sprintf("gate way error %s", errMsg.Error())))
 				if req.Stream {
 					endLogStreaming(c, nc, requestUUID)
