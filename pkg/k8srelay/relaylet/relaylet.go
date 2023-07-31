@@ -12,17 +12,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	path2 "path"
+	"strings"
+	"time"
+
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 	models "github.com/theotw/natssync/pkg/k8srelay/model"
 	msgs "github.com/theotw/natssync/pkg/msgs"
 	"github.com/theotw/natssync/pkg/natsmodel"
 	"gopkg.in/yaml.v3"
-	"io"
-	"net/http"
-	"os"
-	path2 "path"
-	"time"
 )
 
 type Relaylet struct {
@@ -248,9 +250,9 @@ func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, 
 			}
 			go func() {
 				for {
-					_, err = sync.NextMsg(time.Minute * 1)
+					_, err = sync.NextMsg(time.Minute * 5)
 					if err != nil {
-						if err != nats.ErrTimeout {
+						if strings.Contains(err.Error(), "nats: timeout") {
 							log.Warnf("timeout reading NextMsg %s, ignoring", err.Error())
 						}
 					} else {
