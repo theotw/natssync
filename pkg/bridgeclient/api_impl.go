@@ -32,7 +32,7 @@ func handleGetRegister(c *gin.Context) {
 	store := persistence.GetKeyStore()
 	locationID := store.LoadLocationID("")
 	if len(locationID) > 0 {
-		c.JSON(http.StatusOK, "")
+		c.JSON(http.StatusOK, &locationID)
 	} else {
 		c.JSON(http.StatusBadRequest, "")
 	}
