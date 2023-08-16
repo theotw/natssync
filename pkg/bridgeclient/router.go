@@ -44,6 +44,7 @@ func newRouter() *gin.Engine {
 
 	v1 := router.Group("/bridge-client/1", routeMiddleware)
 	v1.Handle("GET", "/about", aboutGetUnversioned)
+	v1.Handle("GET", "/locationID", handleGetRegister)
 	v1.Handle("POST", "/unregister", handlePostUnRegister)
 	v1.Handle("POST", "/register", handlePostRegister)
 	v1.Handle("GET", "/register", registrationGetHandler)
@@ -59,7 +60,7 @@ func addUnversionedRoutes(router *gin.Engine) {
 	router.Handle("GET", "/bridge-client/healthcheck", healthCheckGetUnversioned)
 }
 
-//router middle ware
+// router middle ware
 func routeMiddleware(c *gin.Context) {
 
 	content := c.Request.Header.Get("Content-Type")
