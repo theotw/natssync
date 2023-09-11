@@ -95,17 +95,14 @@ func genericHandlerHandler(c *gin.Context) {
 	log.Infof("URI %s", c.Request.URL.String())
 
 	req := models.NewCallReq()
-	log.Infof("NewCallReq: %+v", req)
 	for k, v := range c.Request.Header {
 		if k != "Authorization" {
 			req.AddHeader(k, v[0])
 		}
 	}
-	log.Infof("adding headers to NewCallReq: %+v", req)
 	req.QueryString = c.Request.URL.RawQuery
 	req.Path = parse.Path
 	req.Method = c.Request.Method
-	log.Infof("adding path, method to NewCallReq: %+v", req)
 	bodyBits, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		log.WithError(err).Errorf("Unable to read body on call %s - %s error: %s", c.Request.Method, parse.Path, err.Error())
@@ -123,12 +120,9 @@ func genericHandlerHandler(c *gin.Context) {
 		req.UUID = requestUUID
 	}
 	req.InBody = bodyBits
-
 	nc := natsmodel.GetNatsConnection()
 	replySub := msgs.MakeNBReplySubject()
-	log.Infof("replySub: %s", replySub)
 	sbMsgSub := msgs.MakeMessageSubject(userTokenWhichBecomesRouteID, models.K8SRelayRequestMessageSubjectSuffix)
-	log.Infof("json.Marshal(&req): %+v", req)
 	bits, err := json.Marshal(&req)
 	if err != nil {
 		c.Status(502)
@@ -137,7 +131,6 @@ func genericHandlerHandler(c *gin.Context) {
 		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
 		return
 	}
-	log.Infof("generating nats message for SB sub: %s", sbMsgSub)
 	nm := nats.NewMsg(sbMsgSub)
 	nm.Data = bits
 	nm.Reply = replySub
@@ -149,7 +142,6 @@ func genericHandlerHandler(c *gin.Context) {
 		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
 		return
 	}
-	log.Infof("publishing nats message with reply sub: %s", replySub)
 	err = nc.PublishMsg(nm)
 	if err != nil {
 		c.Status(502)
@@ -170,12 +162,11 @@ func genericHandlerHandler(c *gin.Context) {
 			}
 			return
 		default:
-			log.Info("replyChannel.nextMsg()")
-			msg, errMsg := replyChannel.NextMsg(time.Minute * 1)
+			msg, errMsg := replyChannel.NextMsg(time.Minute * 2)
 			if errMsg != nil {
 				// if err == nats.ErrTimeout doesn't work here for some reason
 				if strings.Contains(errMsg.Error(), "nats: timeout") {
-					log.Errorf("replyChannel.NextMsg: %+v", errMsg)
+					log.Warnf("replyChannel.NextMsg: %+v", errMsg)
 					continue
 				}
 				c.Status(502)
@@ -188,7 +179,6 @@ func genericHandlerHandler(c *gin.Context) {
 				return
 			}
 
-			log.Info("Unmarshal msg.Data into respMsg")
 			var respMsg models.CallResponse
 			err = json.Unmarshal(msg.Data, &respMsg)
 			if err != nil {
