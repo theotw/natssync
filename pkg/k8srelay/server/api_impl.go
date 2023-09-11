@@ -86,12 +86,13 @@ const bearer = "Bearer "
 
 func genericHandlerHandler(c *gin.Context) {
 	parse, err := url.Parse(c.Request.RequestURI)
-	userTokenWhichBecomesRouteID := GetRouteIDFromAuthHeader(c)
-	log.Infof(userTokenWhichBecomesRouteID)
-	log.Infof("URI %s", c.Request.URL.String())
 	if err != nil {
 		panic(err)
 	}
+
+	userTokenWhichBecomesRouteID := GetRouteIDFromAuthHeader(c)
+	log.Infof(userTokenWhichBecomesRouteID)
+	log.Infof("URI %s", c.Request.URL.String())
 
 	req := models.NewCallReq()
 	for k, v := range c.Request.Header {
@@ -149,6 +150,7 @@ func genericHandlerHandler(c *gin.Context) {
 		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
 		return
 	}
+	nc.Flush()
 
 	isFirst := true
 	for {
@@ -160,10 +162,11 @@ func genericHandlerHandler(c *gin.Context) {
 			}
 			return
 		default:
-			msg, errMsg := replyChannel.NextMsg(time.Minute * 5)
+			msg, errMsg := replyChannel.NextMsg(time.Minute * 2)
 			if errMsg != nil {
 				// if err == nats.ErrTimeout doesn't work here for some reason
 				if strings.Contains(errMsg.Error(), "nats: timeout") {
+					log.Warnf("replyChannel.NextMsg: %+v", errMsg)
 					continue
 				}
 				c.Status(502)
