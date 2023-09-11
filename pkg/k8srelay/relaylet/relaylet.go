@@ -160,9 +160,13 @@ func (t *Relaylet) init() error {
 
 	sub := msgs.MakeMessageSubject("*", models.K8SRelayRequestMessageSubjectSuffix)
 	nc := natsmodel.GetNatsConnection()
-	nc.QueueSubscribe(sub, "k8srelay", func(msg *nats.Msg) {
+	log.Infof("queue subscribing to %s", sub)
+	_, err = nc.QueueSubscribe(sub, "k8srelay", func(msg *nats.Msg) {
 		go t.DoCall(msg)
 	})
+	if err != nil {
+		return errors.New("unable to QueueSubscribe for sub " + sub)
+	}
 	return nil
 }
 
