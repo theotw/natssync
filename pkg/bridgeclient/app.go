@@ -89,6 +89,7 @@ func RunClient(test bool) {
 	connection.Subscribe(bridgemodel.RequestForLocationID, func(msg *nats.Msg) {
 		clientID := store.LoadLocationID("")
 		connection.Publish(bridgemodel.ResponseForLocationID, []byte(clientID))
+		connection.Flush()
 	})
 	if test {
 		testing.NotifyOnAppExitMessage(connection, quitChannel)
@@ -122,6 +123,7 @@ func RunClient(test bool) {
 			lastClientID = clientID
 			//announce the cloud ID/location ID at startup and changes
 			connection.Publish(bridgemodel.ResponseForLocationID, []byte(clientID))
+			connection.Flush()
 			currentMessageHandler = NewBidiMessageHandler(serverURL)
 			log.Infof("Starting Message Handler of type %s ", currentMessageHandler.GetHandlerType())
 			currentMessageHandler.StartMessageHandler(clientID)
