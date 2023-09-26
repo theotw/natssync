@@ -166,12 +166,18 @@ func genericHandlerHandler(c *gin.Context) {
 			if errMsg != nil {
 				// if err == nats.ErrTimeout doesn't work here for some reason
 				if strings.Contains(errMsg.Error(), "nats: timeout") {
-					log.Warnf("replyChannel.NextMsg: %+v", errMsg)
-					continue
+					log.WithField("urlString", urlString).
+						Warnf("replyChannel.NextMsg: %+v", errMsg)
+					if req.Stream {
+						continue
+					}
+					c.Status(503)
+				} else {
+					c.Status(502)
+					log.WithError(errMsg).WithField("urlString", urlString).
+						Error("Returning a 502, got an error next message")
 				}
-				c.Status(502)
 				c.Header("Content-Type", "text/plain")
-				log.WithError(errMsg).Error("Returning a 502, got an error next message")
 				c.Writer.Write([]byte(fmt.Sprintf("gate way error %s", errMsg.Error())))
 				if req.Stream {
 					endLogStreaming(c, nc, requestUUID)
