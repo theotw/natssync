@@ -107,16 +107,17 @@ func (t *RestMessageHandler) pullMessageFromCloud(clientID string) {
 					go sendMessageToCloud(t.serverURL, clientID, pkg.Config.CloudEvents, &echomsg)
 				}
 
+				log.Infof("PublishRequest to sub=%s with reply=%s", natmsg.Subject, natmsg.Reply)
 				if err := nc.PublishRequest(natmsg.Subject, natmsg.Reply, natmsg.Data); err != nil {
 					log.Errorf("Error publishing request: %s", err)
 				}
 			} else {
-				log.Infof("Publishing message to local nats: sub=%s reply=%s", natmsg.Subject, natmsg.Reply)
+				log.Infof("Publishing to sub=%s with reply=%s", natmsg.Subject, natmsg.Reply)
 				if err := nc.Publish(natmsg.Subject, natmsg.Data); err != nil {
 					log.Errorf("Error publishing request: %s", err)
 				}
-				nc.Flush()
 			}
+			nc.Flush()
 		}
 	}
 }
