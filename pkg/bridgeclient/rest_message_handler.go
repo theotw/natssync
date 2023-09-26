@@ -111,9 +111,11 @@ func (t *RestMessageHandler) pullMessageFromCloud(clientID string) {
 					log.Errorf("Error publishing request: %s", err)
 				}
 			} else {
+				log.Infof("Publishing message to local nats: sub=%s reply=%s", natmsg.Subject, natmsg.Reply)
 				if err := nc.Publish(natmsg.Subject, natmsg.Data); err != nil {
 					log.Errorf("Error publishing request: %s", err)
 				}
+				nc.Flush()
 			}
 		}
 	}
