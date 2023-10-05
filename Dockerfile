@@ -73,6 +73,7 @@ ENTRYPOINT ["./simple_auth_amd64_linux"]
 FROM alpine-base as http_proxy
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
+RUN apk add curl
 COPY --from=base /build/out/http_proxy_amd64_linux ./http_proxy_amd64_linux
 ENTRYPOINT ["./http_proxy_amd64_linux"]
 
