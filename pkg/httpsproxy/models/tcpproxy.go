@@ -98,13 +98,10 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 	}
 
 	sequenceID := 0
-	buf := make([]byte, maxBytesToRead)
-	var readErr error
-	var bufferLen int
 	for {
 		log.Debug("Reading Data from socket")
-		//buf := make([]byte, maxBytesToRead)
-		bufferLen, readErr = src.Read(buf)
+		buf := make([]byte, maxBytesToRead)
+		bufferLen, readErr := src.Read(buf)
 		if readErr != nil {
 			errorString := readErr.Error()
 			if !(strings.Contains(errorString, "EOF") || strings.Contains(errorString, "use of closed network connection")) {
@@ -132,6 +129,9 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 			writeBuf = nil
 			dataToSend = nil
 		}
+		buf = nil
+		readErr = nil
+		bufferLen = 0
 	}
 
 	writebuf := make([]byte, 0)
@@ -152,8 +152,6 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 }
 
 func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCloser) {
-	var tcpData []byte
-	var readErr error
 	for {
 		log.Debugf("waiting for Data from nats")
 		natsMsg, err := queue.NextMsg(10 * time.Minute)
@@ -172,7 +170,7 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 				}
 			}
 			log.Debug("Got package from nats")
-			tcpData, readErr = DecodeTCPData(natsMsg.Data)
+			tcpData, readErr := DecodeTCPData(natsMsg.Data)
 			if readErr == nil {
 				tcpDataLen := len(tcpData)
 				log.Debugf("Got valid package from nats len %d", tcpDataLen)
@@ -189,6 +187,8 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 				log.WithError(readErr).Error("Error reading data nats->tcp")
 				break
 			}
+			tcpData = nil
+			readErr = nil
 		}
 	}
 	log.Debug("Terminating")
