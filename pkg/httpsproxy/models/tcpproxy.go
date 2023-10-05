@@ -118,6 +118,8 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 			if err := nc.Flush(); err != nil {
 				log.WithError(err).Errorf("failed to flush natssync")
 			}
+			writeBuf = nil
+			dataToSend = nil
 		}
 
 		if readErr != nil {
@@ -127,6 +129,9 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 			}
 			break
 		}
+		buf = nil
+		readErr = nil
+		bufferLen = 0
 	}
 
 	writebuf := make([]byte, 0)
@@ -153,9 +158,9 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 		if err != nil {
 			log.WithError(err).Errorf("Error reading from NATS")
 		} else {
-			strickCheck := os.Getenv("STRICT_CONNECTION_CHECK")
-			log.Infof("Stick Check %s", strickCheck)
-			if strickCheck == "true" {
+			strictCheck := os.Getenv("STRICT_CONNECTION_CHECK")
+			if strictCheck == "true" {
+				log.Infof("Strict Check %s", strictCheck)
 				connectionID := natsMsg.Header.Get("x-connection-id")
 				if len(connectionID) == 0 {
 					log.WithError(err).Errorf("Not Connection ID header found on message")
@@ -177,10 +182,13 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 					//if we got 0 length data, we are done, bail
 					break
 				}
+				tcpDataLen = 0
 			} else {
 				log.WithError(readErr).Error("Error reading data nats->tcp")
 				break
 			}
+			tcpData = nil
+			readErr = nil
 		}
 	}
 	log.Debug("Terminating")

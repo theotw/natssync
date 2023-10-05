@@ -50,6 +50,7 @@ func (s *server) sendConnectionRequest(connectionID, clientID, host string) erro
 		log.WithError(err).Error("Error connecting to NATS subject")
 		return err
 	}
+	defer sync.Unsubscribe()
 
 	var connectionMsg models.TCPConnectRequest
 	connectionMsg.ConnectionID = connectionID
@@ -257,6 +258,9 @@ func (s *server) RouteHandler(c *gin.Context) {
 		log.WithError(err).Errorf("Error connecting to NATS")
 		code, resp := HandleError(c, err)
 		c.JSON(code, resp)
+		if sync != nil {
+			sync.Unsubscribe()
+		}
 		return
 	}
 
