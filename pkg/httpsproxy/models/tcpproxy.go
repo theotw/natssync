@@ -105,6 +105,14 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 		log.Debug("Reading Data from socket")
 		//buf := make([]byte, maxBytesToRead)
 		bufferLen, readErr = src.Read(buf)
+		if readErr != nil {
+			errorString := readErr.Error()
+			if !(strings.Contains(errorString, "EOF") || strings.Contains(errorString, "use of closed network connection")) {
+				log.WithError(readErr).Errorf("Error reading data tcp -> nats")
+			}
+			break
+		}
+
 		log.Debugf("Read %d bytes ", bufferLen)
 		if bufferLen > 0 {
 			writeBuf := buf[:bufferLen]
@@ -123,14 +131,6 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 			}
 			writeBuf = nil
 			dataToSend = nil
-		}
-
-		if readErr != nil {
-			errorString := readErr.Error()
-			if !(strings.Contains(errorString, "EOF") || strings.Contains(errorString, "use of closed network connection")) {
-				log.WithError(readErr).Errorf("Error reading data tcp -> nats")
-			}
-			break
 		}
 	}
 
