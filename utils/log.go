@@ -1,22 +1,29 @@
 package utils
 
 import (
-	log "github.com/sirupsen/logrus"
+	"os"
 
-	httpproxy "github.com/theotw/natssync/pkg/httpsproxy"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
 	logLevelEnvVariable = "LOG_LEVEL"
+	logLevelDefault     = log.InfoLevel
 )
 
 func InitLogging() {
-	logLevel := httpproxy.GetEnvWithDefaults(logLevelEnvVariable, log.DebugLevel.String())
-	level, levelerr := log.ParseLevel(logLevel)
-	if levelerr != nil {
-		log.Infof("No valid log level from ENV, defaulting to debug level was: %s", level)
-		level = log.DebugLevel
+	level := logLevelDefault
+	logLevel := os.Getenv(logLevelEnvVariable)
+
+	if logLevel != "" {
+		newLevel, err := log.ParseLevel(logLevel)
+		if err != nil {
+			log.Warnf("Could not parse log level \"%s\": %v", err, logLevel)
+		} else {
+			level = newLevel
+		}
 	}
-	log.Infof("2 Using log level  %s / %d", logLevel, level)
+
+	log.Infof("Using log level %s", level)
 	log.SetLevel(level)
 }
