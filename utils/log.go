@@ -18,7 +18,7 @@ func InitLogging() {
 	if logLevel != "" {
 		newLevel, err := log.ParseLevel(logLevel)
 		if err != nil {
-			log.Warnf("Could not parse log level \"%s\": %v", err, logLevel)
+			log.Warnf("Could not parse log level \"%s\": %v", logLevel, err)
 		} else {
 			level = newLevel
 		}

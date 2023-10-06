@@ -102,13 +102,6 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 		log.Debug("Reading Data from socket")
 		buf := make([]byte, maxBytesToRead)
 		bufferLen, readErr := src.Read(buf)
-		if readErr != nil {
-			errorString := readErr.Error()
-			if !(strings.Contains(errorString, "EOF") || strings.Contains(errorString, "use of closed network connection")) {
-				log.WithError(readErr).Errorf("Error reading data tcp -> nats")
-			}
-			break
-		}
 
 		log.Debugf("Read %d bytes ", bufferLen)
 		if bufferLen > 0 {
@@ -126,12 +119,15 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 			if err := nc.Flush(); err != nil {
 				log.WithError(err).Errorf("failed to flush natssync")
 			}
-			writeBuf = nil
-			dataToSend = nil
 		}
-		buf = nil
-		readErr = nil
-		bufferLen = 0
+
+		if readErr != nil {
+			errorString := readErr.Error()
+			if !(strings.Contains(errorString, "EOF") || strings.Contains(errorString, "use of closed network connection")) {
+				log.WithError(readErr).Errorf("Error reading data tcp -> nats")
+			}
+			break
+		}
 	}
 
 	writebuf := make([]byte, 0)
@@ -182,13 +178,10 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 					//if we got 0 length data, we are done, bail
 					break
 				}
-				tcpDataLen = 0
 			} else {
 				log.WithError(readErr).Error("Error reading data nats->tcp")
 				break
 			}
-			tcpData = nil
-			readErr = nil
 		}
 	}
 	log.Debug("Terminating")

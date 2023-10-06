@@ -19,7 +19,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/theotw/natssync/pkg/httpsproxy"
+	httpproxy "github.com/theotw/natssync/pkg/httpsproxy"
 	"github.com/theotw/natssync/pkg/httpsproxy/models"
 )
 
@@ -258,9 +258,6 @@ func (s *server) RouteHandler(c *gin.Context) {
 		log.WithError(err).Errorf("Error connecting to NATS")
 		code, resp := HandleError(c, err)
 		c.JSON(code, resp)
-		if sync != nil {
-			sync.Unsubscribe()
-		}
 		return
 	}
 
