@@ -19,7 +19,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/theotw/natssync/pkg/httpsproxy"
+	httpproxy "github.com/theotw/natssync/pkg/httpsproxy"
 	"github.com/theotw/natssync/pkg/httpsproxy/models"
 )
 
@@ -50,6 +50,7 @@ func (s *server) sendConnectionRequest(connectionID, clientID, host string) erro
 		log.WithError(err).Error("Error connecting to NATS subject")
 		return err
 	}
+	defer sync.Unsubscribe()
 
 	var connectionMsg models.TCPConnectRequest
 	connectionMsg.ConnectionID = connectionID

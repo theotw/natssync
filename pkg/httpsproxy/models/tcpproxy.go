@@ -154,7 +154,7 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 			log.WithError(err).Errorf("Error reading from NATS")
 		} else {
 			strickCheck := os.Getenv("STRICT_CONNECTION_CHECK")
-			log.Infof("Stick Check %s", strickCheck)
+			log.Debugf("Stick Check \"%s\"", strickCheck)
 			if strickCheck == "true" {
 				connectionID := natsMsg.Header.Get("x-connection-id")
 				if len(connectionID) == 0 {
