@@ -82,6 +82,6 @@ func (rw *responseWriter) WriteDataOut() {
 }
 
 func (rw *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	rw.WriteDataOut()
+	//rw.WriteDataOut()
 	return rw.ResponseWriter.Hijack()
 }

@@ -182,10 +182,6 @@ func transferTcpDataToTcp(src io.ReadCloser, dest io.WriteCloser) {
 	for {
 		log.Debug("Reading Data")
 		readLen, readErr := src.Read(buf)
-		if readErr != nil {
-			log.WithError(readErr).Errorf("Error reading data")
-			break
-		}
 
 		log.Debugf("Read %d bytes", readLen)
 		if readLen > 0 {
@@ -199,6 +195,15 @@ func transferTcpDataToTcp(src io.ReadCloser, dest io.WriteCloser) {
 				log.Debugf("Wrote %d bytes", writeLen)
 			}
 		}
+
+		if readErr != nil {
+			if readLen > 0 {
+				log.WithError(readErr).Infof("XXX Got error, but we had still data incoming (%d). That may have been a bug before.", readLen)
+			}
+			log.WithError(readErr).Errorf("Error reading data")
+			break
+		}
+
 	}
 	log.Debug("Terminating")
 	//send terminate

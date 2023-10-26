@@ -147,11 +147,18 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 }
 
 func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCloser) {
+	startTime := time.Now()
 	for {
 		log.Debugf("waiting for Data from nats")
-		natsMsg, err := queue.NextMsg(10 * time.Minute)
+		natsMsg, err := queue.NextMsg(1 * time.Minute)
 		if err != nil {
-			log.WithError(err).Errorf("Error reading from NATS")
+			if !strings.Contains(err.Error(), "nats: timeout") {
+				log.WithError(err).Errorf("Error reading from NATS")
+			}
+			if time.Since(startTime).Minutes() > 30 {
+				log.WithError(err).Errorf("Error reading from NATS -- exceeded 30 minutes, giving up now")
+				break
+			}
 		} else {
 			strickCheck := os.Getenv("STRICT_CONNECTION_CHECK")
 			log.Debugf("Stick Check \"%s\"", strickCheck)
