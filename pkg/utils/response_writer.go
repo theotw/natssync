@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 	"net/http"
 
@@ -82,6 +83,7 @@ func (rw *responseWriter) WriteDataOut() {
 }
 
 func (rw *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	//rw.WriteDataOut()
+	fmt.Printf("responseWriter.body: \"%s\"\n", string(rw.body[:]))
+	rw.WriteDataOut()
 	return rw.ResponseWriter.Hijack()
 }

@@ -38,20 +38,20 @@ func EncodeTCPData(data []byte, connectionID string, sequenceID int) []byte {
 }
 
 // takes in a JSON byte array of the TcpData and returns the byte data
-func DecodeTCPData(data []byte) ([]byte, error) {
+func DecodeTCPData(data []byte) ([]byte, int, error) {
 	var tcpData TCPData
 	err := json.Unmarshal(data, &tcpData)
 	if err != nil {
-		return nil, err
+		return nil, -1, err
 	}
 	bits, err := base64.StdEncoding.DecodeString(tcpData.DataB64)
 	if err != nil {
-		return nil, err
+		return nil, -1, err
 	}
 	if len(bits) != tcpData.DataLength {
-		return nil, errors.New("mismatch data len ")
+		return nil, -1, errors.New("mismatch data len ")
 	}
-	return bits, err
+	return bits, tcpData.SequenceID, err
 }
 
 func StartBiDiNatsTunnel(outBoundSubject, inBoundSubject, connectionID string, inBoundQueue nats.NatsSubscriptionInterface, socket io.ReadWriteCloser) error {
@@ -148,6 +148,7 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 
 func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCloser) {
 	startTime := time.Now()
+	lastSequenceID := 0 // sequence id's seem to start with 1
 	for {
 		log.Debugf("waiting for Data from nats")
 		natsMsg, err := queue.NextMsg(1 * time.Minute)
@@ -155,8 +156,8 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 			if !strings.Contains(err.Error(), "nats: timeout") {
 				log.WithError(err).Errorf("Error reading from NATS")
 			}
-			if time.Since(startTime).Minutes() > 30 {
-				log.WithError(err).Errorf("Error reading from NATS -- exceeded 30 minutes, giving up now")
+			if time.Since(startTime).Minutes() > 10 {
+				log.WithError(err).Errorf("Error reading from NATS -- exceeded 10 minutes, giving up now")
 				break
 			}
 		} else {
@@ -172,8 +173,13 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 				}
 			}
 			log.Debug("Got package from nats")
-			tcpData, readErr := DecodeTCPData(natsMsg.Data)
+			tcpData, sequenceID, readErr := DecodeTCPData(natsMsg.Data)
 			if readErr == nil {
+				if lastSequenceID+1 != sequenceID {
+					log.Errorf("Expected seq id %d, but got %d", lastSequenceID+1, sequenceID)
+				}
+				lastSequenceID += 1
+
 				tcpDataLen := len(tcpData)
 				log.Debugf("Got valid package from nats len %d", tcpDataLen)
 				if tcpDataLen > 0 {
