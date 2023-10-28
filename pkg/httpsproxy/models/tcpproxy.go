@@ -150,7 +150,8 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 	startTime := time.Now()
 
 	sequenceIDOutgoing := 0
-
+	emptyMessageArrivedTooEarly := false
+	usedCache := false
 	msgCache := make(map[int][]byte, 0)
 
 	messageComplete := false
@@ -163,7 +164,7 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 				break
 			}
 			if time.Since(startTime).Minutes() > 3 {
-				log.WithError(err).Errorf("Error reading from NATS -- exceeded 3 minutes, giving up now")
+				log.WithError(err).Errorf("Error reading from NATS -- exceeded 3 minutes, giving up now (empty msg arrived too early: %t)", emptyMessageArrivedTooEarly)
 				break
 			}
 			// this is NextMsg timeout, we can try again
@@ -194,6 +195,9 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 			log.Debugf("Got valid package from nats len %d", tcpDataLen)
 			if tcpDataLen == 0 {
 				//if we got 0 length data, we are done, bail
+				if usedCache {
+					log.Info("Message complete, but had to use cache")
+				}
 				break
 			}
 
@@ -210,10 +214,16 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 		// message came too early
 		log.Errorf("Expected seq id %d, but got %d", sequenceIDOutgoing+1, sequenceID)
 
+		if len(tcpData) == 0 {
+			emptyMessageArrivedTooEarly = true
+		}
+
 		// keep message in cache for now
 		msgCache[sequenceID] = tcpData
+		usedCache = true
 
 		// check if we have cached messages we can send now
+		sendCachedMessagesCount := 0
 		for true {
 			nextOutgoing := sequenceIDOutgoing + 1
 			tcpData, ok := msgCache[nextOutgoing]
@@ -221,15 +231,16 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 				// we do not have the next message, we will have to go back and wait for nats to send it
 				break
 			}
+			sendCachedMessagesCount++
 
 			tcpDataLen := len(tcpData)
 			if tcpDataLen == 0 {
 				//if we got 0 length data, we are done, bail
 				messageComplete = true
+				log.Info("Message complete, but had to use cache")
 				break
 			}
 
-			log.Info("sending cached message now...")
 			if _, err := dest.Write(tcpData); err != nil {
 				log.WithField("seconds", int(time.Since(startTime).Seconds())).WithError(err).Errorf("failed to write tcp data to socket %d", tcpDataLen)
 			}
@@ -237,6 +248,9 @@ func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCl
 			delete(msgCache, nextOutgoing)
 		}
 
+		if sendCachedMessagesCount > 0 {
+			log.Infof("just sent %d cached messages...", sendCachedMessagesCount)
+		}
 	}
 	log.Debug("Terminating")
 	//send terminate
