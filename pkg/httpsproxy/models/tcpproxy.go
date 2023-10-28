@@ -148,54 +148,95 @@ func TransferTcpDataToNats(subject string, connectionID string, src io.ReadClose
 
 func TransferNatsToTcpData(queue nats.NatsSubscriptionInterface, dest io.WriteCloser) {
 	startTime := time.Now()
-	lastSequenceID := 0 // sequence id's seem to start with 1
-	for {
+
+	sequenceIDOutgoing := 0
+
+	msgCache := make(map[int][]byte, 0)
+
+	messageComplete := false
+	for !messageComplete {
 		log.Debugf("waiting for Data from nats")
 		natsMsg, err := queue.NextMsg(1 * time.Minute)
 		if err != nil {
 			if !strings.Contains(err.Error(), "nats: timeout") {
 				log.WithError(err).Errorf("Error reading from NATS")
-			}
-			if time.Since(startTime).Minutes() > 10 {
-				log.WithError(err).Errorf("Error reading from NATS -- exceeded 10 minutes, giving up now")
 				break
 			}
-		} else {
-			strickCheck := os.Getenv("STRICT_CONNECTION_CHECK")
-			log.Debugf("Stick Check \"%s\"", strickCheck)
-			if strickCheck == "true" {
-				connectionID := natsMsg.Header.Get("x-connection-id")
-				if len(connectionID) == 0 {
-					log.WithError(err).Errorf("Not Connection ID header found on message")
-					continue
-				} else {
-					log.Infof("Processing message for connection ID %s", connectionID)
-				}
+			if time.Since(startTime).Minutes() > 3 {
+				log.WithError(err).Errorf("Error reading from NATS -- exceeded 3 minutes, giving up now")
+				break
 			}
-			log.Debug("Got package from nats")
-			tcpData, sequenceID, readErr := DecodeTCPData(natsMsg.Data)
-			if readErr == nil {
-				if lastSequenceID+1 != sequenceID {
-					log.Errorf("Expected seq id %d, but got %d", lastSequenceID+1, sequenceID)
-				}
-				lastSequenceID += 1
+			// this is NextMsg timeout, we can try again
+			continue
+		}
+		strickCheck := os.Getenv("STRICT_CONNECTION_CHECK")
+		log.Debugf("Stick Check \"%s\"", strickCheck)
 
-				tcpDataLen := len(tcpData)
-				log.Debugf("Got valid package from nats len %d", tcpDataLen)
-				if tcpDataLen > 0 {
-					if _, err := dest.Write(tcpData); err != nil {
-						log.WithField("seconds", int(time.Since(startTime).Seconds())).WithError(err).Errorf("failed to write tcp data to socket %d", tcpDataLen)
-					}
-				} else {
-					log.WithField("seconds", int(time.Since(startTime).Seconds())).Info("done")
-					//if we got 0 length data, we are done, bail
-					break
-				}
+		if strickCheck == "true" {
+			connectionID := natsMsg.Header.Get("x-connection-id")
+			if len(connectionID) == 0 {
+				log.WithError(err).Errorf("Not Connection ID header found on message")
+				continue
 			} else {
-				log.WithError(readErr).Error("Error reading data nats->tcp")
-				break
+				log.Infof("Processing message for connection ID %s", connectionID)
 			}
 		}
+		log.Debug("Got package from nats")
+		tcpData, sequenceID, readErr := DecodeTCPData(natsMsg.Data)
+		if readErr != nil {
+			log.WithError(readErr).Error("Error reading data nats->tcp")
+			break
+		}
+
+		if sequenceIDOutgoing+1 == sequenceID {
+			// sequenceID is correct
+			tcpDataLen := len(tcpData)
+			log.Debugf("Got valid package from nats len %d", tcpDataLen)
+			if tcpDataLen == 0 {
+				//if we got 0 length data, we are done, bail
+				break
+			}
+
+			sequenceIDOutgoing++
+			if _, err := dest.Write(tcpData); err != nil {
+				log.WithField("seconds", int(time.Since(startTime).Seconds())).WithError(err).Errorf("failed to write tcp data to socket %d", tcpDataLen)
+				break // no need to continue
+			}
+
+			// continue reading from nats to get next message
+			continue
+		}
+
+		// message came too early
+		log.Errorf("Expected seq id %d, but got %d", sequenceIDOutgoing+1, sequenceID)
+
+		// keep message in cache for now
+		msgCache[sequenceID] = tcpData
+
+		// check if we have cached messages we can send now
+		for true {
+			nextOutgoing := sequenceIDOutgoing + 1
+			tcpData, ok := msgCache[nextOutgoing]
+			if !ok {
+				// we do not have the next message, we will have to go back and wait for nats to send it
+				break
+			}
+
+			tcpDataLen := len(tcpData)
+			if tcpDataLen == 0 {
+				//if we got 0 length data, we are done, bail
+				messageComplete = true
+				break
+			}
+
+			log.Info("sending cached message now...")
+			if _, err := dest.Write(tcpData); err != nil {
+				log.WithField("seconds", int(time.Since(startTime).Seconds())).WithError(err).Errorf("failed to write tcp data to socket %d", tcpDataLen)
+			}
+			sequenceIDOutgoing = nextOutgoing
+			delete(msgCache, nextOutgoing)
+		}
+
 	}
 	log.Debug("Terminating")
 	//send terminate
