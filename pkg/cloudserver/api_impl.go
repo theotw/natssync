@@ -443,7 +443,7 @@ func handlePostRegister(c *gin.Context) {
 	}
 
 	if !response.Success {
-		ierr := errors.NewInternalError(errors.BRIDGE_ERROR, errors.INVALID_REGISTRATION_REQ, nil)
+		ierr := errors.NewInternalError(errors.BRIDGE_ERROR, errors.INVALID_REGISTRATION_REQ, map[string]string{"key": response.Reason})
 		c.JSON(bridgemodel.HandleError(c, ierr))
 		return
 	}
