@@ -97,7 +97,7 @@ func CreateLocationKeyStore(keystoreUrl string) (LocationKeyStore, error) {
 		return mongoKeyStore, err
 
 	case configmapKeyStoreTypePrefix:
-		configmapKeyStore, err := configmap.NewConfigmapKeyStore(keystoreUri)
+		configmapKeyStore, err := configmap.NewConfigmapKeyStore()
 		if err == nil {
 			newReaper(configmapKeyStore).RunCleanupJob(context.TODO())
 		}

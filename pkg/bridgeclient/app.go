@@ -108,7 +108,7 @@ func RunClient(test bool) {
 
 		nc := natsmodel.GetNatsConnection()
 		clientID := store.LoadLocationID("")
-		//no client ID yet?  that happens on a new startup before it is registered.  Just hang out and wait for one
+		// no client ID yet?  that happens on a new startup before it is registered.  Just hang out and wait for one
 		if len(clientID) == 0 {
 			log.Infof("No client ID, sleeping and retrying")
 			time.Sleep(5 * time.Second)
@@ -127,6 +127,11 @@ func RunClient(test bool) {
 			currentMessageHandler = NewBidiMessageHandler(serverURL)
 			log.Infof("Starting Message Handler of type %s ", currentMessageHandler.GetHandlerType())
 			currentMessageHandler.StartMessageHandler(clientID)
+		}
+
+		if len(clientID) > 0 {
+			// We have a clientID, but we still should wait 5 seconds before running again.
+			time.Sleep(5 * time.Second)
 		}
 	}
 }

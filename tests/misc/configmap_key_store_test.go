@@ -23,10 +23,7 @@ type testCase struct {
 }
 
 func TestFileKeyStore(t *testing.T) {
-	// Set to the configmap mount location
-	configmapMountPath := "/configmap-data"
-
-	store, err := configmap.NewConfigmapKeyStore(configmapMountPath)
+	store, err := configmap.NewConfigmapKeyStore()
 	if err != nil {
 		log.Fatal(err)
 	}
